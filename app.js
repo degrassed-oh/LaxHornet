@@ -312,10 +312,6 @@ function setQuarter(quarter) {
 }
 
 function renderShell(content, options = {}) {
-  const subtitle = state.activeGame
-    ? `${state.activeGame.opponent} - ${state.activeGame.currentQuarter}`
-    : state.player.name;
-
   return `
     <header class="topbar">
       <div class="brand-row">
@@ -323,7 +319,6 @@ function renderShell(content, options = {}) {
           <span class="brand-logo-wrap">
             <img class="brand-logo" src="assets/laxhornet-logo.png" alt="LaxHornet" />
             <h1 class="sr-only">LaxHornet</h1>
-            <p class="brand-subtitle">${escapeHTML(subtitle || "Youth lacrosse stats")}</p>
           </span>
         </button>
         <span class="topbar-actions">

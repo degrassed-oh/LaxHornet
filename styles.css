@@ -87,7 +87,7 @@ button:disabled {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  min-height: 52px;
+  min-height: 42px;
 }
 
 .brand {
@@ -136,16 +136,6 @@ button:disabled {
   font-size: 1.2rem;
   font-weight: 850;
   line-height: 1.05;
-}
-
-.brand-subtitle {
-  margin: 3px 0 0;
-  color: #c2c5ca;
-  font-size: 0.84rem;
-  font-weight: 650;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .status-chip {
