@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 180" role="img" aria-label="LaxHornet speed stinger logo">
+  <title>LaxHornet Speed Stinger</title>
+  <path d="M48 58h102l-28 30h124l-23 22H46l28-28H28z" fill="#d71920"/>
+  <g transform="skewX(-14)">
+    <text x="182" y="116" fill="#ffffff" stroke="#050505" stroke-width="9" paint-order="stroke" font-family="Arial Black, Impact, sans-serif" font-size="86" font-weight="900">LAX</text>
+    <text x="382" y="116" fill="#d7dce2" stroke="#050505" stroke-width="9" paint-order="stroke" font-family="Arial Black, Impact, sans-serif" font-size="86" font-weight="900">HORNET</text>
+  </g>
+  <path d="M680 83h102l-30-31 116 38-116 38 30-31H680z" fill="#d71920" stroke="#050505" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M546 124h178" stroke="#ffffff" stroke-width="8"/>
+</svg>

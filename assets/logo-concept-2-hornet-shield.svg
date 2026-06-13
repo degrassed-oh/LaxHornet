@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 180" role="img" aria-label="LaxHornet shield stinger logo">
+  <title>LaxHornet Shield Stinger</title>
+  <path d="M38 28h122l52 62-52 62H38l42-62z" fill="#d71920"/>
+  <path d="M72 52h70l30 38-30 38H72l26-38z" fill="#050505"/>
+  <path d="M97 66h22v48H97z" fill="#ffffff"/>
+  <path d="M117 66h45l-22 24 22 24h-45z" fill="#d7dce2"/>
+  <path d="M198 44h548l78 46-78 46H198l34-46z" fill="#050505"/>
+  <path d="M217 58h512l55 32-55 32H217l23-32z" fill="none" stroke="#d71920" stroke-width="9"/>
+  <g transform="skewX(-9)">
+    <text x="250" y="114" fill="#ffffff" font-family="Arial Black, Impact, sans-serif" font-size="78" font-weight="900">LAX</text>
+    <text x="438" y="114" fill="#d7dce2" font-family="Arial Black, Impact, sans-serif" font-size="78" font-weight="900">HORNET</text>
+  </g>
+  <path d="M755 68l64 22-64 22 17-22z" fill="#ffffff"/>
+</svg>

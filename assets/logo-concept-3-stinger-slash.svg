@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 180" role="img" aria-label="LaxHornet stinger slash logo">
+  <title>LaxHornet Stinger Slash</title>
+  <path d="M44 45h652l46 45-46 45H44z" fill="#ffffff" stroke="#050505" stroke-width="10" stroke-linejoin="round"/>
+  <path d="M92 128h575l92-38-38 38h89l-139 28 36-20H92z" fill="#d71920"/>
+  <g transform="skewX(-11)">
+    <text x="78" y="112" fill="#050505" font-family="Arial Black, Impact, sans-serif" font-size="78" font-weight="900">LAX</text>
+    <text x="270" y="112" fill="#d71920" font-family="Arial Black, Impact, sans-serif" font-size="78" font-weight="900">HORNET</text>
+  </g>
+  <path d="M690 46l86 44-86 44 29-44z" fill="#ffffff" stroke="#050505" stroke-width="10" stroke-linejoin="round"/>
+  <path d="M711 73l35 17-35 17 12-17z" fill="#d71920"/>
+</svg>

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 180" role="img" aria-label="LaxHornet stinger tail logo">
+  <title>LaxHornet Stinger Tail</title>
+  <g transform="skewX(-10)">
+    <text x="24" y="112" fill="#ffffff" stroke="#050505" stroke-width="8" paint-order="stroke" font-family="Arial Black, Impact, sans-serif" font-size="82" font-weight="900">LA</text>
+    <g stroke="#050505" stroke-width="8" stroke-linejoin="round">
+      <path d="M151 51h35l30 34 34-34h41l-55 62 35 29h-40l-24-21-31 21h-39l53-51z" fill="#ffffff"/>
+      <path d="M213 84l70-39 31 8-62 53h66l-93 37 26-36z" fill="#d71920"/>
+      <path d="M207 103l36 39h-38l-18-24z" fill="#d7dce2"/>
+    </g>
+    <text x="324" y="112" fill="#d71920" stroke="#050505" stroke-width="8" paint-order="stroke" font-family="Arial Black, Impact, sans-serif" font-size="82" font-weight="900">HORNET</text>
+  </g>
+  <path d="M596 132h204l38-26-18 26 70 1-84 28 22-23H596z" fill="#d71920"/>
+  <path d="M92 137h476" stroke="#d7dce2" stroke-width="10" stroke-linecap="square"/>
+  <path d="M818 63l68 22-58 27 18-28z" fill="#ffffff" stroke="#050505" stroke-width="7" stroke-linejoin="round"/>
+</svg>

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 180" role="img" aria-label="LaxHornet venom wordmark logo">
+  <title>LaxHornet Venom Wordmark</title>
+  <path d="M42 138h560l82-40-35 40h122l-176 30 46-20H42z" fill="#d71920"/>
+  <g transform="skewX(-12)">
+    <text x="40" y="112" fill="#ffffff" stroke="#050505" stroke-width="9" paint-order="stroke" font-family="Arial Black, Impact, sans-serif" font-size="88" font-weight="900">LA</text>
+    <path d="M160 48h42l28 38 38-38h56l-62 63 35 33h-54l-22-22-31 22h-54l58-52z" fill="#ffffff" stroke="#050505" stroke-width="9" stroke-linejoin="round"/>
+    <path d="M226 78l76-35-31 39h68l-98 45 22-34z" fill="#d71920" stroke="#050505" stroke-width="8" stroke-linejoin="round"/>
+    <text x="334" y="112" fill="#d71920" stroke="#050505" stroke-width="9" paint-order="stroke" font-family="Arial Black, Impact, sans-serif" font-size="88" font-weight="900">HORNET</text>
+  </g>
+  <path d="M777 64l78 25-78 31 20-31z" fill="#ffffff" stroke="#050505" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M76 128h475" stroke="#d7dce2" stroke-width="9"/>
+</svg>

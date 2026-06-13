@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 180" role="img" aria-label="LaxHornet compact stinger logo">
+  <title>LaxHornet Compact Stinger</title>
+  <path d="M40 28h126l-38 62 38 62H40l38-62z" fill="#d71920"/>
+  <path d="M62 52h70l-22 38 22 38H62l22-38z" fill="#050505"/>
+  <path d="M87 68h20v44H87z" fill="#ffffff"/>
+  <path d="M98 68h39l-16 22 16 22H98z" fill="#d7dce2"/>
+  <g transform="skewX(-9)">
+    <text x="190" y="113" fill="#ffffff" stroke="#050505" stroke-width="8" paint-order="stroke" font-family="Arial Black, Impact, sans-serif" font-size="82" font-weight="900">LAX</text>
+    <text x="382" y="113" fill="#d7dce2" stroke="#050505" stroke-width="8" paint-order="stroke" font-family="Arial Black, Impact, sans-serif" font-size="82" font-weight="900">HORNET</text>
+  </g>
+  <path d="M760 50l96 40-96 40 27-40z" fill="#d71920" stroke="#050505" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M786 80h-146" stroke="#d71920" stroke-width="12" stroke-linecap="square"/>
+</svg>
