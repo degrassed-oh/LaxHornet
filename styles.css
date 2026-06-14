@@ -647,8 +647,19 @@ button:disabled {
 }
 
 .share-card h3,
-.share-watch-form h3 {
+.share-watch-form h3,
+.account-card h3 {
   margin: 0;
+}
+
+.account-card {
+  border-color: rgba(245, 181, 50, 0.36);
+}
+
+.account-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
 }
 
 .share-code {

@@ -158,6 +158,7 @@ const state = {
   games: loadJSON(STORAGE_KEYS.games, []),
   activeGame: loadJSON(STORAGE_KEYS.activeGame, null),
   reviewGameId: loadJSON(STORAGE_KEYS.reviewGameId, null),
+  authUser: null,
   sharedGame: null,
   sharedCode: startupShareCode,
   syncStatus: supabaseClient ? "Live Share ready" : "Live Share unavailable",
@@ -189,7 +190,15 @@ function uid(prefix = "id") {
 }
 
 function makeShareCode() {
-  return Math.random().toString(36).slice(2, 8).toUpperCase();
+  return `${Math.random().toString(36).slice(2, 8)}${Math.random().toString(36).slice(2, 8)}`.toUpperCase();
+}
+
+function currentUserId() {
+  return state.authUser?.id || null;
+}
+
+function userEmail() {
+  return state.authUser?.email || "";
 }
 
 function todayISO() {
@@ -240,6 +249,7 @@ function normalizeEvent(event = {}, gameId = "") {
   return {
     id: event.id || uid("event"),
     gameId: event.gameId || gameId,
+    userId: event.userId || event.user_id || "",
     timestamp: event.timestamp || new Date().toISOString(),
     quarter: event.quarter || "Q1",
     statType: stat.key,
@@ -260,6 +270,8 @@ function normalizeGame(game = {}) {
     ...game,
     id,
     shareCode: game.shareCode || game.share_code || makeShareCode(),
+    userId: game.userId || game.user_id || "",
+    isShared: Boolean(game.isShared ?? game.is_shared ?? false),
     events: (game.events || []).map((event) => normalizeEvent(event, id)),
   };
 }
@@ -324,6 +336,8 @@ function makeGame(formData) {
   return {
     id: uid("game"),
     shareCode: makeShareCode(),
+    userId: currentUserId() || "",
+    isShared: false,
     opponent: formData.get("opponent")?.trim() || "Opponent",
     date: formData.get("date") || todayISO(),
     location: formData.get("location")?.trim() || "",
@@ -378,7 +392,7 @@ function calculateTotals(events = []) {
 }
 
 function calculateSeasonTotals() {
-  const games = state.games;
+  const games = visibleGames();
   const totals = games.reduce(
     (acc, game) => {
       const gameTotals = calculateTotals(game.events);
@@ -421,11 +435,18 @@ function pct(value) {
   return `${Math.round(value * 100)}%`;
 }
 
+function visibleGames() {
+  const userId = currentUserId();
+  if (!userId) return state.games.filter((game) => !game.userId);
+  return state.games.filter((game) => !game.userId || game.userId === userId);
+}
+
 function currentReviewGame() {
+  const games = visibleGames();
   if (state.reviewGameId) {
-    return state.games.find((game) => game.id === state.reviewGameId) || state.activeGame;
+    return games.find((game) => game.id === state.reviewGameId) || state.activeGame;
   }
-  return state.activeGame || state.games[0] || null;
+  return state.activeGame || games[0] || null;
 }
 
 function saveActiveGame(message = "Game saved locally") {
@@ -454,6 +475,7 @@ function logEvent(statKey) {
   const event = {
     id: uid("event"),
     gameId: state.activeGame.id,
+    userId: state.activeGame.userId || currentUserId() || "",
     timestamp: new Date().toISOString(),
     quarter: state.activeGame.currentQuarter,
     statType: stat.key,
@@ -678,9 +700,12 @@ function importJSONFile(file) {
 
 function gameToSupabaseRow(game) {
   const normalized = normalizeGame(game);
+  const userId = normalized.userId || currentUserId();
   return {
     id: normalized.id,
+    user_id: userId,
     share_code: normalized.shareCode,
+    is_shared: Boolean(normalized.isShared),
     opponent: normalized.opponent,
     game_date: normalized.date,
     location: normalized.location || "",
@@ -696,9 +721,14 @@ function gameToSupabaseRow(game) {
 
 function eventToSupabaseRow(event) {
   const normalized = normalizeEvent(event, event.gameId);
+  const game = state.activeGame?.id === normalized.gameId
+    ? state.activeGame
+    : state.games.find((item) => item.id === normalized.gameId) || state.sharedGame;
+  const userId = normalized.userId || game?.userId || currentUserId();
   return {
     id: normalized.id,
     game_id: normalized.gameId,
+    user_id: userId,
     timestamp: normalized.timestamp,
     quarter: normalized.quarter,
     stat_type: normalized.statType,
@@ -718,6 +748,7 @@ function eventFromSupabaseRow(row) {
     {
       id: row.id,
       gameId: row.game_id,
+      userId: row.user_id || "",
       timestamp: row.timestamp,
       quarter: row.quarter,
       statType: row.stat_type,
@@ -737,7 +768,9 @@ function eventFromSupabaseRow(row) {
 function gameFromSupabaseRow(row, events = []) {
   return normalizeGame({
     id: row.id,
+    userId: row.user_id || "",
     shareCode: row.share_code,
+    isShared: Boolean(row.is_shared),
     opponent: row.opponent,
     date: row.game_date,
     location: row.location || "",
@@ -770,9 +803,83 @@ function reportSyncError(error) {
   }
 }
 
+function mergeGames(localGames, cloudGames) {
+  const merged = new Map(localGames.map((game) => [game.id, normalizeGame(game)]));
+  cloudGames.map(normalizeGame).forEach((game) => merged.set(game.id, game));
+  return [...merged.values()].sort((a, b) => new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt));
+}
+
+async function loadCloudGames(options = {}) {
+  if (!supabaseClient || !currentUserId()) return;
+  const { data, error } = await supabaseClient
+    .from("games")
+    .select("*, events(*)")
+    .eq("user_id", currentUserId())
+    .order("game_date", { ascending: false });
+
+  if (error) {
+    if (!options.silent) reportSyncError(error);
+    return;
+  }
+
+  const cloudGames = (data || []).map((game) => gameFromSupabaseRow(game, game.events || []));
+  state.games = mergeGames(state.games, cloudGames);
+  persistAll();
+  state.syncStatus = "Cloud games loaded";
+  if (!options.silent) {
+    render();
+    showToast("Cloud games synced");
+  }
+}
+
+async function handleAuthSubmit(formData) {
+  if (!supabaseClient) {
+    showToast("Supabase is not available");
+    return;
+  }
+
+  const email = formData.get("email")?.trim();
+  const password = formData.get("password") || "";
+  const authAction = formData.get("authAction");
+  if (!email || password.length < 6) {
+    showToast("Use an email and 6+ character password");
+    return;
+  }
+
+  const result =
+    authAction === "sign-up"
+      ? await supabaseClient.auth.signUp({ email, password })
+      : await supabaseClient.auth.signInWithPassword({ email, password });
+
+  if (result.error) {
+    showToast(result.error.message);
+    return;
+  }
+
+  state.authUser = result.data.user || result.data.session?.user || state.authUser;
+  state.syncStatus = state.authUser ? "Signed in" : "Check email to confirm account";
+  if (state.authUser) await loadCloudGames({ silent: true });
+  render();
+  showToast(state.syncStatus);
+}
+
+async function signOut() {
+  if (!supabaseClient) return;
+  await supabaseClient.auth.signOut();
+  state.authUser = null;
+  state.syncStatus = "Signed out";
+  render();
+  showToast("Signed out");
+}
+
 async function syncGameToSupabase(game, options = {}) {
   if (!supabaseClient || !game) return false;
-  const normalized = normalizeGame(game);
+  const userId = currentUserId();
+  if (!userId) {
+    state.syncStatus = "Sign in for cloud sync";
+    return false;
+  }
+  const normalized = normalizeGame({ ...game, userId: game.userId || userId });
   const { error } = await supabaseClient.from("games").upsert(gameToSupabaseRow(normalized));
   if (error) {
     reportSyncError(error);
@@ -782,7 +889,7 @@ async function syncGameToSupabase(game, options = {}) {
   if (options.includeEvents && normalized.events.length) {
     const { error: eventsError } = await supabaseClient
       .from("events")
-      .upsert(normalized.events.map((event) => eventToSupabaseRow(event)));
+      .upsert(normalized.events.map((event) => eventToSupabaseRow({ ...event, userId })));
     if (eventsError) {
       reportSyncError(eventsError);
       return false;
@@ -891,10 +998,16 @@ async function loadSharedGame(shareCode) {
 async function copyShareLink() {
   const game = state.activeGame || currentReviewGame();
   if (!game) return;
+  game.isShared = true;
+  game.userId = game.userId || currentUserId() || "";
+  if (state.activeGame?.id === game.id) state.activeGame = game;
+  upsertGame(game);
+  persistAll();
+  await syncGameToSupabase(game, { includeEvents: true });
   const link = shareLinkForGame(game);
   try {
     await navigator.clipboard.writeText(link);
-    showToast("Share link copied");
+    showToast("Live share link copied");
   } catch {
     window.prompt("Copy this share link", link);
   }
@@ -943,16 +1056,64 @@ function renderBottomNav() {
 
 function renderShareCard(game) {
   const normalized = normalizeGame(game);
+  const canCloudSync = Boolean(currentUserId());
   return `
     <section class="card pad share-card">
       <div>
         <h3>Live Share</h3>
-        <p class="muted small">Share this code or link so another iPhone can watch live.</p>
+        <p class="muted small">${
+          canCloudSync
+            ? "Copy the link to enable read-only live viewing for this game."
+            : "Sign in to enable cloud sharing from another iPhone."
+        }</p>
       </div>
       <div class="share-code">${escapeHTML(normalized.shareCode)}</div>
-      <button class="btn neutral" type="button" data-action="copy-share-link">Copy Share Link</button>
+      <button class="btn neutral" type="button" data-action="copy-share-link" ${canCloudSync ? "" : "disabled"}>Copy Share Link</button>
       <p class="muted small">${escapeHTML(state.syncStatus)}</p>
     </section>
+  `;
+}
+
+function renderAccountCard() {
+  if (!supabaseClient) {
+    return `
+      <section class="card pad">
+        <h3>Parent Account</h3>
+        <p class="muted small">Supabase is not available, so this device is using local-only storage.</p>
+      </section>
+    `;
+  }
+
+  if (state.authUser) {
+    return `
+      <section class="card pad account-card">
+        <h3>Parent Account</h3>
+        <p class="muted small">${escapeHTML(userEmail())}</p>
+        <div class="account-actions">
+          <button class="btn neutral" type="button" data-action="sync-cloud-games">Sync Cloud Games</button>
+          <button class="btn secondary" type="button" data-action="sign-out">Sign Out</button>
+        </div>
+      </section>
+    `;
+  }
+
+  return `
+    <form class="card pad form-grid account-card" data-form="auth">
+      <h3>Parent Account</h3>
+      <p class="muted small">Sign in so each parent keeps their own players, games, and season dashboard separate.</p>
+      <div class="field">
+        <label for="authEmail">Email</label>
+        <input id="authEmail" name="email" type="email" autocomplete="email" required />
+      </div>
+      <div class="field">
+        <label for="authPassword">Password</label>
+        <input id="authPassword" name="password" type="password" autocomplete="current-password" minlength="6" required />
+      </div>
+      <div class="account-actions">
+        <button class="btn positive" type="submit" name="authAction" value="sign-in">Sign In</button>
+        <button class="btn secondary" type="submit" name="authAction" value="sign-up">Create Account</button>
+      </div>
+    </form>
   `;
 }
 
@@ -967,6 +1128,8 @@ function renderHome() {
     </section>
 
     <section class="stack">
+      ${renderAccountCard()}
+
       <div class="card pad">
         <h3>${escapeHTML(state.player.name || "Player")}${state.player.number ? ` #${escapeHTML(state.player.number)}` : ""}</h3>
         <p class="muted small">${escapeHTML([state.player.team, state.player.position].filter(Boolean).join(" - ") || "Add player details before the next game.")}</p>
@@ -1395,6 +1558,7 @@ function renderTotalsTable(totals) {
 }
 
 function renderPastGames() {
+  const games = visibleGames();
   return renderShell(`
     <section class="screen-title">
       <h2>Past Games</h2>
@@ -1414,8 +1578,8 @@ function renderPastGames() {
 
     <section class="card">
       ${
-        state.games.length
-          ? state.games.map(renderGameListRow).join("")
+        games.length
+          ? games.map(renderGameListRow).join("")
           : `<div class="empty">No saved games yet.</div>`
       }
     </section>
@@ -1556,6 +1720,10 @@ function handleSubmit(event) {
     showToast("Player settings saved");
   }
 
+  if (form.dataset.form === "auth") {
+    handleAuthSubmit(formData);
+  }
+
   if (form.dataset.form === "start-game") {
     if (state.activeGame && !window.confirm("Replace the current active game? Save it first if needed.")) {
       return;
@@ -1645,6 +1813,8 @@ function handleClick(event) {
     if (action.dataset.action === "export-csv") exportCSV();
     if (action.dataset.action === "export-json") exportJSON();
     if (action.dataset.action === "copy-share-link") copyShareLink();
+    if (action.dataset.action === "sign-out") signOut();
+    if (action.dataset.action === "sync-cloud-games") loadCloudGames();
     return;
   }
 
@@ -1713,12 +1883,29 @@ function registerServiceWorker() {
   });
 }
 
+async function initApp() {
+  if (supabaseClient) {
+    const { data } = await supabaseClient.auth.getSession();
+    state.authUser = data.session?.user || null;
+    state.syncStatus = state.authUser ? "Signed in" : "Sign in for cloud sync";
+    supabaseClient.auth.onAuthStateChange(async (_event, session) => {
+      state.authUser = session?.user || null;
+      state.syncStatus = state.authUser ? "Signed in" : "Signed out";
+      if (state.authUser) await loadCloudGames({ silent: true });
+      render();
+    });
+    if (state.authUser) await loadCloudGames({ silent: true });
+  }
+
+  if (startupShareCode) {
+    loadSharedGame(startupShareCode);
+  } else {
+    render();
+  }
+}
+
 document.addEventListener("submit", handleSubmit);
 document.addEventListener("click", handleClick);
 document.addEventListener("change", handleChange);
 registerServiceWorker();
-if (startupShareCode) {
-  loadSharedGame(startupShareCode);
-} else {
-  render();
-}
+initApp();

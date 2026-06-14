@@ -11,6 +11,7 @@ LaxHornet is a mobile-first offline PWA for tracking youth lacrosse stats during
 - Game Impact Score calculated from each event
 - Season totals and averages from saved games
 - Offline-ready `manifest.json` and service worker
+- Optional Supabase parent accounts so each parent keeps separate games
 - Optional Supabase Live Share with a share code/link for read-only real-time viewing
 
 ## Local Setup
@@ -44,7 +45,7 @@ The app uses relative paths (`./`) so it can run from a GitHub Pages project URL
 https://your-username.github.io/LaxHornet/
 ```
 
-## Supabase Live Share Setup
+## Supabase Multi-Parent Setup
 
 The app is configured for:
 
@@ -52,16 +53,18 @@ The app is configured for:
 https://ulbmjcvnyznvmjgpstno.supabase.co
 ```
 
-To create the database tables:
+To create or update the database tables:
 
 1. Open the Supabase project dashboard.
 2. Go to **SQL Editor**.
 3. Open `supabase-schema.sql` from this repo.
 4. Paste the full SQL into Supabase and run it.
-5. Start a new game in LaxHornet.
-6. Use the **Live Share** code or **Copy Share Link** button from the Live Game Tracker.
+5. In Supabase, open **Authentication > Providers** and make sure Email is enabled.
+6. Open LaxHornet and create a parent account from the Home screen.
+7. Start a new game.
+8. Use **Copy Share Link** from the Live Game Tracker when you want a read-only viewer link.
 
-The first schema uses public read/write policies so a no-login static GitHub Pages app can sync from iPhones. Use this only for stats you are comfortable sharing. A more secure owner/viewer-token or Supabase Auth setup can be added later.
+Games and events are private to the signed-in parent by default. Copying a share link marks that game as shared so family can watch it read-only from another iPhone.
 
 ## Stat Scoring
 
