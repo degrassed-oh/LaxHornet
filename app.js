@@ -690,8 +690,8 @@ function renderHome() {
   const active = state.activeGame;
 
   return renderShell(`
-    <section class="screen-title">
-      <h2>Game-day stats, fast.</h2>
+    <section class="screen-title home-title">
+      <h2>Fast stats for a fast game.</h2>
       <p>Track every play with big buttons, local saves, and season totals that work offline.</p>
     </section>
 
