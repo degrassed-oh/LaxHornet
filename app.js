@@ -1705,7 +1705,15 @@ function handleSubmit(event) {
   const form = event.target.closest("form");
   if (!form) return;
   event.preventDefault();
-  const formData = new FormData(form);
+  let formData;
+  try {
+    formData = event.submitter ? new FormData(form, event.submitter) : new FormData(form);
+  } catch {
+    formData = new FormData(form);
+  }
+  if (event.submitter?.name && !formData.has(event.submitter.name)) {
+    formData.set(event.submitter.name, event.submitter.value);
+  }
 
   if (form.dataset.form === "settings") {
     state.player = {
