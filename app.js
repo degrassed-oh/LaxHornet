@@ -8,23 +8,126 @@ const STORAGE_KEYS = {
 const QUARTERS = ["Q1", "Q2", "Q3", "Q4", "OT"];
 
 const STAT_DEFS = [
-  { key: "goal", label: "Goal", points: 5, tone: "positive" },
-  { key: "assist", label: "Assist", points: 4, tone: "positive" },
-  { key: "shot", label: "Shot", points: 1, tone: "neutral" },
-  { key: "shotOnGoal", label: "Shot on Goal", points: 2, tone: "positive" },
-  { key: "groundBall", label: "Ground Ball", points: 3, tone: "positive" },
-  { key: "turnover", label: "Turnover", points: -2, tone: "negative" },
-  { key: "causedTurnover", label: "Caused Turnover", points: 3, tone: "positive" },
-  { key: "defensiveStop", label: "Defensive Stop", points: 3, tone: "positive" },
-  { key: "successfulClear", label: "Successful Clear", points: 2, tone: "positive" },
-  { key: "failedClear", label: "Failed Clear", points: -2, tone: "negative" },
-  { key: "hustlePlay", label: "Hustle Play", points: 1, tone: "positive" },
-  { key: "smartPlay", label: "Smart Play", points: 1, tone: "positive" },
-  { key: "penalty", label: "Penalty", points: -2, tone: "negative" },
-  { key: "note", label: "Note", points: 0, tone: "neutral" },
+  { key: "goal", label: "Goal", points: 5, tone: "positive", category: "Offense" },
+  { key: "assist", label: "Assist", points: 4, tone: "positive", category: "Offense" },
+  { key: "shot", label: "Shot", points: 1, tone: "neutral", category: "Offense" },
+  { key: "shotOnGoal", label: "Shot on Goal", points: 2, tone: "positive", category: "Offense" },
+  { key: "groundBall", label: "Ground Ball", points: 3, tone: "positive", category: "Effort / IQ" },
+  { key: "turnover", label: "Turnover", points: -2, tone: "negative", category: "Possession" },
+  { key: "causedTurnover", label: "Caused Turnover", points: 3, tone: "positive", category: "Defense" },
+  { key: "defensiveStop", label: "Defensive Stop", points: 3, tone: "positive", category: "Defense" },
+  { key: "successfulClear", label: "Successful Clear", points: 2, tone: "positive", category: "Clearing" },
+  { key: "failedClear", label: "Failed Clear", points: -2, tone: "negative", category: "Clearing" },
+  { key: "hustlePlay", label: "Hustle Play", points: 1, tone: "positive", category: "Effort / IQ" },
+  { key: "backedUpShot", label: "Backed Up Shot", points: 2, tone: "positive", category: "Effort / IQ" },
+  { key: "smartPlay", label: "Smart Play", points: 1, tone: "positive", category: "Effort / IQ" },
+  { key: "penalty", label: "Penalty", points: -2, tone: "negative", category: "Discipline" },
+  { key: "note", label: "Note", points: 0, tone: "neutral", category: "Note" },
 ];
 
 const STAT_BY_KEY = Object.fromEntries(STAT_DEFS.map((stat) => [stat.key, stat]));
+
+const TAG_SUGGESTIONS = {
+  goal: [
+    "Left hand",
+    "Right hand",
+    "On the run",
+    "Time and room",
+    "Inside finish",
+    "Bad angle",
+    "Under pressure",
+    "Saved",
+    "Missed cage",
+    "Blocked",
+    "Pipe",
+  ],
+  shot: [
+    "Left hand",
+    "Right hand",
+    "On the run",
+    "Time and room",
+    "Inside finish",
+    "Bad angle",
+    "Under pressure",
+    "Saved",
+    "Missed cage",
+    "Blocked",
+    "Pipe",
+  ],
+  shotOnGoal: [
+    "Left hand",
+    "Right hand",
+    "On the run",
+    "Time and room",
+    "Inside finish",
+    "Bad angle",
+    "Under pressure",
+    "Saved",
+    "Missed cage",
+    "Blocked",
+    "Pipe",
+  ],
+  groundBall: [
+    "Contested",
+    "Uncontested",
+    "In traffic",
+    "Sideline",
+    "Faceoff wing",
+    "Defensive end",
+    "Offensive end",
+    "Scoop and move",
+    "Scoop but lost",
+  ],
+  turnover: [
+    "Bad pass",
+    "Dropped ball",
+    "Forced dodge",
+    "Double team",
+    "Poor decision",
+    "Pressure",
+    "Out of bounds",
+    "Failed catch",
+    "Sloppy cradle",
+  ],
+  backedUpShot: [
+    "Endline",
+    "Sideline",
+    "Hustle",
+    "Saved possession",
+    "Offensive end",
+    "Anticipated shot",
+    "Beat defender",
+    "Second effort",
+  ],
+  defensiveStop: [
+    "Good footwork",
+    "Forced weak hand",
+    "Stayed topside",
+    "Help defense",
+    "Recovery",
+    "Communication",
+    "Slide",
+    "Forced bad shot",
+  ],
+  causedTurnover: [
+    "Good footwork",
+    "Forced weak hand",
+    "Stayed topside",
+    "Help defense",
+    "Recovery",
+    "Communication",
+    "Slide",
+    "Forced bad shot",
+  ],
+  hustlePlay: [
+    "Chase down",
+    "Ride effort",
+    "Loose ball pressure",
+    "Sprint back",
+    "Second effort",
+    "Energy play",
+  ],
+};
 
 const DEFAULT_PLAYER = {
   name: "Your player",
@@ -43,8 +146,14 @@ const state = {
   activeGame: loadJSON(STORAGE_KEYS.activeGame, null),
   reviewGameId: loadJSON(STORAGE_KEYS.reviewGameId, null),
   editingEventId: null,
+  tagEditingEventId: null,
+  tagDraftTags: [],
   toast: "",
 };
+
+state.games = state.games.map(normalizeGame);
+state.activeGame = state.activeGame ? normalizeGame(state.activeGame) : null;
+persistAll();
 
 function loadJSON(key, fallback) {
   try {
@@ -92,6 +201,48 @@ function pointText(points) {
   return `${points}`;
 }
 
+function normalizeTag(tag) {
+  return String(tag || "").trim();
+}
+
+function uniqueTags(tags = []) {
+  return [...new Set(tags.map(normalizeTag).filter(Boolean))];
+}
+
+function normalizeEvent(event = {}, gameId = "") {
+  const stat = STAT_BY_KEY[event.statType] || {
+    key: event.statType || "note",
+    label: event.statLabel || "Note",
+    points: Number(event.pointValue || 0),
+    category: event.category || "Note",
+  };
+
+  return {
+    id: event.id || uid("event"),
+    gameId: event.gameId || gameId,
+    timestamp: event.timestamp || new Date().toISOString(),
+    quarter: event.quarter || "Q1",
+    statType: stat.key,
+    statLabel: event.statLabel || stat.label,
+    category: event.category || stat.category || "General",
+    pointValue: Number(event.pointValue ?? stat.points ?? 0),
+    tags: uniqueTags(event.tags),
+    note: event.note || "",
+    fieldZone: event.fieldZone || "",
+    correctedAt: event.correctedAt || null,
+    tagsUpdatedAt: event.tagsUpdatedAt || null,
+  };
+}
+
+function normalizeGame(game = {}) {
+  const id = game.id || uid("game");
+  return {
+    ...game,
+    id,
+    events: (game.events || []).map((event) => normalizeEvent(event, id)),
+  };
+}
+
 function persistAll() {
   saveJSON(STORAGE_KEYS.player, state.player);
   saveJSON(STORAGE_KEYS.games, state.games);
@@ -121,6 +272,7 @@ function navigate(screen) {
 }
 
 function upsertGame(game) {
+  game = normalizeGame(game);
   const index = state.games.findIndex((item) => item.id === game.id);
   if (index >= 0) {
     state.games[index] = { ...game };
@@ -131,13 +283,19 @@ function upsertGame(game) {
 }
 
 function saveReviewedGame(game, message = "Game updated") {
-  const updatedGame = { ...game, savedAt: new Date().toISOString() };
+  const updatedGame = normalizeGame({ ...game, savedAt: new Date().toISOString() });
   upsertGame(updatedGame);
   if (state.activeGame?.id === updatedGame.id) {
     state.activeGame = updatedGame;
   }
   persistAll();
   showToast(message);
+}
+
+function updateReviewGame(gameId, updater, message = "Game updated") {
+  const game = state.games.find((item) => item.id === gameId);
+  if (!game) return;
+  saveReviewedGame(updater(game), message);
 }
 
 function makeGame(formData) {
@@ -167,6 +325,9 @@ function calculateTotals(events = []) {
   const successfulClears = count("successfulClear");
   const failedClears = count("failedClear");
   const impact = events.reduce((sum, event) => sum + Number(event.pointValue || 0), 0);
+  const backedUpShots = count("backedUpShot");
+  const groundBalls = count("groundBall");
+  const hustlePlays = count("hustlePlay");
 
   return {
     impact,
@@ -178,13 +339,15 @@ function calculateTotals(events = []) {
     shotsOnGoal,
     shootingPct: shots ? goals / shots : 0,
     shotOnGoalPct: shots ? shotsOnGoal / shots : 0,
-    groundBalls: count("groundBall"),
+    groundBalls,
     turnovers: count("turnover"),
     causedTurnovers: count("causedTurnover"),
     defensiveStops: count("defensiveStop"),
     clears: successfulClears,
     failedClears,
-    hustlePlays: count("hustlePlay"),
+    hustlePlays,
+    backedUpShots,
+    effortScore: hustlePlays + groundBalls + backedUpShots,
     smartPlays: count("smartPlay"),
     penalties: count("penalty"),
     notes: count("note"),
@@ -217,6 +380,8 @@ function calculateSeasonTotals() {
       clears: 0,
       failedClears: 0,
       hustlePlays: 0,
+      backedUpShots: 0,
+      effortScore: 0,
       smartPlays: 0,
       penalties: 0,
       notes: 0,
@@ -264,12 +429,16 @@ function logEvent(statKey) {
 
   const event = {
     id: uid("event"),
+    gameId: state.activeGame.id,
+    timestamp: new Date().toISOString(),
+    quarter: state.activeGame.currentQuarter,
     statType: stat.key,
     statLabel: stat.label,
-    quarter: state.activeGame.currentQuarter,
-    timestamp: new Date().toISOString(),
-    note,
+    category: stat.category,
     pointValue: stat.points,
+    tags: [],
+    note,
+    fieldZone: "",
   };
 
   state.activeGame.events.push(event);
@@ -329,6 +498,151 @@ function deleteEvent(gameId, eventId) {
   if (state.editingEventId === eventId) state.editingEventId = null;
   saveReviewedGame(updatedGame, "Event deleted");
   render();
+}
+
+function beginTagEdit(eventId) {
+  const game = currentReviewGame();
+  const event = game?.events.find((item) => item.id === eventId);
+  if (!event) return;
+  state.tagEditingEventId = eventId;
+  state.tagDraftTags = uniqueTags(event.tags);
+  render();
+  document.querySelector("[data-tag-editor]")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function addDraftTag(tag) {
+  state.tagDraftTags = uniqueTags([...state.tagDraftTags, tag]);
+  render();
+  document.querySelector("[data-tag-editor]")?.scrollIntoView({ behavior: "auto", block: "start" });
+}
+
+function removeDraftTag(tag) {
+  state.tagDraftTags = uniqueTags(state.tagDraftTags).filter((item) => item !== normalizeTag(tag));
+  render();
+  document.querySelector("[data-tag-editor]")?.scrollIntoView({ behavior: "auto", block: "start" });
+}
+
+function saveEventTags(gameId, eventId) {
+  const tags = uniqueTags(state.tagDraftTags);
+  updateReviewGame(
+    gameId,
+    (game) => ({
+      ...game,
+      events: game.events.map((event) =>
+        event.id === eventId
+          ? {
+              ...event,
+              tags,
+              tagsUpdatedAt: new Date().toISOString(),
+            }
+          : event,
+      ),
+    }),
+    "Tags saved",
+  );
+  state.tagEditingEventId = null;
+  state.tagDraftTags = [];
+  render();
+}
+
+function csvEscape(value) {
+  const text = Array.isArray(value) ? value.join(" | ") : String(value ?? "");
+  return `"${text.replaceAll('"', '""')}"`;
+}
+
+function buildCSV() {
+  const headers = [
+    "gameId",
+    "gameDate",
+    "opponent",
+    "eventId",
+    "timestamp",
+    "quarter",
+    "statType",
+    "statLabel",
+    "category",
+    "pointValue",
+    "tags",
+    "note",
+    "fieldZone",
+  ];
+  const rows = state.games.flatMap((game) =>
+    normalizeGame(game).events.map((event) => [
+      game.id,
+      game.date,
+      game.opponent,
+      event.id,
+      event.timestamp,
+      event.quarter,
+      event.statType,
+      event.statLabel,
+      event.category,
+      event.pointValue,
+      event.tags,
+      event.note,
+      event.fieldZone,
+    ]),
+  );
+  return [headers, ...rows].map((row) => row.map(csvEscape).join(",")).join("\n");
+}
+
+function downloadFile(filename, content, type) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function exportCSV() {
+  downloadFile(`laxhornet-events-${todayISO()}.csv`, buildCSV(), "text/csv;charset=utf-8");
+  showToast("CSV exported");
+}
+
+function exportJSON() {
+  const payload = {
+    app: "LaxHornet",
+    version: 2,
+    exportedAt: new Date().toISOString(),
+    player: state.player,
+    games: state.games.map(normalizeGame),
+  };
+  downloadFile(
+    `laxhornet-backup-${todayISO()}.json`,
+    JSON.stringify(payload, null, 2),
+    "application/json;charset=utf-8",
+  );
+  showToast("JSON backup exported");
+}
+
+function importJSONFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.addEventListener("load", () => {
+    try {
+      const payload = JSON.parse(reader.result);
+      const importedGames = Array.isArray(payload) ? payload : payload.games;
+      if (!Array.isArray(importedGames)) throw new Error("Missing games array");
+
+      if (payload.player) state.player = { ...DEFAULT_PLAYER, ...payload.player };
+
+      const merged = new Map(state.games.map((game) => [game.id, normalizeGame(game)]));
+      importedGames.map(normalizeGame).forEach((game) => merged.set(game.id, game));
+      state.games = [...merged.values()].sort(
+        (a, b) => new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt),
+      );
+      persistAll();
+      render();
+      showToast("JSON backup imported");
+    } catch {
+      showToast("Could not import that JSON file");
+    }
+  });
+  reader.readAsText(file);
 }
 
 function setQuarter(quarter) {
@@ -550,18 +864,43 @@ function renderEventRow(event, options = {}) {
       <span class="badge">${escapeHTML(event.quarter)}</span>
       <span>
         <strong>${escapeHTML(event.statLabel)}</strong>
-        <p>${formatTime(event.timestamp)}${event.note ? ` - ${escapeHTML(event.note)}` : ""}</p>
+        <p>${formatTime(event.timestamp)} - ${escapeHTML(event.category || "General")}${event.note ? ` - ${escapeHTML(event.note)}` : ""}</p>
+        ${renderTagChips(event.tags)}
       </span>
       <span class="score">${pointText(event.pointValue)}</span>
       ${
         options.editable
           ? `<span class="event-actions">
               <button class="mini-btn" type="button" data-edit-event="${event.id}">Edit</button>
+              <button class="mini-btn tag" type="button" data-edit-tags="${event.id}">Add/Edit Tags</button>
               <button class="mini-btn danger" type="button" data-delete-event="${event.id}" data-game-id="${options.gameId}">Delete</button>
             </span>`
           : ""
       }
     </div>
+  `;
+}
+
+function renderTagChips(tags = [], options = {}) {
+  const cleanTags = uniqueTags(tags);
+  if (!cleanTags.length) return "";
+  return `
+    <span class="tag-chip-list">
+      ${cleanTags
+        .map(
+          (tag) => `
+            <span class="tag-chip">
+              ${escapeHTML(tag)}
+              ${
+                options.removable
+                  ? `<button class="tag-remove" type="button" data-remove-draft-tag="${escapeHTML(tag)}" aria-label="Remove ${escapeHTML(tag)}">x</button>`
+                  : ""
+              }
+            </span>
+          `,
+        )
+        .join("")}
+    </span>
   `;
 }
 
@@ -599,6 +938,51 @@ function renderEventEditForm(game, event) {
   `;
 }
 
+function suggestedTagsForEvent(event) {
+  return TAG_SUGGESTIONS[event.statType] || [];
+}
+
+function renderTagEditor(game, event) {
+  const selectedTags = uniqueTags(state.tagDraftTags);
+  const suggestedTags = suggestedTagsForEvent(event).filter((tag) => !selectedTags.includes(tag));
+
+  return `
+    <section class="card pad tag-editor" data-tag-editor="${event.id}">
+      <h3>Edit Tags</h3>
+      <p class="muted small">${escapeHTML(event.statLabel)} - ${escapeHTML(event.category || "General")} - ${formatTime(event.timestamp)}</p>
+      <div class="tag-editor-block">
+        <strong class="tag-editor-label">Selected tags</strong>
+        ${
+          selectedTags.length
+            ? renderTagChips(selectedTags, { removable: true })
+            : `<p class="muted small">No tags selected yet.</p>`
+        }
+      </div>
+      <div class="tag-editor-block">
+        <strong class="tag-editor-label">Suggested tags</strong>
+        ${
+          suggestedTags.length
+            ? `<div class="tag-suggestions">${suggestedTags
+                .map((tag) => `<button class="tag-suggestion" type="button" data-add-draft-tag="${escapeHTML(tag)}">${escapeHTML(tag)}</button>`)
+                .join("")}</div>`
+            : `<p class="muted small">No suggestions for this event type.</p>`
+        }
+      </div>
+      <form class="custom-tag-form" data-form="custom-tag">
+        <div class="field">
+          <label for="customTag">Custom tag</label>
+          <input id="customTag" name="customTag" placeholder="Add your own tag" />
+        </div>
+        <button class="btn neutral" type="submit">Add Tag</button>
+      </form>
+      <div class="edit-actions">
+        <button class="btn positive" type="button" data-action="save-tags" data-game-id="${game.id}" data-event-id="${event.id}">Save Tag Changes</button>
+        <button class="btn secondary" type="button" data-action="cancel-tags">Cancel</button>
+      </div>
+    </section>
+  `;
+}
+
 function renderReview() {
   const game = currentReviewGame();
   if (!game) {
@@ -615,6 +999,9 @@ function renderReview() {
   const editingEvent = state.editingEventId
     ? game.events.find((event) => event.id === state.editingEventId)
     : null;
+  const tagEditingEvent = state.tagEditingEventId
+    ? game.events.find((event) => event.id === state.tagEditingEventId)
+    : null;
   return renderShell(`
     <section class="screen-title">
       <h2>Game Review</h2>
@@ -630,6 +1017,7 @@ function renderReview() {
       </div>
       ${renderTotalsTable(totals)}
       ${editingEvent ? renderEventEditForm(game, editingEvent) : ""}
+      ${tagEditingEvent ? renderTagEditor(game, tagEditingEvent) : ""}
       <div class="card pad">
         <h3>Event Log</h3>
         ${
@@ -652,6 +1040,8 @@ function renderTotalsTable(totals) {
     ["Shooting %", pct(totals.shootingPct)],
     ["Shot on goal %", pct(totals.shotOnGoalPct)],
     ["Ground balls", totals.groundBalls],
+    ["Backed up shots", totals.backedUpShots],
+    ["Effort score", totals.effortScore],
     ["Turnovers", totals.turnovers],
     ["Caused turnovers", totals.causedTurnovers],
     ["Defensive stops", totals.defensiveStops],
@@ -679,6 +1069,17 @@ function renderPastGames() {
     <section class="screen-title">
       <h2>Past Games</h2>
       <p>Saved games stay on this device and can be reviewed or deleted.</p>
+    </section>
+
+    <section class="card pad export-card">
+      <h3>Backup & Export</h3>
+      <p class="muted small">Exports include event tags, notes, categories, and impact values.</p>
+      <div class="export-actions">
+        <button class="btn neutral" type="button" data-action="export-csv">Export CSV</button>
+        <button class="btn neutral" type="button" data-action="export-json">Export JSON</button>
+        <label class="btn secondary import-label" for="jsonImport">Import JSON</label>
+        <input class="import-input" id="jsonImport" type="file" accept="application/json,.json" data-import-json />
+      </div>
     </section>
 
     <section class="card">
@@ -724,6 +1125,7 @@ function renderDashboard() {
         <div class="metric"><strong>${totals.goals}</strong><span>Goals</span></div>
         <div class="metric"><strong>${totals.assists}</strong><span>Assists</span></div>
         <div class="metric"><strong>${totals.points}</strong><span>Points</span></div>
+        <div class="metric"><strong>${totals.effortScore}</strong><span>Effort Score</span></div>
         <div class="metric"><strong>${pct(totals.shootingPct)}</strong><span>Shooting %</span></div>
       </div>
       ${renderTotalsTable(totals)}
@@ -763,6 +1165,16 @@ function renderHelp() {
       <div class="card pad">
         <h3>Points vs Impact</h3>
         <p class="muted small">Lacrosse points are goals plus assists. Impact Score is broader: it also counts ground balls, clears, defensive stops, hustle plays, smart plays, and mistakes.</p>
+      </div>
+
+      <div class="card pad">
+        <h3>Backed Up Shot</h3>
+        <p class="muted small">A Backed Up Shot is when the player hustles to the endline or sideline to retain possession after a shot. It adds +2 to Game Impact Score.</p>
+      </div>
+
+      <div class="card pad">
+        <h3>Effort Score</h3>
+        <p class="muted small">Effort Score is Hustle Plays plus Ground Balls plus Backed Up Shots. It is a simple count of extra-possession effort plays.</p>
       </div>
 
       <div class="card table-card">
@@ -840,13 +1252,21 @@ function handleSubmit(event) {
       statLabel: stat.label,
       quarter: formData.get("quarter") || updatedEvents[eventIndex].quarter,
       note: formData.get("note")?.trim() || "",
+      category: stat.category,
       pointValue: stat.points,
+      tags: uniqueTags(updatedEvents[eventIndex].tags),
+      fieldZone: updatedEvents[eventIndex].fieldZone || "",
       correctedAt: new Date().toISOString(),
     };
 
     state.editingEventId = null;
     saveReviewedGame({ ...game, events: updatedEvents }, "Event corrected");
     render();
+  }
+
+  if (form.dataset.form === "custom-tag") {
+    const tag = formData.get("customTag")?.trim();
+    if (tag) addDraftTag(tag);
   }
 }
 
@@ -878,14 +1298,45 @@ function handleClick(event) {
       state.editingEventId = null;
       render();
     }
+    if (action.dataset.action === "cancel-tags") {
+      state.tagEditingEventId = null;
+      state.tagDraftTags = [];
+      render();
+    }
+    if (action.dataset.action === "save-tags") {
+      saveEventTags(action.dataset.gameId, action.dataset.eventId);
+    }
+    if (action.dataset.action === "export-csv") exportCSV();
+    if (action.dataset.action === "export-json") exportJSON();
     return;
   }
 
   const editEvent = event.target.closest("[data-edit-event]");
   if (editEvent) {
     state.editingEventId = editEvent.dataset.editEvent;
+    state.tagEditingEventId = null;
+    state.tagDraftTags = [];
     render();
     document.querySelector(".edit-event-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    return;
+  }
+
+  const editTags = event.target.closest("[data-edit-tags]");
+  if (editTags) {
+    state.editingEventId = null;
+    beginTagEdit(editTags.dataset.editTags);
+    return;
+  }
+
+  const addDraftTagButton = event.target.closest("[data-add-draft-tag]");
+  if (addDraftTagButton) {
+    addDraftTag(addDraftTagButton.dataset.addDraftTag);
+    return;
+  }
+
+  const removeDraftTagButton = event.target.closest("[data-remove-draft-tag]");
+  if (removeDraftTagButton) {
+    removeDraftTag(removeDraftTagButton.dataset.removeDraftTag);
     return;
   }
 
@@ -909,6 +1360,13 @@ function handleClick(event) {
   }
 }
 
+function handleChange(event) {
+  const input = event.target.closest("[data-import-json]");
+  if (!input) return;
+  importJSONFile(input.files?.[0]);
+  input.value = "";
+}
+
 function registerServiceWorker() {
   if (!("serviceWorker" in navigator)) return;
   window.addEventListener("load", () => {
@@ -920,5 +1378,6 @@ function registerServiceWorker() {
 
 document.addEventListener("submit", handleSubmit);
 document.addEventListener("click", handleClick);
+document.addEventListener("change", handleChange);
 registerServiceWorker();
 render();

@@ -16,6 +16,8 @@
   --negative-dark: #aa3d14;
   --danger: #cf2f33;
   --warning: #ec8b22;
+  --hornet-yellow: #f5b532;
+  --hornet-yellow-soft: #fff2bf;
   --shadow: 0 16px 36px rgba(0, 0, 0, 0.32);
   --radius: 8px;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -544,8 +546,116 @@ button:disabled {
   background: var(--danger);
 }
 
+.mini-btn.tag {
+  color: #111317;
+  background: var(--hornet-yellow);
+}
+
 .edit-event-form {
   border-color: rgba(17, 132, 71, 0.32);
+}
+
+.tag-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  max-width: 100%;
+  padding: 5px 8px;
+  border: 1px solid rgba(17, 19, 23, 0.16);
+  border-radius: 999px;
+  color: #111317;
+  background: var(--hornet-yellow-soft);
+  font-size: 0.78rem;
+  font-weight: 900;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+
+.tag-remove {
+  display: inline-grid;
+  width: 22px;
+  height: 22px;
+  margin-left: 6px;
+  place-items: center;
+  border-radius: 999px;
+  color: #ffffff;
+  background: #111317;
+  font-size: 0.82rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.tag-editor {
+  border-color: rgba(245, 181, 50, 0.72);
+  box-shadow: 0 0 0 2px rgba(245, 181, 50, 0.14);
+}
+
+.tag-editor-block {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.tag-editor-label {
+  color: var(--text);
+  font-size: 0.82rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.tag-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tag-suggestion {
+  min-height: 40px;
+  padding: 9px 12px;
+  border: 1px solid rgba(17, 19, 23, 0.14);
+  border-radius: 999px;
+  color: #111317;
+  background: #ffffff;
+  font-size: 0.88rem;
+  font-weight: 900;
+}
+
+.custom-tag-form {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.export-card {
+  margin-bottom: 12px;
+}
+
+.export-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.import-label {
+  display: grid;
+  place-items: center;
+}
+
+.import-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .edit-actions {
