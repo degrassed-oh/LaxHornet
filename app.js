@@ -17,6 +17,8 @@ const STAT_DEFS = [
   { key: "assist", label: "Assist", points: 4, tone: "positive", category: "Offense" },
   { key: "shot", label: "Shot", points: 1, tone: "neutral", category: "Offense" },
   { key: "shotOnGoal", label: "Shot on Goal", points: 2, tone: "positive", category: "Offense" },
+  { key: "goalieSave", label: "Save", points: 3, tone: "goalieSave", category: "Goalie" },
+  { key: "goalAllowed", label: "Goal Allowed", points: -2, tone: "goalieAllowed", category: "Goalie" },
   { key: "groundBall", label: "Ground Ball", points: 3, tone: "positive", category: "Effort / IQ" },
   { key: "turnover", label: "Turnover", points: -2, tone: "negative", category: "Possession" },
   { key: "causedTurnover", label: "Caused Turnover", points: 3, tone: "positive", category: "Defense" },
@@ -71,6 +73,28 @@ const TAG_SUGGESTIONS = {
     "Missed cage",
     "Blocked",
     "Pipe",
+  ],
+  goalieSave: [
+    "High",
+    "Low",
+    "Off stick",
+    "Stick side",
+    "Doorstep",
+    "Outside shot",
+    "Step-down",
+    "Rebound controlled",
+    "Cleared after save",
+  ],
+  goalAllowed: [
+    "Inside finish",
+    "Outside shot",
+    "Screened",
+    "Fast break",
+    "Man-down",
+    "Rebound",
+    "Pipe and in",
+    "Backside",
+    "Under pressure",
   ],
   groundBall: [
     "Contested",
@@ -372,6 +396,8 @@ function calculateTotals(events = []) {
   const successfulClears = count("successfulClear");
   const failedClears = count("failedClear");
   const impact = events.reduce((sum, event) => sum + Number(event.pointValue || 0), 0);
+  const saves = count("goalieSave");
+  const goalsAllowed = count("goalAllowed");
   const backedUpShots = count("backedUpShot");
   const groundBalls = count("groundBall");
   const hustlePlays = count("hustlePlay");
@@ -384,6 +410,9 @@ function calculateTotals(events = []) {
     points: goals + assists,
     shots,
     shotsOnGoal,
+    saves,
+    goalsAllowed,
+    savePct: saves + goalsAllowed ? saves / (saves + goalsAllowed) : 0,
     shootingPct: shots ? goals / shots : 0,
     shotOnGoalPct: shots ? shotsOnGoal / shots : 0,
     groundBalls,
@@ -420,6 +449,8 @@ function calculateSeasonTotals() {
       points: 0,
       shots: 0,
       shotsOnGoal: 0,
+      saves: 0,
+      goalsAllowed: 0,
       groundBalls: 0,
       turnovers: 0,
       causedTurnovers: 0,
@@ -437,6 +468,7 @@ function calculateSeasonTotals() {
 
   totals.shootingPct = totals.shots ? totals.goals / totals.shots : 0;
   totals.shotOnGoalPct = totals.shots ? totals.shotsOnGoal / totals.shots : 0;
+  totals.savePct = totals.saves + totals.goalsAllowed ? totals.saves / (totals.saves + totals.goalsAllowed) : 0;
   totals.averageImpact = totals.gamesPlayed ? totals.impact / totals.gamesPlayed : 0;
   return totals;
 }
@@ -1548,6 +1580,9 @@ function renderTotalsTable(totals) {
     ["Shots on goal", totals.shotsOnGoal],
     ["Shooting %", pct(totals.shootingPct)],
     ["Shot on goal %", pct(totals.shotOnGoalPct)],
+    ["Saves", totals.saves],
+    ["Goals allowed", totals.goalsAllowed],
+    ["Save %", pct(totals.savePct)],
     ["Ground balls", totals.groundBalls],
     ["Backed up shots", totals.backedUpShots],
     ["Effort score", totals.effortScore],
@@ -1635,6 +1670,7 @@ function renderDashboard() {
         <div class="metric"><strong>${totals.goals}</strong><span>Goals</span></div>
         <div class="metric"><strong>${totals.assists}</strong><span>Assists</span></div>
         <div class="metric"><strong>${totals.points}</strong><span>Points</span></div>
+        <div class="metric"><strong>${totals.saves}</strong><span>Saves</span></div>
         <div class="metric"><strong>${totals.effortScore}</strong><span>Effort Score</span></div>
         <div class="metric"><strong>${pct(totals.shootingPct)}</strong><span>Shooting %</span></div>
       </div>

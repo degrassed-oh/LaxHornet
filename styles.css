@@ -14,6 +14,10 @@
   --neutral-dark: #232a31;
   --negative: #d85a24;
   --negative-dark: #aa3d14;
+  --goalie-save: #007f8a;
+  --goalie-save-dark: #00535d;
+  --goalie-allowed: #7a3db8;
+  --goalie-allowed-dark: #4e2578;
   --danger: #cf2f33;
   --warning: #ec8b22;
   --hornet-yellow: #f5b532;
@@ -313,6 +317,14 @@ button:disabled {
   background: linear-gradient(180deg, var(--negative), var(--negative-dark));
 }
 
+.stat-button.goalieSave {
+  background: linear-gradient(180deg, var(--goalie-save), var(--goalie-save-dark));
+}
+
+.stat-button.goalieAllowed {
+  background: linear-gradient(180deg, var(--goalie-allowed), var(--goalie-allowed-dark));
+}
+
 .btn.danger {
   background: linear-gradient(180deg, var(--danger), #9e2025);
 }
@@ -509,6 +521,14 @@ button:disabled {
 
 .event-row.negative .badge {
   background: var(--negative);
+}
+
+.event-row.goalieSave .badge {
+  background: var(--goalie-save);
+}
+
+.event-row.goalieAllowed .badge {
+  background: var(--goalie-allowed);
 }
 
 .event-row strong {

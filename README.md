@@ -70,6 +70,7 @@ Games and events are private to the signed-in parent by default. Copying a share
 
 - Goal: +5
 - Assist: +4
+- Save: +3
 - Shot on Goal: +2
 - Shot: +1
 - Ground Ball: +3
@@ -80,6 +81,7 @@ Games and events are private to the signed-in parent by default. Copying a share
 - Smart Play: +1
 - Turnover: -2
 - Failed Clear: -2
+- Goal Allowed: -2
 - Penalty: -2
 - Note: 0
 
