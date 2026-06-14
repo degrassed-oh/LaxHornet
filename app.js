@@ -1128,8 +1128,6 @@ function renderHome() {
     </section>
 
     <section class="stack">
-      ${renderAccountCard()}
-
       <div class="card pad">
         <h3>${escapeHTML(state.player.name || "Player")}${state.player.number ? ` #${escapeHTML(state.player.number)}` : ""}</h3>
         <p class="muted small">${escapeHTML([state.player.team, state.player.position].filter(Boolean).join(" - ") || "Add player details before the next game.")}</p>
@@ -1142,15 +1140,6 @@ function renderHome() {
         <div class="metric"><strong>${season.averageImpact.toFixed(1)}</strong><span>Avg Impact</span></div>
       </div>
 
-      <form class="card pad form-grid share-watch-form" data-form="watch-share">
-        <h3>Watch Shared Game</h3>
-        <div class="field">
-          <label for="shareCode">Share code</label>
-          <input id="shareCode" name="shareCode" value="${escapeHTML(state.sharedCode)}" placeholder="ABC123" autocapitalize="characters" />
-        </div>
-        <button class="btn neutral" type="submit">Watch Live</button>
-      </form>
-
       <div class="action-grid">
         ${
           active
@@ -1161,6 +1150,17 @@ function renderHome() {
         <button class="btn secondary" type="button" data-nav="past">Past Games</button>
         <button class="btn secondary" type="button" data-nav="settings">Player Settings</button>
       </div>
+
+      ${renderAccountCard()}
+
+      <form class="card pad form-grid share-watch-form" data-form="watch-share">
+        <h3>Watch Shared Game</h3>
+        <div class="field">
+          <label for="shareCode">Share code</label>
+          <input id="shareCode" name="shareCode" value="${escapeHTML(state.sharedCode)}" placeholder="ABC123" autocapitalize="characters" />
+        </div>
+        <button class="btn neutral" type="submit">Watch Live</button>
+      </form>
     </section>
   `);
 }
