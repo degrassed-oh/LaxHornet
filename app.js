@@ -42,6 +42,7 @@ const state = {
   games: loadJSON(STORAGE_KEYS.games, []),
   activeGame: loadJSON(STORAGE_KEYS.activeGame, null),
   reviewGameId: loadJSON(STORAGE_KEYS.reviewGameId, null),
+  editingEventId: null,
   toast: "",
 };
 
@@ -127,6 +128,16 @@ function upsertGame(game) {
     state.games.unshift({ ...game });
   }
   state.games.sort((a, b) => new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt));
+}
+
+function saveReviewedGame(game, message = "Game updated") {
+  const updatedGame = { ...game, savedAt: new Date().toISOString() };
+  upsertGame(updatedGame);
+  if (state.activeGame?.id === updatedGame.id) {
+    state.activeGame = updatedGame;
+  }
+  persistAll();
+  showToast(message);
 }
 
 function makeGame(formData) {
@@ -302,6 +313,22 @@ function deleteGame(id) {
   persistAll();
   render();
   showToast("Game deleted");
+}
+
+function deleteEvent(gameId, eventId) {
+  const game = state.games.find((item) => item.id === gameId);
+  if (!game) return;
+  const event = game.events.find((item) => item.id === eventId);
+  if (!event) return;
+  if (!window.confirm(`Delete ${event.statLabel}?`)) return;
+
+  const updatedGame = {
+    ...game,
+    events: game.events.filter((item) => item.id !== eventId),
+  };
+  if (state.editingEventId === eventId) state.editingEventId = null;
+  saveReviewedGame(updatedGame, "Event deleted");
+  render();
 }
 
 function setQuarter(quarter) {
@@ -516,7 +543,7 @@ function renderLiveTracker() {
   `, { hideNav: true });
 }
 
-function renderEventRow(event) {
+function renderEventRow(event, options = {}) {
   const stat = STAT_BY_KEY[event.statType] || { tone: "neutral" };
   return `
     <div class="event-row ${stat.tone}">
@@ -526,7 +553,49 @@ function renderEventRow(event) {
         <p>${formatTime(event.timestamp)}${event.note ? ` - ${escapeHTML(event.note)}` : ""}</p>
       </span>
       <span class="score">${pointText(event.pointValue)}</span>
+      ${
+        options.editable
+          ? `<span class="event-actions">
+              <button class="mini-btn" type="button" data-edit-event="${event.id}">Edit</button>
+              <button class="mini-btn danger" type="button" data-delete-event="${event.id}" data-game-id="${options.gameId}">Delete</button>
+            </span>`
+          : ""
+      }
     </div>
+  `;
+}
+
+function renderEventEditForm(game, event) {
+  const statOptions = STAT_DEFS.map(
+    (stat) =>
+      `<option value="${stat.key}" ${event.statType === stat.key ? "selected" : ""}>${stat.label} (${pointText(stat.points)})</option>`,
+  ).join("");
+  const quarterOptions = QUARTERS.map(
+    (quarter) => `<option value="${quarter}" ${event.quarter === quarter ? "selected" : ""}>${quarter}</option>`,
+  ).join("");
+
+  return `
+    <form class="card pad form-grid edit-event-form" data-form="event-edit" data-game-id="${game.id}" data-event-id="${event.id}">
+      <h3>Edit Event</h3>
+      <div class="form-grid two">
+        <div class="field">
+          <label for="editStat">Stat type</label>
+          <select id="editStat" name="statType">${statOptions}</select>
+        </div>
+        <div class="field">
+          <label for="editQuarter">Quarter</label>
+          <select id="editQuarter" name="quarter">${quarterOptions}</select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="editNote">Note</label>
+        <textarea id="editNote" name="note" placeholder="Optional correction note">${escapeHTML(event.note || "")}</textarea>
+      </div>
+      <div class="edit-actions">
+        <button class="btn positive" type="submit">Save Correction</button>
+        <button class="btn secondary" type="button" data-action="cancel-edit-event">Cancel</button>
+      </div>
+    </form>
   `;
 }
 
@@ -543,6 +612,9 @@ function renderReview() {
   }
 
   const totals = calculateTotals(game.events);
+  const editingEvent = state.editingEventId
+    ? game.events.find((event) => event.id === state.editingEventId)
+    : null;
   return renderShell(`
     <section class="screen-title">
       <h2>Game Review</h2>
@@ -557,11 +629,15 @@ function renderReview() {
         <div class="metric"><strong>${totals.assists}</strong><span>Assists</span></div>
       </div>
       ${renderTotalsTable(totals)}
+      ${editingEvent ? renderEventEditForm(game, editingEvent) : ""}
       <div class="card pad">
         <h3>Event Log</h3>
         ${
           game.events.length
-            ? `<div class="event-list">${[...game.events].reverse().map(renderEventRow).join("")}</div>`
+            ? `<div class="event-list">${[...game.events]
+                .reverse()
+                .map((event) => renderEventRow(event, { editable: true, gameId: game.id }))
+                .join("")}</div>`
             : `<p class="muted small">No events were logged for this game.</p>`
         }
       </div>
@@ -747,6 +823,31 @@ function handleSubmit(event) {
     navigate("live");
     showToast("Live game started");
   }
+
+  if (form.dataset.form === "event-edit") {
+    const game = state.games.find((item) => item.id === form.dataset.gameId);
+    if (!game) return;
+    const eventIndex = game.events.findIndex((item) => item.id === form.dataset.eventId);
+    if (eventIndex < 0) return;
+
+    const stat = STAT_BY_KEY[formData.get("statType")];
+    if (!stat) return;
+
+    const updatedEvents = [...game.events];
+    updatedEvents[eventIndex] = {
+      ...updatedEvents[eventIndex],
+      statType: stat.key,
+      statLabel: stat.label,
+      quarter: formData.get("quarter") || updatedEvents[eventIndex].quarter,
+      note: formData.get("note")?.trim() || "",
+      pointValue: stat.points,
+      correctedAt: new Date().toISOString(),
+    };
+
+    state.editingEventId = null;
+    saveReviewedGame({ ...game, events: updatedEvents }, "Event corrected");
+    render();
+  }
 }
 
 function handleClick(event) {
@@ -773,6 +874,24 @@ function handleClick(event) {
     if (action.dataset.action === "undo") undoLastEvent();
     if (action.dataset.action === "save-game") saveActiveGame();
     if (action.dataset.action === "end-game") endGame();
+    if (action.dataset.action === "cancel-edit-event") {
+      state.editingEventId = null;
+      render();
+    }
+    return;
+  }
+
+  const editEvent = event.target.closest("[data-edit-event]");
+  if (editEvent) {
+    state.editingEventId = editEvent.dataset.editEvent;
+    render();
+    document.querySelector(".edit-event-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    return;
+  }
+
+  const deleteEventButton = event.target.closest("[data-delete-event]");
+  if (deleteEventButton) {
+    deleteEvent(deleteEventButton.dataset.gameId, deleteEventButton.dataset.deleteEvent);
     return;
   }
 

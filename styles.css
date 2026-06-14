@@ -523,6 +523,37 @@ button:disabled {
   font-weight: 900;
 }
 
+.event-actions {
+  display: flex;
+  grid-column: 1 / -1;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.mini-btn {
+  min-height: 36px;
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  color: #ffffff;
+  background: var(--neutral);
+  font-size: 0.84rem;
+  font-weight: 900;
+}
+
+.mini-btn.danger {
+  background: var(--danger);
+}
+
+.edit-event-form {
+  border-color: rgba(17, 132, 71, 0.32);
+}
+
+.edit-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
 .list-row {
   display: grid;
   grid-template-columns: 1fr auto;
@@ -666,6 +697,10 @@ button:disabled {
 
   .form-grid.two {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .edit-actions {
+    grid-template-columns: 1fr 1fr;
   }
 }
 
