@@ -639,6 +639,31 @@ button:disabled {
   margin-top: 14px;
 }
 
+.share-card {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0;
+  border-color: rgba(245, 181, 50, 0.58);
+}
+
+.share-card h3,
+.share-watch-form h3 {
+  margin: 0;
+}
+
+.share-code {
+  display: inline-grid;
+  min-height: 46px;
+  place-items: center;
+  border: 2px dashed rgba(17, 19, 23, 0.24);
+  border-radius: var(--radius);
+  color: #111317;
+  background: var(--hornet-yellow-soft);
+  font-size: 1.5rem;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
 .export-card {
   margin-bottom: 12px;
 }

@@ -5,6 +5,11 @@ const STORAGE_KEYS = {
   reviewGameId: "laxhornet.reviewGameId",
 };
 
+const SUPABASE_CONFIG = {
+  url: "https://ulbmjcvnyznvmjgpstno.supabase.co",
+  publishableKey: "sb_publishable_-RUc79OPosRLNP5B6JIH2A_f3I_2A0M",
+};
+
 const QUARTERS = ["Q1", "Q2", "Q3", "Q4", "OT"];
 
 const STAT_DEFS = [
@@ -138,6 +143,14 @@ const DEFAULT_PLAYER = {
 };
 
 const app = document.querySelector("#app");
+const startupShareCode = new URLSearchParams(window.location.search).get("share")?.trim().toUpperCase() || "";
+const supabaseClient =
+  window.supabase?.createClient && SUPABASE_CONFIG.url && SUPABASE_CONFIG.publishableKey
+    ? window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.publishableKey)
+    : null;
+
+let sharedGameChannel = null;
+let lastSyncErrorAt = 0;
 
 const state = {
   screen: "home",
@@ -145,6 +158,9 @@ const state = {
   games: loadJSON(STORAGE_KEYS.games, []),
   activeGame: loadJSON(STORAGE_KEYS.activeGame, null),
   reviewGameId: loadJSON(STORAGE_KEYS.reviewGameId, null),
+  sharedGame: null,
+  sharedCode: startupShareCode,
+  syncStatus: supabaseClient ? "Live Share ready" : "Live Share unavailable",
   editingEventId: null,
   tagEditingEventId: null,
   tagDraftTags: [],
@@ -170,6 +186,10 @@ function saveJSON(key, value) {
 
 function uid(prefix = "id") {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function makeShareCode() {
+  return Math.random().toString(36).slice(2, 8).toUpperCase();
 }
 
 function todayISO() {
@@ -239,6 +259,7 @@ function normalizeGame(game = {}) {
   return {
     ...game,
     id,
+    shareCode: game.shareCode || game.share_code || makeShareCode(),
     events: (game.events || []).map((event) => normalizeEvent(event, id)),
   };
 }
@@ -289,6 +310,7 @@ function saveReviewedGame(game, message = "Game updated") {
     state.activeGame = updatedGame;
   }
   persistAll();
+  syncGameToSupabase(updatedGame, { includeEvents: true });
   showToast(message);
 }
 
@@ -301,6 +323,7 @@ function updateReviewGame(gameId, updater, message = "Game updated") {
 function makeGame(formData) {
   return {
     id: uid("game"),
+    shareCode: makeShareCode(),
     opponent: formData.get("opponent")?.trim() || "Opponent",
     date: formData.get("date") || todayISO(),
     location: formData.get("location")?.trim() || "",
@@ -410,6 +433,7 @@ function saveActiveGame(message = "Game saved locally") {
   state.activeGame.savedAt = new Date().toISOString();
   upsertGame(state.activeGame);
   persistAll();
+  syncGameToSupabase(state.activeGame, { includeEvents: true });
   showToast(message);
 }
 
@@ -444,6 +468,7 @@ function logEvent(statKey) {
   state.activeGame.events.push(event);
   state.activeGame.savedAt = new Date().toISOString();
   persistAll();
+  syncLoggedEvent(state.activeGame, event);
   render();
   showToast(`${stat.label} logged (${pointText(stat.points)})`);
 }
@@ -456,6 +481,8 @@ function undoLastEvent() {
   const removed = state.activeGame.events.pop();
   state.activeGame.savedAt = new Date().toISOString();
   persistAll();
+  deleteSupabaseEvent(removed.id);
+  syncGameToSupabase(state.activeGame);
   render();
   showToast(`Undid ${removed.statLabel}`);
 }
@@ -465,10 +492,12 @@ function endGame() {
   state.activeGame.status = "complete";
   state.activeGame.endedAt = new Date().toISOString();
   state.activeGame.savedAt = new Date().toISOString();
+  const completedGame = normalizeGame(state.activeGame);
   upsertGame(state.activeGame);
   state.reviewGameId = state.activeGame.id;
   state.activeGame = null;
   persistAll();
+  syncGameToSupabase(completedGame, { includeEvents: true });
   navigate("review");
   showToast("Game ended and saved");
 }
@@ -480,6 +509,7 @@ function deleteGame(id) {
   state.games = state.games.filter((item) => item.id !== id);
   if (state.reviewGameId === id) state.reviewGameId = state.games[0]?.id || null;
   persistAll();
+  deleteSupabaseGame(id);
   render();
   showToast("Game deleted");
 }
@@ -496,6 +526,7 @@ function deleteEvent(gameId, eventId) {
     events: game.events.filter((item) => item.id !== eventId),
   };
   if (state.editingEventId === eventId) state.editingEventId = null;
+  deleteSupabaseEvent(eventId);
   saveReviewedGame(updatedGame, "Event deleted");
   render();
 }
@@ -645,10 +676,235 @@ function importJSONFile(file) {
   reader.readAsText(file);
 }
 
+function gameToSupabaseRow(game) {
+  const normalized = normalizeGame(game);
+  return {
+    id: normalized.id,
+    share_code: normalized.shareCode,
+    opponent: normalized.opponent,
+    game_date: normalized.date,
+    location: normalized.location || "",
+    game_type: normalized.gameType || "",
+    player_snapshot: normalized.playerSnapshot || {},
+    current_quarter: normalized.currentQuarter || "Q1",
+    status: normalized.status || "in-progress",
+    created_at: normalized.createdAt || new Date().toISOString(),
+    saved_at: normalized.savedAt || null,
+    ended_at: normalized.endedAt || null,
+  };
+}
+
+function eventToSupabaseRow(event) {
+  const normalized = normalizeEvent(event, event.gameId);
+  return {
+    id: normalized.id,
+    game_id: normalized.gameId,
+    timestamp: normalized.timestamp,
+    quarter: normalized.quarter,
+    stat_type: normalized.statType,
+    stat_label: normalized.statLabel,
+    category: normalized.category,
+    point_value: normalized.pointValue,
+    tags: uniqueTags(normalized.tags),
+    note: normalized.note || "",
+    field_zone: normalized.fieldZone || "",
+    corrected_at: normalized.correctedAt || null,
+    tags_updated_at: normalized.tagsUpdatedAt || null,
+  };
+}
+
+function eventFromSupabaseRow(row) {
+  return normalizeEvent(
+    {
+      id: row.id,
+      gameId: row.game_id,
+      timestamp: row.timestamp,
+      quarter: row.quarter,
+      statType: row.stat_type,
+      statLabel: row.stat_label,
+      category: row.category,
+      pointValue: row.point_value,
+      tags: row.tags || [],
+      note: row.note || "",
+      fieldZone: row.field_zone || "",
+      correctedAt: row.corrected_at || null,
+      tagsUpdatedAt: row.tags_updated_at || null,
+    },
+    row.game_id,
+  );
+}
+
+function gameFromSupabaseRow(row, events = []) {
+  return normalizeGame({
+    id: row.id,
+    shareCode: row.share_code,
+    opponent: row.opponent,
+    date: row.game_date,
+    location: row.location || "",
+    gameType: row.game_type || "",
+    playerSnapshot: row.player_snapshot || {},
+    currentQuarter: row.current_quarter || "Q1",
+    status: row.status || "in-progress",
+    createdAt: row.created_at,
+    savedAt: row.saved_at,
+    endedAt: row.ended_at,
+    events: events.map(eventFromSupabaseRow).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp)),
+  });
+}
+
+function shareLinkForGame(game) {
+  const url = new URL(window.location.href);
+  url.search = "";
+  url.hash = "";
+  url.searchParams.set("share", normalizeGame(game).shareCode);
+  return url.toString();
+}
+
+function reportSyncError(error) {
+  console.warn("LaxHornet Supabase sync failed:", error);
+  state.syncStatus = "Live Share setup needed";
+  const now = Date.now();
+  if (now - lastSyncErrorAt > 8000) {
+    lastSyncErrorAt = now;
+    showToast("Live Share needs Supabase setup");
+  }
+}
+
+async function syncGameToSupabase(game, options = {}) {
+  if (!supabaseClient || !game) return false;
+  const normalized = normalizeGame(game);
+  const { error } = await supabaseClient.from("games").upsert(gameToSupabaseRow(normalized));
+  if (error) {
+    reportSyncError(error);
+    return false;
+  }
+
+  if (options.includeEvents && normalized.events.length) {
+    const { error: eventsError } = await supabaseClient
+      .from("events")
+      .upsert(normalized.events.map((event) => eventToSupabaseRow(event)));
+    if (eventsError) {
+      reportSyncError(eventsError);
+      return false;
+    }
+  }
+
+  state.syncStatus = "Live Share synced";
+  return true;
+}
+
+async function syncLoggedEvent(game, event) {
+  if (!supabaseClient || !game || !event) return;
+  const gameSynced = await syncGameToSupabase(game);
+  if (!gameSynced) return;
+  const { error } = await supabaseClient.from("events").upsert(eventToSupabaseRow(event));
+  if (error) {
+    reportSyncError(error);
+  } else {
+    state.syncStatus = "Live Share synced";
+  }
+}
+
+async function deleteSupabaseEvent(eventId) {
+  if (!supabaseClient || !eventId) return;
+  const { error } = await supabaseClient.from("events").delete().eq("id", eventId);
+  if (error) reportSyncError(error);
+}
+
+async function deleteSupabaseGame(gameId) {
+  if (!supabaseClient || !gameId) return;
+  const { error } = await supabaseClient.from("games").delete().eq("id", gameId);
+  if (error) reportSyncError(error);
+}
+
+function applySharedEventPayload(payload) {
+  if (!state.sharedGame) return;
+  if (payload.eventType === "DELETE") {
+    state.sharedGame.events = state.sharedGame.events.filter((event) => event.id !== payload.old.id);
+  } else {
+    const event = eventFromSupabaseRow(payload.new);
+    const index = state.sharedGame.events.findIndex((item) => item.id === event.id);
+    if (index >= 0) {
+      state.sharedGame.events[index] = event;
+    } else {
+      state.sharedGame.events.push(event);
+    }
+    state.sharedGame.events.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+  }
+  render();
+}
+
+function applySharedGamePayload(payload) {
+  if (!state.sharedGame || payload.eventType === "DELETE") return;
+  state.sharedGame = gameFromSupabaseRow(payload.new, state.sharedGame.events.map(eventToSupabaseRow));
+  render();
+}
+
+function subscribeToSharedGame(gameId) {
+  if (!supabaseClient || !gameId) return;
+  if (sharedGameChannel) supabaseClient.removeChannel(sharedGameChannel);
+  sharedGameChannel = supabaseClient
+    .channel(`laxhornet-game-${gameId}`)
+    .on("postgres_changes", { event: "*", schema: "public", table: "games", filter: `id=eq.${gameId}` }, applySharedGamePayload)
+    .on("postgres_changes", { event: "*", schema: "public", table: "events", filter: `game_id=eq.${gameId}` }, applySharedEventPayload)
+    .subscribe((status) => {
+      state.syncStatus = status === "SUBSCRIBED" ? "Watching live" : "Connecting live";
+      render();
+    });
+}
+
+async function loadSharedGame(shareCode) {
+  const code = normalizeTag(shareCode).toUpperCase();
+  if (!code) return;
+  state.sharedCode = code;
+  state.screen = "shared";
+  state.sharedGame = null;
+  render();
+
+  if (!supabaseClient) {
+    showToast("Live Share is not available");
+    return;
+  }
+
+  const { data, error } = await supabaseClient
+    .from("games")
+    .select("*, events(*)")
+    .eq("share_code", code)
+    .maybeSingle();
+
+  if (error) {
+    reportSyncError(error);
+    return;
+  }
+
+  if (!data) {
+    showToast("Shared game not found");
+    return;
+  }
+
+  state.sharedGame = gameFromSupabaseRow(data, data.events || []);
+  state.syncStatus = "Watching live";
+  subscribeToSharedGame(state.sharedGame.id);
+  render();
+}
+
+async function copyShareLink() {
+  const game = state.activeGame || currentReviewGame();
+  if (!game) return;
+  const link = shareLinkForGame(game);
+  try {
+    await navigator.clipboard.writeText(link);
+    showToast("Share link copied");
+  } catch {
+    window.prompt("Copy this share link", link);
+  }
+}
+
 function setQuarter(quarter) {
   if (!state.activeGame) return;
   state.activeGame.currentQuarter = quarter;
   persistAll();
+  syncGameToSupabase(state.activeGame);
   render();
 }
 
@@ -685,6 +941,21 @@ function renderBottomNav() {
   `;
 }
 
+function renderShareCard(game) {
+  const normalized = normalizeGame(game);
+  return `
+    <section class="card pad share-card">
+      <div>
+        <h3>Live Share</h3>
+        <p class="muted small">Share this code or link so another iPhone can watch live.</p>
+      </div>
+      <div class="share-code">${escapeHTML(normalized.shareCode)}</div>
+      <button class="btn neutral" type="button" data-action="copy-share-link">Copy Share Link</button>
+      <p class="muted small">${escapeHTML(state.syncStatus)}</p>
+    </section>
+  `;
+}
+
 function renderHome() {
   const season = calculateSeasonTotals();
   const active = state.activeGame;
@@ -707,6 +978,15 @@ function renderHome() {
         <div class="metric"><strong>${season.assists}</strong><span>Assists</span></div>
         <div class="metric"><strong>${season.averageImpact.toFixed(1)}</strong><span>Avg Impact</span></div>
       </div>
+
+      <form class="card pad form-grid share-watch-form" data-form="watch-share">
+        <h3>Watch Shared Game</h3>
+        <div class="field">
+          <label for="shareCode">Share code</label>
+          <input id="shareCode" name="shareCode" value="${escapeHTML(state.sharedCode)}" placeholder="ABC123" autocapitalize="characters" />
+        </div>
+        <button class="btn neutral" type="submit">Watch Live</button>
+      </form>
 
       <div class="action-grid">
         ${
@@ -826,6 +1106,8 @@ function renderLiveTracker() {
       <div class="live-pill"><strong>${totals.points}</strong><span>Points</span></div>
       <div class="live-pill"><strong>${totals.eventCount}</strong><span>Events</span></div>
     </section>
+
+    ${renderShareCard(game)}
 
     <section class="tracker-grid" aria-label="Stat buttons">
       ${STAT_DEFS.map(
@@ -1033,6 +1315,54 @@ function renderReview() {
   `);
 }
 
+function renderSharedGame() {
+  const code = escapeHTML(state.sharedCode || "");
+  if (!state.sharedGame) {
+    return renderShell(`
+      <section class="screen-title">
+        <h2>Shared Game</h2>
+        <p>${code ? `Loading share code ${code}...` : "Enter a share code from the tracker phone."}</p>
+      </section>
+      <form class="card pad form-grid" data-form="watch-share">
+        <div class="field">
+          <label for="sharedScreenCode">Share code</label>
+          <input id="sharedScreenCode" name="shareCode" value="${code}" placeholder="ABC123" autocapitalize="characters" />
+        </div>
+        <button class="btn neutral" type="submit">Watch Live</button>
+      </form>
+    `);
+  }
+
+  const game = state.sharedGame;
+  const totals = calculateTotals(game.events);
+  const events = [...game.events].reverse();
+
+  return renderShell(`
+    <section class="screen-title">
+      <h2>${escapeHTML(game.opponent)}</h2>
+      <p>Shared live game - ${formatDate(game.date)} - ${escapeHTML(state.syncStatus)}</p>
+    </section>
+
+    <section class="stack">
+      <div class="metric-grid">
+        <div class="metric"><strong>${totals.impact}</strong><span>Impact</span></div>
+        <div class="metric"><strong>${totals.points}</strong><span>Points</span></div>
+        <div class="metric"><strong>${totals.goals}</strong><span>Goals</span></div>
+        <div class="metric"><strong>${totals.assists}</strong><span>Assists</span></div>
+      </div>
+      ${renderTotalsTable(totals)}
+      <div class="card pad">
+        <h3>Live Timeline</h3>
+        ${
+          events.length
+            ? `<div class="event-list">${events.map(renderEventRow).join("")}</div>`
+            : `<p class="muted small">No events logged yet.</p>`
+        }
+      </div>
+    </section>
+  `);
+}
+
 function renderTotalsTable(totals) {
   const rows = [
     ["Shots", totals.shots],
@@ -1199,6 +1529,7 @@ function render() {
     start: renderStartGame,
     live: renderLiveTracker,
     review: renderReview,
+    shared: renderSharedGame,
     past: renderPastGames,
     dashboard: renderDashboard,
     help: renderHelp,
@@ -1232,6 +1563,7 @@ function handleSubmit(event) {
     state.activeGame = makeGame(formData);
     state.reviewGameId = state.activeGame.id;
     persistAll();
+    syncGameToSupabase(state.activeGame);
     navigate("live");
     showToast("Live game started");
   }
@@ -1267,6 +1599,10 @@ function handleSubmit(event) {
   if (form.dataset.form === "custom-tag") {
     const tag = formData.get("customTag")?.trim();
     if (tag) addDraftTag(tag);
+  }
+
+  if (form.dataset.form === "watch-share") {
+    loadSharedGame(formData.get("shareCode"));
   }
 }
 
@@ -1308,6 +1644,7 @@ function handleClick(event) {
     }
     if (action.dataset.action === "export-csv") exportCSV();
     if (action.dataset.action === "export-json") exportJSON();
+    if (action.dataset.action === "copy-share-link") copyShareLink();
     return;
   }
 
@@ -1380,4 +1717,8 @@ document.addEventListener("submit", handleSubmit);
 document.addEventListener("click", handleClick);
 document.addEventListener("change", handleChange);
 registerServiceWorker();
-render();
+if (startupShareCode) {
+  loadSharedGame(startupShareCode);
+} else {
+  render();
+}
