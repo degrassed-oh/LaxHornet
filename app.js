@@ -192,6 +192,7 @@ const state = {
   tagEditingEventId: null,
   tagDraftTags: [],
   toast: "",
+  authBusy: false,
 };
 
 state.games = state.games.map(normalizeGame);
@@ -880,6 +881,8 @@ async function handleAuthSubmit(formData) {
     return;
   }
 
+  if (state.authBusy) return;
+
   const email = formData.get("email")?.trim();
   const password = formData.get("password") || "";
   const authAction = formData.get("authAction");
@@ -887,6 +890,9 @@ async function handleAuthSubmit(formData) {
     showToast("Use an email and 6+ character password");
     return;
   }
+
+  state.authBusy = true;
+  render();
 
   const result =
     authAction === "sign-up"
@@ -899,8 +905,16 @@ async function handleAuthSubmit(formData) {
         })
       : await supabaseClient.auth.signInWithPassword({ email, password });
 
+  state.authBusy = false;
+
   if (result.error) {
-    showToast(result.error.message);
+    const message = result.error.message || "";
+    showToast(
+      /rate|too many|exceeded/i.test(message)
+        ? "Email limit hit. Wait, or set up custom SMTP."
+        : message,
+    );
+    render();
     return;
   }
 
@@ -1158,8 +1172,8 @@ function renderAccountCard() {
         <input id="authPassword" name="password" type="password" autocomplete="current-password" minlength="6" required />
       </div>
       <div class="account-actions">
-        <button class="btn positive" type="submit" name="authAction" value="sign-in">Sign In</button>
-        <button class="btn secondary" type="submit" name="authAction" value="sign-up">Create Account</button>
+        <button class="btn positive" type="submit" name="authAction" value="sign-in" ${state.authBusy ? "disabled" : ""}>${state.authBusy ? "Working..." : "Sign In"}</button>
+        <button class="btn secondary" type="submit" name="authAction" value="sign-up" ${state.authBusy ? "disabled" : ""}>${state.authBusy ? "Sending..." : "Create Account"}</button>
       </div>
     </form>
   `;
