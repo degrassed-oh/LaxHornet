@@ -201,6 +201,13 @@ function userEmail() {
   return state.authUser?.email || "";
 }
 
+function authRedirectUrl() {
+  const url = new URL(window.location.href);
+  url.search = "";
+  url.hash = "";
+  return url.toString();
+}
+
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -848,7 +855,13 @@ async function handleAuthSubmit(formData) {
 
   const result =
     authAction === "sign-up"
-      ? await supabaseClient.auth.signUp({ email, password })
+      ? await supabaseClient.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: authRedirectUrl(),
+          },
+        })
       : await supabaseClient.auth.signInWithPassword({ email, password });
 
   if (result.error) {
