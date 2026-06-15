@@ -24,26 +24,52 @@ const PERIOD_FORMATS = {
 };
 
 const STAT_DEFS = [
-  { key: "goal", label: "Goal", points: 5, tone: "positive", category: "Offense" },
-  { key: "assist", label: "Assist", points: 4, tone: "positive", category: "Offense" },
+  { key: "goal", label: "Goal", points: 5, tone: "offense", category: "Offense" },
+  { key: "assist", label: "Assist", points: 4, tone: "offense", category: "Offense" },
   { key: "shot", label: "Shot", points: 1, tone: "neutral", category: "Offense" },
-  { key: "shotOnGoal", label: "Shot on Goal", points: 2, tone: "positive", category: "Offense" },
+  { key: "shotOnGoal", label: "Shot on Goal", points: 2, tone: "offense", category: "Offense" },
   { key: "goalieSave", label: "Save", points: 3, tone: "goalieSave", category: "Goalie" },
   { key: "goalAllowed", label: "Goal Allowed", points: -2, tone: "goalieAllowed", category: "Goalie" },
-  { key: "groundBall", label: "Ground Ball", points: 3, tone: "positive", category: "Effort / IQ" },
+  { key: "faceoffWin", label: "Faceoff Win", points: 2, tone: "faceoffWin", category: "Faceoff" },
+  { key: "faceoffLoss", label: "Faceoff Loss", points: -1, tone: "faceoffLoss", category: "Faceoff" },
+  { key: "groundBall", label: "Ground Ball", points: 3, tone: "effort", category: "Effort / IQ" },
   { key: "turnover", label: "Turnover", points: -2, tone: "negative", category: "Possession" },
-  { key: "causedTurnover", label: "Caused Turnover", points: 3, tone: "positive", category: "Defense" },
-  { key: "defensiveStop", label: "Defensive Stop", points: 3, tone: "positive", category: "Defense" },
-  { key: "successfulClear", label: "Successful Clear", points: 2, tone: "positive", category: "Clearing" },
+  { key: "causedTurnover", label: "Caused Turnover", points: 3, tone: "defense", category: "Defense" },
+  { key: "defensiveStop", label: "Defensive Stop", points: 3, tone: "defense", category: "Defense" },
+  { key: "successfulClear", label: "Successful Clear", points: 2, tone: "clear", category: "Clearing" },
   { key: "failedClear", label: "Failed Clear", points: -2, tone: "negative", category: "Clearing" },
-  { key: "hustlePlay", label: "Hustle Play", points: 1, tone: "positive", category: "Effort / IQ" },
-  { key: "backedUpShot", label: "Backed Up Shot", points: 2, tone: "positive", category: "Effort / IQ" },
-  { key: "smartPlay", label: "Smart Play", points: 1, tone: "positive", category: "Effort / IQ" },
+  { key: "hustlePlay", label: "Hustle Play", points: 1, tone: "effort", category: "Effort / IQ" },
+  { key: "backedUpShot", label: "Backed Up Shot", points: 2, tone: "effort", category: "Effort / IQ" },
+  { key: "smartPlay", label: "Smart Play", points: 1, tone: "effort", category: "Effort / IQ" },
   { key: "penalty", label: "Penalty", points: -2, tone: "negative", category: "Discipline" },
   { key: "note", label: "Note", points: 0, tone: "neutral", category: "Note" },
 ];
 
 const STAT_BY_KEY = Object.fromEntries(STAT_DEFS.map((stat) => [stat.key, stat]));
+
+const LIVE_STAT_GROUPS = [
+  {
+    label: "Offense",
+    hint: "Shots and scoring",
+    keys: ["goal", "assist", "shotOnGoal", "shot", "backedUpShot"],
+  },
+  {
+    label: "Possession / IQ",
+    hint: "Loose balls, decisions, effort",
+    keys: ["groundBall", "turnover", "hustlePlay", "smartPlay"],
+  },
+  {
+    label: "Defense / Clears",
+    hint: "Stops, pressure, transition",
+    keys: ["causedTurnover", "defensiveStop", "successfulClear", "failedClear", "penalty"],
+  },
+  {
+    label: "Specialty",
+    hint: "Goalie, faceoff, notes",
+    keys: ["faceoffWin", "faceoffLoss", "goalieSave", "goalAllowed", "note"],
+    compact: true,
+  },
+];
 
 const TAG_SUGGESTIONS = {
   goal: [
@@ -106,6 +132,28 @@ const TAG_SUGGESTIONS = {
     "Pipe and in",
     "Backside",
     "Under pressure",
+  ],
+  faceoffWin: [
+    "Clean win",
+    "Clamp",
+    "Rake",
+    "Pop out",
+    "Won forward",
+    "Won back",
+    "Wing help",
+    "Fast break",
+    "Stayed with it",
+  ],
+  faceoffLoss: [
+    "Clean loss",
+    "Countered",
+    "Violation",
+    "Lost clamp",
+    "Wing lost",
+    "Scrum loss",
+    "Out of bounds",
+    "Quick restart",
+    "Tie-up",
   ],
   groundBall: [
     "Contested",
@@ -203,6 +251,7 @@ const state = {
   tagEditingEventId: null,
   tagDraftTags: [],
   watchShareExpanded: false,
+  liveShareExpanded: false,
   toast: "",
   authBusy: false,
 };
@@ -438,6 +487,9 @@ function calculateTotals(events = []) {
   const backedUpShots = count("backedUpShot");
   const groundBalls = count("groundBall");
   const hustlePlays = count("hustlePlay");
+  const faceoffWins = count("faceoffWin");
+  const faceoffLosses = count("faceoffLoss");
+  const faceoffAttempts = faceoffWins + faceoffLosses;
 
   return {
     impact,
@@ -450,6 +502,10 @@ function calculateTotals(events = []) {
     saves,
     goalsAllowed,
     savePct: saves + goalsAllowed ? saves / (saves + goalsAllowed) : 0,
+    faceoffWins,
+    faceoffLosses,
+    faceoffAttempts,
+    faceoffPct: faceoffAttempts ? faceoffWins / faceoffAttempts : 0,
     shootingPct: shots ? goals / shots : 0,
     shotOnGoalPct: shots ? shotsOnGoal / shots : 0,
     groundBalls,
@@ -488,6 +544,9 @@ function calculateSeasonTotals() {
       shotsOnGoal: 0,
       saves: 0,
       goalsAllowed: 0,
+      faceoffWins: 0,
+      faceoffLosses: 0,
+      faceoffAttempts: 0,
       groundBalls: 0,
       turnovers: 0,
       causedTurnovers: 0,
@@ -506,6 +565,7 @@ function calculateSeasonTotals() {
   totals.shootingPct = totals.shots ? totals.goals / totals.shots : 0;
   totals.shotOnGoalPct = totals.shots ? totals.shotsOnGoal / totals.shots : 0;
   totals.savePct = totals.saves + totals.goalsAllowed ? totals.saves / (totals.saves + totals.goalsAllowed) : 0;
+  totals.faceoffPct = totals.faceoffAttempts ? totals.faceoffWins / totals.faceoffAttempts : 0;
   totals.averageImpact = totals.gamesPlayed ? totals.impact / totals.gamesPlayed : 0;
   return totals;
 }
@@ -1159,19 +1219,31 @@ function renderBottomNav() {
 function renderShareCard(game) {
   const normalized = normalizeGame(game);
   const canCloudSync = Boolean(currentUserId());
+  const expanded = state.liveShareExpanded;
   return `
-    <section class="card pad share-card">
-      <div>
-        <h3>Live Share</h3>
-        <p class="muted small">${
-          canCloudSync
-            ? "Copy the link to enable read-only live viewing for this game."
-            : "Sign in to enable cloud sharing from another iPhone."
-        }</p>
+    <section class="card pad share-card ${expanded ? "expanded" : "collapsed"}">
+      <div class="collapsible-card-head">
+        <div>
+          <h3>Live Share</h3>
+          <p class="muted small">${
+            canCloudSync
+              ? "Copy the link for read-only live viewing from another device."
+              : "Sign in to enable cloud sharing from another iPhone."
+          }</p>
+        </div>
+        <button class="collapse-icon" type="button" data-action="toggle-live-share" aria-expanded="${expanded}" aria-label="${expanded ? "Minimize Live Share" : "Expand Live Share"}">
+          <span aria-hidden="true">${expanded ? "⌄" : "›"}</span>
+        </button>
       </div>
-      <div class="share-code">${escapeHTML(normalized.shareCode)}</div>
-      <button class="btn neutral" type="button" data-action="copy-share-link" ${canCloudSync ? "" : "disabled"}>Copy Share Link</button>
-      <p class="muted small">${escapeHTML(state.syncStatus)}</p>
+      ${
+        expanded
+          ? `<div class="share-card-body">
+              <div class="share-code">${escapeHTML(normalized.shareCode)}</div>
+              <button class="btn neutral" type="button" data-action="copy-share-link" ${canCloudSync ? "" : "disabled"}>Copy Share Link</button>
+              <p class="muted small">${escapeHTML(state.syncStatus)}</p>
+            </div>`
+          : ""
+      }
     </section>
   `;
 }
@@ -1262,8 +1334,8 @@ function renderHome() {
             <h3>Watch Shared Game</h3>
             <p class="muted small">Enter a family share code to watch a read-only live game.</p>
           </div>
-          <button class="mini-btn" type="button" data-action="toggle-watch-share" aria-expanded="${watchExpanded}" aria-controls="watchShareFields">
-            ${watchExpanded ? "Minimize" : "Expand"}
+          <button class="collapse-icon" type="button" data-action="toggle-watch-share" aria-expanded="${watchExpanded}" aria-controls="watchShareFields" aria-label="${watchExpanded ? "Minimize Watch Shared Game" : "Expand Watch Shared Game"}">
+            <span aria-hidden="true">${watchExpanded ? "⌄" : "›"}</span>
           </button>
         </div>
         ${
@@ -1360,6 +1432,38 @@ function renderStartGame() {
   `);
 }
 
+function renderStatButton(stat, options = {}) {
+  return `
+    <button class="stat-button ${stat.tone}${options.compact ? " compact" : ""}" type="button" data-stat="${stat.key}">
+      <span class="label">${stat.label}</span>
+      <span class="points">${stat.points === 0 ? "note" : `${pointText(stat.points)} impact`}</span>
+    </button>
+  `;
+}
+
+function renderLiveStatGroups() {
+  return `
+    <section class="live-stat-groups" aria-label="Stat buttons">
+      ${LIVE_STAT_GROUPS.map((group) => {
+        const buttons = group.keys
+          .map((key) => STAT_BY_KEY[key])
+          .filter(Boolean)
+          .map((stat) => renderStatButton(stat, { compact: group.compact }))
+          .join("");
+        return `
+          <div class="stat-group ${group.compact ? "compact" : ""}">
+            <div class="stat-group-head">
+              <h3>${group.label}</h3>
+              <span>${group.hint}</span>
+            </div>
+            <div class="tracker-grid">${buttons}</div>
+          </div>
+        `;
+      }).join("")}
+    </section>
+  `;
+}
+
 function renderLiveTracker() {
   if (!state.activeGame) {
     return renderShell(`
@@ -1377,7 +1481,7 @@ function renderLiveTracker() {
   const periods = periodsForGame(game);
 
   return renderShell(`
-    <section class="screen-title">
+    <section class="screen-title live-title">
       <h2>${escapeHTML(game.opponent)}</h2>
       <p>${formatDate(game.date)} - ${periodFormatLabel(game)}${game.location ? ` - ${escapeHTML(game.location)}` : ""}</p>
     </section>
@@ -1395,18 +1499,7 @@ function renderLiveTracker() {
       <div class="live-pill"><strong>${totals.eventCount}</strong><span>Events</span></div>
     </section>
 
-    ${renderShareCard(game)}
-
-    <section class="tracker-grid" aria-label="Stat buttons">
-      ${STAT_DEFS.map(
-        (stat) => `
-          <button class="stat-button ${stat.tone}" type="button" data-stat="${stat.key}">
-            <span class="label">${stat.label}</span>
-            <span class="points">${stat.points === 0 ? "note" : `${pointText(stat.points)} impact`}</span>
-          </button>
-        `,
-      ).join("")}
-    </section>
+    ${renderLiveStatGroups()}
 
     <section class="card pad" style="margin-top: 12px;">
       <h3>Recent Log</h3>
@@ -1416,6 +1509,8 @@ function renderLiveTracker() {
           : `<p class="muted small">No events yet. Tap a stat button to start the log.</p>`
       }
     </section>
+
+    ${renderShareCard(game)}
 
     <div class="sticky-actions">
       <div class="sticky-inner">
@@ -1660,6 +1755,10 @@ function renderTotalsTable(totals) {
     ["Saves", totals.saves],
     ["Goals allowed", totals.goalsAllowed],
     ["Save %", pct(totals.savePct)],
+    ["Faceoff wins", totals.faceoffWins],
+    ["Faceoff losses", totals.faceoffLosses],
+    ["Faceoff attempts", totals.faceoffAttempts],
+    ["Faceoff win %", pct(totals.faceoffPct)],
     ["Ground balls", totals.groundBalls],
     ["Backed up shots", totals.backedUpShots],
     ["Effort score", totals.effortScore],
@@ -1748,6 +1847,7 @@ function renderDashboard() {
         <div class="metric"><strong>${totals.assists}</strong><span>Assists</span></div>
         <div class="metric"><strong>${totals.points}</strong><span>Points</span></div>
         <div class="metric"><strong>${totals.saves}</strong><span>Saves</span></div>
+        <div class="metric"><strong>${pct(totals.faceoffPct)}</strong><span>Faceoff %</span></div>
         <div class="metric"><strong>${totals.effortScore}</strong><span>Effort Score</span></div>
         <div class="metric"><strong>${pct(totals.shootingPct)}</strong><span>Shooting %</span></div>
       </div>
@@ -1810,6 +1910,11 @@ function renderHelp() {
       <div class="card pad">
         <h3>Shot Percentages</h3>
         <p class="muted small">Shooting % is goals divided by total shots. Shot on goal % is shots on goal divided by total shots. In this app, a Shot on Goal counts as both a shot and a shot on goal.</p>
+      </div>
+
+      <div class="card pad">
+        <h3>Faceoff Win %</h3>
+        <p class="muted small">Faceoff win % is Faceoff Wins divided by total faceoff attempts. Attempts are Faceoff Wins plus Faceoff Losses.</p>
       </div>
     </section>
   `);
@@ -2021,6 +2126,10 @@ function handleClick(event) {
     if (action.dataset.action === "copy-share-link") copyShareLink();
     if (action.dataset.action === "sign-out") signOut();
     if (action.dataset.action === "sync-cloud-games") loadCloudGames();
+    if (action.dataset.action === "toggle-live-share") {
+      state.liveShareExpanded = !state.liveShareExpanded;
+      render();
+    }
     if (action.dataset.action === "toggle-watch-share") {
       state.watchShareExpanded = !state.watchShareExpanded;
       render();

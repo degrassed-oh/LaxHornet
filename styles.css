@@ -14,10 +14,22 @@
   --neutral-dark: #232a31;
   --negative: #d85a24;
   --negative-dark: #aa3d14;
+  --offense: #128348;
+  --offense-dark: #075a31;
+  --effort: #b77800;
+  --effort-dark: #765000;
+  --defense: #00746f;
+  --defense-dark: #004e4a;
+  --clear: #2f5e92;
+  --clear-dark: #1f3e62;
   --goalie-save: #007f8a;
   --goalie-save-dark: #00535d;
   --goalie-allowed: #7a3db8;
   --goalie-allowed-dark: #4e2578;
+  --faceoff-win: #c38b00;
+  --faceoff-win-dark: #7c5b00;
+  --faceoff-loss: #8b4b2f;
+  --faceoff-loss-dark: #5e2f1c;
   --danger: #cf2f33;
   --warning: #ec8b22;
   --hornet-yellow: #f5b532;
@@ -205,6 +217,24 @@ button:disabled {
   line-height: 1.45;
 }
 
+.live-title {
+  margin: 12px 0 10px;
+}
+
+.live-title h2 {
+  color: #f2f3f4;
+  font-size: 1.24rem;
+  font-weight: 850;
+  line-height: 1.05;
+}
+
+.live-title p {
+  margin-top: 5px;
+  color: #aeb4bb;
+  font-size: 0.82rem;
+  line-height: 1.25;
+}
+
 .stack {
   display: grid;
   gap: 12px;
@@ -322,12 +352,36 @@ button:disabled {
   background: linear-gradient(180deg, var(--negative), var(--negative-dark));
 }
 
+.stat-button.offense {
+  background: linear-gradient(180deg, var(--offense), var(--offense-dark));
+}
+
+.stat-button.effort {
+  background: linear-gradient(180deg, var(--effort), var(--effort-dark));
+}
+
+.stat-button.defense {
+  background: linear-gradient(180deg, var(--defense), var(--defense-dark));
+}
+
+.stat-button.clear {
+  background: linear-gradient(180deg, var(--clear), var(--clear-dark));
+}
+
 .stat-button.goalieSave {
   background: linear-gradient(180deg, var(--goalie-save), var(--goalie-save-dark));
 }
 
 .stat-button.goalieAllowed {
   background: linear-gradient(180deg, var(--goalie-allowed), var(--goalie-allowed-dark));
+}
+
+.stat-button.faceoffWin {
+  background: linear-gradient(180deg, var(--faceoff-win), var(--faceoff-win-dark));
+}
+
+.stat-button.faceoffLoss {
+  background: linear-gradient(180deg, var(--faceoff-loss), var(--faceoff-loss-dark));
 }
 
 .btn.danger {
@@ -384,57 +438,98 @@ button:disabled {
 .quarter-tabs,
 .period-tabs {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(48px, 1fr));
-  gap: 7px;
-  margin: 0 0 12px;
+  grid-template-columns: repeat(auto-fit, minmax(42px, 1fr));
+  gap: 6px;
+  margin: 0 0 10px;
 }
 
 .quarter-tab,
 .period-tab {
-  min-height: 44px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: var(--radius);
-  color: #eef0f2;
-  background: rgba(255, 255, 255, 0.08);
-  font-size: 0.95rem;
-  font-weight: 900;
+  min-height: 36px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 7px;
+  color: #b8bec5;
+  background: rgba(255, 255, 255, 0.045);
+  font-size: 0.78rem;
+  font-weight: 800;
+  box-shadow: none;
 }
 
 .quarter-tab.active,
 .period-tab.active {
-  color: var(--navy-950);
-  background: #f5b532;
+  border-color: rgba(255, 255, 255, 0.28);
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 -2px 0 rgba(245, 181, 50, 0.55);
 }
 
 .live-summary {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: 7px;
+  margin-bottom: 13px;
 }
 
 .live-pill {
-  min-height: 70px;
-  padding: 10px;
+  min-height: 56px;
+  padding: 8px 9px;
   border-radius: var(--radius);
-  background: #ffffff;
-  color: var(--text);
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.94);
+  color: #15171a;
+  box-shadow: 0 7px 18px rgba(0, 0, 0, 0.13);
 }
 
 .live-pill strong {
   display: block;
-  font-size: clamp(1.22rem, 7vw, 1.95rem);
+  font-size: clamp(1.08rem, 6vw, 1.55rem);
   line-height: 1;
+  font-weight: 900;
 }
 
 .live-pill span {
   display: block;
-  margin-top: 6px;
+  margin-top: 5px;
   color: var(--muted);
-  font-size: 0.72rem;
-  font-weight: 900;
+  font-size: 0.64rem;
+  font-weight: 850;
   text-transform: uppercase;
+}
+
+.live-stat-groups {
+  display: grid;
+  gap: 16px;
+}
+
+.stat-group {
+  display: grid;
+  gap: 8px;
+}
+
+.stat-group-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 1px;
+}
+
+.stat-group-head h3 {
+  margin: 0;
+  color: #d5d9dd;
+  font-size: 0.72rem;
+  font-weight: 850;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.stat-group-head span {
+  color: #7f8790;
+  font-size: 0.66rem;
+  font-weight: 700;
+  line-height: 1.1;
+  text-align: right;
 }
 
 .tracker-grid {
@@ -458,6 +553,11 @@ button:disabled {
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
 }
 
+.stat-button.compact {
+  min-height: 60px;
+  padding: 10px;
+}
+
 .stat-button .label {
   font-size: clamp(0.98rem, 4.4vw, 1.14rem);
   font-weight: 900;
@@ -468,6 +568,14 @@ button:disabled {
   color: rgba(255, 255, 255, 0.86);
   font-size: 0.78rem;
   font-weight: 850;
+}
+
+.stat-button.compact .label {
+  font-size: clamp(0.88rem, 4vw, 1rem);
+}
+
+.stat-button.compact .points {
+  font-size: 0.72rem;
 }
 
 .sticky-actions {
@@ -491,9 +599,19 @@ button:disabled {
 }
 
 .sticky-actions .btn {
-  min-height: 48px;
+  min-height: 46px;
   padding: 9px 8px;
-  font-size: clamp(0.76rem, 3.4vw, 0.95rem);
+  font-size: clamp(0.72rem, 3.2vw, 0.88rem);
+  box-shadow: 0 7px 14px rgba(0, 0, 0, 0.2);
+}
+
+.sticky-actions .btn.warning,
+.sticky-actions .btn.neutral {
+  background: linear-gradient(180deg, #343a42, #20242a);
+}
+
+.sticky-actions .btn.danger {
+  background: linear-gradient(180deg, #96363a, #651e23);
 }
 
 .event-list {
@@ -674,6 +792,10 @@ button:disabled {
   border-color: rgba(245, 181, 50, 0.58);
 }
 
+.share-card.collapsed {
+  gap: 0;
+}
+
 .share-card h3,
 .share-watch-form h3,
 .account-card h3 {
@@ -693,6 +815,30 @@ button:disabled {
   grid-template-columns: 1fr auto;
   gap: 12px;
   align-items: center;
+}
+
+.collapse-icon {
+  display: inline-grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid rgba(17, 19, 23, 0.16);
+  border-radius: 999px;
+  color: var(--muted);
+  background: transparent;
+  font-size: 1.35rem;
+  font-weight: 900;
+  line-height: 1;
+  box-shadow: none;
+}
+
+.collapse-icon span {
+  transform: translateY(-1px);
+}
+
+.share-card-body {
+  display: grid;
+  gap: 10px;
 }
 
 .share-watch-fields {
@@ -922,6 +1068,10 @@ button:disabled {
 
 @media (max-width: 430px) {
   .status-chip {
+    display: none;
+  }
+
+  .stat-group-head span {
     display: none;
   }
 }
