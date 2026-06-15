@@ -680,6 +680,10 @@ button:disabled {
   border-color: rgba(17, 132, 71, 0.36);
 }
 
+.tutorial-list h3 {
+  margin: 0;
+}
+
 .account-actions {
   display: grid;
   grid-template-columns: 1fr;

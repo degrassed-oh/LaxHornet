@@ -1757,16 +1757,64 @@ function renderAuthSuccess() {
   return renderShell(`
     <section class="screen-title">
       <h2>Account Confirmed</h2>
-      <p>${signedIn ? "You're signed in and ready to track games." : "Your email has been verified. Sign in below to finish."}</p>
+      <p>${signedIn ? "You're signed in and ready to track games." : "Your email has been verified."}</p>
     </section>
 
     <section class="stack">
       <div class="card pad account-success-card">
         <h3>Welcome to LaxHornet</h3>
         <p class="muted small">Parent accounts keep each family's players, games, and season dashboard separate.</p>
-        <button class="btn positive" type="button" data-nav="home">${signedIn ? "Go to Home" : "Sign In"}</button>
+        <div class="account-actions">
+          <button class="btn positive" type="button" data-nav="home">${signedIn ? "Go to Home" : "Sign In"}</button>
+          <button class="btn secondary" type="button" data-nav="tutorial">Quick Tutorial</button>
+        </div>
       </div>
-      ${signedIn ? "" : renderAccountCard()}
+    </section>
+  `);
+}
+
+function renderTutorial() {
+  return renderShell(`
+    <section class="screen-title">
+      <h2>Quick Tutorial</h2>
+      <p>A fast guide to tracking a game, syncing data, and sharing live stats.</p>
+    </section>
+
+    <section class="stack tutorial-list">
+      <div class="card pad">
+        <h3>1. Set Up The Player</h3>
+        <p class="muted small">Open Player Settings and enter the player name, number, team, and position. These details stay on the device and are copied into each new game.</p>
+      </div>
+
+      <div class="card pad">
+        <h3>2. Sign In For Cloud Sync</h3>
+        <p class="muted small">Use a Parent Account when you want games saved to Supabase. Each parent only sees their own synced games and season dashboard.</p>
+      </div>
+
+      <div class="card pad">
+        <h3>3. Start A Game</h3>
+        <p class="muted small">Tap Start New Game, enter the opponent, and use the large stat buttons during play. Use Q1, Q2, Q3, Q4, or OT to keep events in the right period.</p>
+      </div>
+
+      <div class="card pad">
+        <h3>4. Track Fast</h3>
+        <p class="muted small">Tap each event once as it happens. Undo removes the last event. Save keeps the game locally and syncs it when you are signed in.</p>
+      </div>
+
+      <div class="card pad">
+        <h3>5. Review And Tag</h3>
+        <p class="muted small">After a game, open Game Review to edit events, correct notes, add tags, and check totals like Impact Score, Effort Score, Save %, and shooting percentages.</p>
+      </div>
+
+      <div class="card pad">
+        <h3>6. Share Live</h3>
+        <p class="muted small">From the Live Game Tracker, copy the Live Share link so family can watch a read-only timeline from another iPhone.</p>
+      </div>
+
+      <div class="action-grid">
+        <button class="btn positive" type="button" data-nav="home">Go to Home</button>
+        <button class="btn neutral" type="button" data-nav="start">Start New Game</button>
+      </div>
     </section>
   `);
 }
@@ -1775,6 +1823,7 @@ function render() {
   const screens = {
     home: renderHome,
     authSuccess: renderAuthSuccess,
+    tutorial: renderTutorial,
     settings: renderSettings,
     start: renderStartGame,
     live: renderLiveTracker,
