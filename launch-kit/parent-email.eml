@@ -1,0 +1,50 @@
+Subject: Try LaxHornet for youth lacrosse stats
+MIME-Version: 1.0
+Content-Type: text/html; charset=UTF-8
+
+<!doctype html>
+<html lang="en">
+  <body style="margin:0; padding:0; background:#f1f2f4; color:#111317; font-family:Arial, Helvetica, sans-serif;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f1f2f4; margin:0; padding:24px 12px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:640px; background:#ffffff; border-collapse:collapse; border-radius:8px; overflow:hidden;">
+            <tr>
+              <td style="background:#111111; padding:28px 26px 24px; color:#ffffff;">
+                <img src="https://degrasse-mastermind.github.io/LaxHornet/assets/laxhornet-logo.png" alt="LaxHornet" width="260" style="display:block; max-width:100%; height:auto; margin:0 0 20px;" />
+                <h1 style="margin:0; color:#ffffff; font-size:30px; line-height:1.08; font-weight:800;">Fast lacrosse stats for parents, coaches, and families.</h1>
+                <p style="margin:12px 0 0; color:#d8dadd; font-size:16px; line-height:1.5;">Track multiple players, save games, review season totals, and share live game updates from another phone, tablet, or computer.</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:26px;">
+                <p style="margin:0 0 16px; color:#30343a; font-size:16px; line-height:1.5;">I built a simple youth lacrosse stat tracker called <strong>LaxHornet</strong>. It works on iPhone, saves stats by player, supports live sharing, and can be installed like an app.</p>
+                <p style="margin:22px 0;"><a href="https://degrasse-mastermind.github.io/LaxHornet/" style="display:inline-block; padding:14px 20px; border-radius:8px; background:#e81010; color:#ffffff; font-size:16px; font-weight:800; text-decoration:none;">Open LaxHornet</a></p>
+                <p style="margin:0 0 18px; color:#555d67; font-size:14px; line-height:1.5;">Direct link: <a href="https://degrasse-mastermind.github.io/LaxHornet/" style="color:#e81010; font-weight:700;">https://degrasse-mastermind.github.io/LaxHornet/</a></p>
+                <p><a href="https://degrasse-mastermind.github.io/LaxHornet/"><img src="https://degrasse-mastermind.github.io/LaxHornet/launch-kit/laxhornet-qr.png" alt="QR code for LaxHornet" width="150" style="display:block; width:150px; height:auto; border:1px solid #d8dadd; border-radius:8px; padding:8px; background:#ffffff;" /></a></p>
+                <h2 style="margin:20px 0 10px; color:#111317; font-size:20px; line-height:1.2;">Install On iPhone</h2>
+                <ol style="margin:0; padding-left:20px; color:#30343a; font-size:15px; line-height:1.45;">
+                  <li>Open the link in Safari.</li>
+                  <li>Tap the Share button.</li>
+                  <li>Tap Add to Home Screen.</li>
+                  <li>Open LaxHornet from the new icon.</li>
+                </ol>
+                <h2 style="margin:22px 0 10px; color:#111317; font-size:20px; line-height:1.2;">Quick Start</h2>
+                <ol style="margin:0; padding-left:20px; color:#30343a; font-size:15px; line-height:1.45;">
+                  <li>Create a User Profile or sign in.</li>
+                  <li>Add one or more players in Player Settings.</li>
+                  <li>Tap the player you want active.</li>
+                  <li>Start a game and use the big stat buttons.</li>
+                </ol>
+                <p style="margin-top:22px; padding:16px; border-left:5px solid #e81010; background:#f1f2f4; border-radius:8px; color:#30343a; font-size:15px; line-height:1.5;">Live Share lets family follow along from another iPhone, phone, tablet, or computer. During a game, tap <strong>Live Share</strong> beside the game date and paste the copied link into a text or email.</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:18px 26px; background:#111111; color:#c6c8cc; font-size:12px; line-height:1.4;">LaxHornet Youth Lacrosse Stat Tracker<br /><a href="https://degrasse-mastermind.github.io/LaxHornet/" style="color:#ffffff;">Open the app</a></td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
