@@ -202,6 +202,7 @@ const state = {
   editingEventId: null,
   tagEditingEventId: null,
   tagDraftTags: [],
+  watchShareExpanded: false,
   toast: "",
   authBusy: false,
 };
@@ -1132,6 +1133,7 @@ function renderShell(content, options = {}) {
         </button>
         <span class="topbar-actions">
           <button class="help-chip" type="button" data-nav="help" aria-label="Open help">?</button>
+          <button class="help-chip tutorial-chip" type="button" data-nav="tutorial" aria-label="Open quick tutorial">i</button>
           <span class="status-chip">${state.activeGame ? "Live" : "Offline Ready"}</span>
         </span>
       </div>
@@ -1149,6 +1151,7 @@ function renderBottomNav() {
       <button class="btn ghost" type="button" data-nav="past">Past</button>
       <button class="btn ghost" type="button" data-nav="dashboard">Season</button>
       <button class="btn ghost" type="button" data-nav="settings">Player</button>
+      <button class="btn ghost" type="button" data-nav="tutorial">Guide</button>
     </nav>
   `;
 }
@@ -1219,6 +1222,7 @@ function renderAccountCard() {
 function renderHome() {
   const season = calculateSeasonTotals();
   const active = state.activeGame;
+  const watchExpanded = state.watchShareExpanded;
 
   return renderShell(`
     <section class="screen-title home-title">
@@ -1252,13 +1256,27 @@ function renderHome() {
 
       ${renderAccountCard()}
 
-      <form class="card pad form-grid share-watch-form" data-form="watch-share">
-        <h3>Watch Shared Game</h3>
-        <div class="field">
-          <label for="shareCode">Share code</label>
-          <input id="shareCode" name="shareCode" value="${escapeHTML(state.sharedCode)}" placeholder="ABC123" autocapitalize="characters" />
+      <form class="card pad form-grid share-watch-form ${watchExpanded ? "expanded" : "collapsed"}" data-form="watch-share">
+        <div class="collapsible-card-head">
+          <div>
+            <h3>Watch Shared Game</h3>
+            <p class="muted small">Enter a family share code to watch a read-only live game.</p>
+          </div>
+          <button class="mini-btn" type="button" data-action="toggle-watch-share" aria-expanded="${watchExpanded}" aria-controls="watchShareFields">
+            ${watchExpanded ? "Minimize" : "Expand"}
+          </button>
         </div>
-        <button class="btn neutral" type="submit">Watch Live</button>
+        ${
+          watchExpanded
+            ? `<div class="share-watch-fields" id="watchShareFields">
+                <div class="field">
+                  <label for="shareCode">Share code</label>
+                  <input id="shareCode" name="shareCode" value="${escapeHTML(state.sharedCode)}" placeholder="ABC123" autocapitalize="characters" />
+                </div>
+                <button class="btn neutral" type="submit">Watch Live</button>
+              </div>`
+            : ""
+        }
       </form>
     </section>
   `);
@@ -2003,6 +2021,10 @@ function handleClick(event) {
     if (action.dataset.action === "copy-share-link") copyShareLink();
     if (action.dataset.action === "sign-out") signOut();
     if (action.dataset.action === "sync-cloud-games") loadCloudGames();
+    if (action.dataset.action === "toggle-watch-share") {
+      state.watchShareExpanded = !state.watchShareExpanded;
+      render();
+    }
     return;
   }
 
