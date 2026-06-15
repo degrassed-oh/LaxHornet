@@ -10,7 +10,18 @@ const SUPABASE_CONFIG = {
   publishableKey: "sb_publishable_-RUc79OPosRLNP5B6JIH2A_f3I_2A0M",
 };
 
-const QUARTERS = ["Q1", "Q2", "Q3", "Q4", "OT"];
+const PERIOD_FORMATS = {
+  quarters: {
+    label: "4 quarters",
+    start: "Q1",
+    periods: ["Q1", "Q2", "Q3", "Q4", "OT"],
+  },
+  halves: {
+    label: "2 halves",
+    start: "H1",
+    periods: ["H1", "H2", "OT"],
+  },
+};
 
 const STAT_DEFS = [
   { key: "goal", label: "Goal", points: 5, tone: "positive", category: "Offense" },
@@ -265,6 +276,23 @@ function pointText(points) {
   return `${points}`;
 }
 
+function periodFormatForGame(game = {}) {
+  if (PERIOD_FORMATS[game.periodFormat]) return game.periodFormat;
+  if (PERIOD_FORMATS[game.period_format]) return game.period_format;
+  const current = game.currentQuarter || game.current_quarter || "";
+  const hasHalfEvent = (game.events || []).some((event) => String(event.quarter || "").startsWith("H"));
+  if (String(current).startsWith("H") || hasHalfEvent) return "halves";
+  return "quarters";
+}
+
+function periodsForGame(game = {}) {
+  return PERIOD_FORMATS[periodFormatForGame(game)].periods;
+}
+
+function periodFormatLabel(game = {}) {
+  return PERIOD_FORMATS[periodFormatForGame(game)].label;
+}
+
 function normalizeTag(tag) {
   return String(tag || "").trim();
 }
@@ -301,12 +329,17 @@ function normalizeEvent(event = {}, gameId = "") {
 
 function normalizeGame(game = {}) {
   const id = game.id || uid("game");
+  const periodFormat = periodFormatForGame(game);
+  const periods = PERIOD_FORMATS[periodFormat].periods;
+  const currentQuarter = game.currentQuarter || game.current_quarter || PERIOD_FORMATS[periodFormat].start;
   return {
     ...game,
     id,
     shareCode: game.shareCode || game.share_code || makeShareCode(),
     userId: game.userId || game.user_id || "",
     isShared: Boolean(game.isShared ?? game.is_shared ?? false),
+    periodFormat,
+    currentQuarter: periods.includes(currentQuarter) ? currentQuarter : periods[0],
     events: (game.events || []).map((event) => normalizeEvent(event, id)),
   };
 }
@@ -368,17 +401,19 @@ function updateReviewGame(gameId, updater, message = "Game updated") {
 }
 
 function makeGame(formData) {
+  const periodFormat = PERIOD_FORMATS[formData.get("periodFormat")] ? formData.get("periodFormat") : "quarters";
   return {
     id: uid("game"),
     shareCode: makeShareCode(),
     userId: currentUserId() || "",
     isShared: false,
+    periodFormat,
     opponent: formData.get("opponent")?.trim() || "Opponent",
     date: formData.get("date") || todayISO(),
     location: formData.get("location")?.trim() || "",
     gameType: formData.get("gameType") || "Regular season",
     playerSnapshot: { ...state.player },
-    currentQuarter: "Q1",
+    currentQuarter: PERIOD_FORMATS[periodFormat].start,
     events: [],
     status: "in-progress",
     createdAt: new Date().toISOString(),
@@ -753,6 +788,7 @@ function gameToSupabaseRow(game) {
     game_date: normalized.date,
     location: normalized.location || "",
     game_type: normalized.gameType || "",
+    period_format: normalized.periodFormat || "quarters",
     player_snapshot: normalized.playerSnapshot || {},
     current_quarter: normalized.currentQuarter || "Q1",
     status: normalized.status || "in-progress",
@@ -818,6 +854,7 @@ function gameFromSupabaseRow(row, events = []) {
     date: row.game_date,
     location: row.location || "",
     gameType: row.game_type || "",
+    periodFormat: row.period_format || periodFormatForGame({ currentQuarter: row.current_quarter }),
     playerSnapshot: row.player_snapshot || {},
     currentQuarter: row.current_quarter || "Q1",
     status: row.status || "in-progress",
@@ -1266,7 +1303,7 @@ function renderStartGame() {
   return renderShell(`
     <section class="screen-title">
       <h2>Start New Game</h2>
-      <p>Set the opponent, then start tracking from Q1.</p>
+      <p>Set the opponent, choose the game format, then start tracking.</p>
     </section>
 
     <form class="card pad form-grid" data-form="start-game">
@@ -1288,6 +1325,13 @@ function renderStartGame() {
             <option>Scrimmage</option>
           </select>
         </div>
+      </div>
+      <div class="field">
+        <label for="periodFormat">Game format</label>
+        <select id="periodFormat" name="periodFormat">
+          <option value="quarters">4 quarters</option>
+          <option value="halves">2 halves</option>
+        </select>
       </div>
       <div class="field">
         <label for="location">Location</label>
@@ -1312,17 +1356,18 @@ function renderLiveTracker() {
   const game = state.activeGame;
   const totals = calculateTotals(game.events);
   const recentEvents = [...game.events].reverse().slice(0, 5);
+  const periods = periodsForGame(game);
 
   return renderShell(`
     <section class="screen-title">
       <h2>${escapeHTML(game.opponent)}</h2>
-      <p>${formatDate(game.date)}${game.location ? ` - ${escapeHTML(game.location)}` : ""}</p>
+      <p>${formatDate(game.date)} - ${periodFormatLabel(game)}${game.location ? ` - ${escapeHTML(game.location)}` : ""}</p>
     </section>
 
-    <div class="quarter-tabs" role="group" aria-label="Quarter selector">
-      ${QUARTERS.map(
-        (quarter) =>
-          `<button class="quarter-tab ${game.currentQuarter === quarter ? "active" : ""}" type="button" data-quarter="${quarter}">${quarter}</button>`,
+    <div class="period-tabs" role="group" aria-label="Period selector">
+      ${periods.map(
+        (period) =>
+          `<button class="period-tab ${game.currentQuarter === period ? "active" : ""}" type="button" data-quarter="${period}">${period}</button>`,
       ).join("")}
     </div>
 
@@ -1416,8 +1461,8 @@ function renderEventEditForm(game, event) {
     (stat) =>
       `<option value="${stat.key}" ${event.statType === stat.key ? "selected" : ""}>${stat.label} (${pointText(stat.points)})</option>`,
   ).join("");
-  const quarterOptions = QUARTERS.map(
-    (quarter) => `<option value="${quarter}" ${event.quarter === quarter ? "selected" : ""}>${quarter}</option>`,
+  const periodOptions = [...new Set([...periodsForGame(game), event.quarter])].filter(Boolean).map(
+    (period) => `<option value="${period}" ${event.quarter === period ? "selected" : ""}>${period}</option>`,
   ).join("");
 
   return `
@@ -1429,8 +1474,8 @@ function renderEventEditForm(game, event) {
           <select id="editStat" name="statType">${statOptions}</select>
         </div>
         <div class="field">
-          <label for="editQuarter">Quarter</label>
-          <select id="editQuarter" name="quarter">${quarterOptions}</select>
+          <label for="editQuarter">Period</label>
+          <select id="editQuarter" name="quarter">${periodOptions}</select>
         </div>
       </div>
       <div class="field">
@@ -1777,7 +1822,7 @@ function renderTutorial() {
   return renderShell(`
     <section class="screen-title">
       <h2>Quick Tutorial</h2>
-      <p>A fast guide to tracking a game, syncing data, and sharing live stats.</p>
+      <p>A fast guide to tracking a game, saving data, and sharing live stats.</p>
     </section>
 
     <section class="stack tutorial-list">
@@ -1788,12 +1833,12 @@ function renderTutorial() {
 
       <div class="card pad">
         <h3>2. Sign In For Cloud Sync</h3>
-        <p class="muted small">Use a Parent Account when you want games saved to Supabase. Each parent only sees their own synced games and season dashboard.</p>
+        <p class="muted small">Use a Parent Account when you want games backed up online. Each parent only sees their own synced games and season dashboard.</p>
       </div>
 
       <div class="card pad">
         <h3>3. Start A Game</h3>
-        <p class="muted small">Tap Start New Game, enter the opponent, and use the large stat buttons during play. Use Q1, Q2, Q3, Q4, or OT to keep events in the right period.</p>
+        <p class="muted small">Tap Start New Game, enter the opponent, choose 4 quarters or 2 halves, and use the large stat buttons during play. Select the current period so each event lands in the right part of the game.</p>
       </div>
 
       <div class="card pad">
@@ -1808,7 +1853,7 @@ function renderTutorial() {
 
       <div class="card pad">
         <h3>6. Share Live</h3>
-        <p class="muted small">From the Live Game Tracker, copy the Live Share link so family can watch a read-only timeline from another iPhone.</p>
+        <p class="muted small">From the Live Game Tracker, copy the Live Share link so family can watch a read-only timeline from another iPhone, phone, tablet, or computer.</p>
       </div>
 
       <div class="action-grid">

@@ -376,14 +376,16 @@ button:disabled {
   box-shadow: 0 0 0 3px rgba(60, 70, 82, 0.2);
 }
 
-.quarter-tabs {
+.quarter-tabs,
+.period-tabs {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(48px, 1fr));
   gap: 7px;
   margin: 0 0 12px;
 }
 
-.quarter-tab {
+.quarter-tab,
+.period-tab {
   min-height: 44px;
   border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: var(--radius);
@@ -393,7 +395,8 @@ button:disabled {
   font-weight: 900;
 }
 
-.quarter-tab.active {
+.quarter-tab.active,
+.period-tab.active {
   color: var(--navy-950);
   background: #f5b532;
 }

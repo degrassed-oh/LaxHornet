@@ -1,18 +1,18 @@
 # LaxHornet
 
-LaxHornet is a mobile-first offline PWA for tracking youth lacrosse stats during games. It uses plain HTML, CSS, and JavaScript. Player settings, active games, and saved games are stored in `localStorage`, with optional Supabase Live Share for real-time viewing on another device.
+LaxHornet is a mobile-first offline PWA for tracking youth lacrosse stats during games. It uses plain HTML, CSS, and JavaScript. Player settings, active games, and saved games are stored in `localStorage`, with optional cloud sync and Live Share for real-time viewing on another device.
 
 ## Features
 
 - Home, Player Settings, Start New Game, Live Game Tracker, Game Review, Past Games, and Season Dashboard screens
 - Big one-handed live stat buttons for game-day use
-- Quarter selector for Q1, Q2, Q3, Q4, and OT
+- Game format selector for 4 quarters or 2 halves, with OT support
 - Undo last event, save game, end game, review, and delete game actions
 - Game Impact Score calculated from each event
 - Season totals and averages from saved games
 - Offline-ready `manifest.json` and service worker
-- Optional Supabase parent accounts so each parent keeps separate games
-- Optional Supabase Live Share with a share code/link for read-only real-time viewing
+- Optional parent accounts so each parent keeps separate games
+- Optional Live Share with a share code/link for read-only real-time viewing
 
 ## Local Setup
 

@@ -10,6 +10,7 @@ create table if not exists public.games (
   game_date date not null,
   location text,
   game_type text,
+  period_format text not null default 'quarters',
   player_snapshot jsonb not null default '{}'::jsonb,
   current_quarter text not null default 'Q1',
   status text not null default 'in-progress',
@@ -38,6 +39,7 @@ create table if not exists public.events (
 
 alter table public.games add column if not exists user_id uuid references auth.users(id) on delete cascade;
 alter table public.games add column if not exists is_shared boolean not null default false;
+alter table public.games add column if not exists period_format text not null default 'quarters';
 alter table public.events add column if not exists user_id uuid references auth.users(id) on delete cascade;
 
 create index if not exists games_user_id_idx on public.games (user_id);
