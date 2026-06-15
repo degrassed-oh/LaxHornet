@@ -48,6 +48,10 @@ The app uses relative paths (`./`) so it can run from a GitHub Pages project URL
 https://your-username.github.io/LaxHornet/
 ```
 
+## Launch Kit
+
+The `launch-kit/` folder includes a QR code, printable parent handout, PDF handout, and message templates for sharing LaxHornet with teams and families.
+
 ## Supabase Multi-User Setup
 
 The app is configured for:
