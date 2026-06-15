@@ -12,12 +12,12 @@ const SUPABASE_CONFIG = {
 
 const PERIOD_FORMATS = {
   quarters: {
-    label: "4 quarters",
+    label: "Quarters",
     start: "Q1",
     periods: ["Q1", "Q2", "Q3", "Q4", "OT"],
   },
   halves: {
-    label: "2 halves",
+    label: "Halves",
     start: "H1",
     periods: ["H1", "H2", "OT"],
   },
@@ -1329,8 +1329,8 @@ function renderStartGame() {
       <div class="field">
         <label for="periodFormat">Game format</label>
         <select id="periodFormat" name="periodFormat">
-          <option value="quarters">4 quarters</option>
-          <option value="halves">2 halves</option>
+          <option value="quarters">Quarters</option>
+          <option value="halves">Halves</option>
         </select>
       </div>
       <div class="field">
@@ -1838,7 +1838,7 @@ function renderTutorial() {
 
       <div class="card pad">
         <h3>3. Start A Game</h3>
-        <p class="muted small">Tap Start New Game, enter the opponent, choose 4 quarters or 2 halves, and use the large stat buttons during play. Select the current period so each event lands in the right part of the game.</p>
+        <p class="muted small">Tap Start New Game, enter the opponent, choose Quarters or Halves, and use the large stat buttons during play. Select the current period so each event lands in the right part of the game.</p>
       </div>
 
       <div class="card pad">
