@@ -1,0 +1,16 @@
+Subject: Try LaxHornet for youth lacrosse stats
+
+I built a simple youth lacrosse stat tracker called LaxHornet.
+
+It works on iPhone, saves stats by player, supports live sharing, and can be installed like an app.
+
+Open it here:
+https://degrasse-mastermind.github.io/LaxHornet/
+
+For iPhone:
+1. Open the link in Safari.
+2. Tap the Share button.
+3. Tap Add to Home Screen.
+4. Open LaxHornet from the new icon.
+
+Once inside, create a User Profile, add your player in Player Settings, and start tracking games.

@@ -1,0 +1,5 @@
+Try LaxHornet, a youth lacrosse stat tracker I built:
+
+https://degrasse-mastermind.github.io/LaxHornet/
+
+On iPhone, open in Safari, tap Share, then Add to Home Screen.
