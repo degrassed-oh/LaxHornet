@@ -1306,6 +1306,7 @@ function mergeGames(localGames, cloudGames) {
 async function loadCloudGames(options = {}) {
   if (!supabaseClient || !currentUserId()) return;
   await flushDeletedCloudRecords();
+  const uploadedCount = await syncLocalGamesToCloud();
   const { data, error } = await supabaseClient
     .from("games")
     .select("*, events(*)")
@@ -1320,12 +1321,55 @@ async function loadCloudGames(options = {}) {
   const cloudGames = (data || []).map((game) => gameFromSupabaseRow(game, game.events || []));
   state.games = mergeGames(state.games, cloudGames);
   mergePlayersFromGames(state.games);
+  const newestCloudGame = cloudGames.find((game) => !isDeletedGame(game.id));
+  if (!options.silent && newestCloudGame) {
+    const syncedPlayerId = gamePlayerId(newestCloudGame);
+    if (syncedPlayerId && state.players.some((player) => player.id === syncedPlayerId)) {
+      state.activePlayerId = syncedPlayerId;
+      syncActivePlayer();
+      state.reviewGameId = newestCloudGame.id;
+    }
+  }
   persistAll();
-  state.syncStatus = "Cloud games loaded";
+  const syncParts = [];
+  if (uploadedCount) syncParts.push(`${uploadedCount} uploaded`);
+  syncParts.push(
+    cloudGames.length
+      ? `${cloudGames.length} loaded`
+      : "0 loaded",
+  );
+  state.syncStatus = `Cloud sync: ${syncParts.join(", ")}`;
   if (!options.silent) {
     render();
-    showToast("Cloud games synced");
+    showToast(
+      cloudGames.length
+        ? `Cloud games synced. Showing ${playerTitle(state.player)}.`
+        : "No cloud games found for this account",
+    );
   }
+}
+
+async function syncLocalGamesToCloud() {
+  if (!supabaseClient || !currentUserId()) return 0;
+  const localGames = new Map();
+  state.games.forEach((game) => {
+    if (!isDeletedGame(game.id)) localGames.set(game.id, game);
+  });
+  if (state.activeGame && !isDeletedGame(state.activeGame.id)) {
+    localGames.set(state.activeGame.id, state.activeGame);
+  }
+
+  let uploaded = 0;
+  for (const game of localGames.values()) {
+    if (game.userId && game.userId !== currentUserId()) continue;
+    const normalized = normalizeGame({ ...game, userId: currentUserId() });
+    if (state.activeGame?.id === normalized.id) state.activeGame = normalized;
+    const index = state.games.findIndex((item) => item.id === normalized.id);
+    if (index >= 0) state.games[index] = normalized;
+    const synced = await syncGameToSupabase(normalized, { includeEvents: true });
+    if (synced) uploaded += 1;
+  }
+  return uploaded;
 }
 
 async function flushDeletedCloudRecords() {
@@ -1626,6 +1670,7 @@ function renderAccountCard() {
       <section class="card pad account-card">
         <h3>User Profile</h3>
         <p class="muted small">${escapeHTML(userEmail())}</p>
+        <p class="muted small">${escapeHTML(state.syncStatus)}</p>
         <div class="account-actions">
           <button class="btn neutral" type="button" data-action="sync-cloud-games">Sync Cloud Games</button>
           <button class="btn secondary" type="button" data-action="sign-out">Sign Out</button>
