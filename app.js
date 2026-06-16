@@ -492,6 +492,14 @@ function normalizeEvent(event = {}, gameId = "") {
     points: Number(event.pointValue || 0),
     category: event.category || "Note",
   };
+  const rawPointValue = event.pointValue ?? event.point_value;
+  const numericPointValue = Number(rawPointValue);
+  const hasStoredPointValue = rawPointValue !== undefined && rawPointValue !== null && rawPointValue !== "";
+  const storedPointValueLooksWrong = stat.key !== "note" && Number(stat.points || 0) !== 0 && numericPointValue === 0;
+  const pointValue =
+    hasStoredPointValue && Number.isFinite(numericPointValue) && !storedPointValueLooksWrong
+      ? numericPointValue
+      : Number(stat.points || 0);
 
   return {
     id: event.id || uid("event"),
@@ -502,7 +510,7 @@ function normalizeEvent(event = {}, gameId = "") {
     statType: stat.key,
     statLabel: event.statLabel || stat.label,
     category: event.category || stat.category || "General",
-    pointValue: Number(event.pointValue ?? stat.points ?? 0),
+    pointValue,
     tags: uniqueTags(event.tags),
     note: event.note || "",
     fieldZone: event.fieldZone || "",
