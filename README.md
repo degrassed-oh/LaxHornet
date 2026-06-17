@@ -15,6 +15,7 @@ LaxHornet is a mobile-first offline PWA for tracking youth lacrosse stats during
 - Per-player season totals and averages from saved games
 - Offline-ready `manifest.json` and service worker
 - Optional user profiles so each user keeps separate games
+- Optional shared team rosters so invited parents can track and view the same rostered players
 - Optional Live Share with a share code/link for read-only real-time viewing
 
 ## Local Setup
@@ -71,7 +72,19 @@ To create or update the database tables:
 7. Start a new game.
 8. Use **Copy Share Link** from the Live Game Tracker when you want a read-only viewer link.
 
-Games and events are private to the signed-in user by default. Copying a share link marks that game as shared so family can watch it read-only from another iPhone.
+Games and events are private to the signed-in user by default. Team roster games are visible to signed-in parents who joined the same team with the invite code. Copying a share link marks that game as shared so family can watch it read-only from another iPhone.
+
+## Shared Team Rosters
+
+Use **Team Roster** when multiple parents need to track or view stats for the same rostered players.
+
+1. Sign in with a User Profile.
+2. Create a team to generate an invite code.
+3. Add rostered players by name and jersey number.
+4. Give another parent the invite code.
+5. The other parent signs in, joins the team, syncs teams, and selects the same rostered player.
+
+Best practice: choose one official tracker for each player/game. Multiple parents can sync and review the same stats, but two people logging the same player at the same time can create duplicate events.
 
 ## Stat Scoring
 
@@ -84,6 +97,7 @@ Games and events are private to the signed-in user by default. Copying a share l
 - Caused Turnover: +3
 - Defensive Stop: +3
 - Successful Clear: +2
+- Backed Up Shot: +2
 - Hustle Play: +1
 - Smart Play: +1
 - Turnover: -2

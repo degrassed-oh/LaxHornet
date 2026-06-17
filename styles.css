@@ -380,6 +380,119 @@ button:disabled {
   box-shadow: inset 0 0 0 1px rgba(232, 16, 16, 0.14);
 }
 
+.team-card {
+  display: grid;
+  gap: 14px;
+}
+
+.team-card.collapsed {
+  gap: 0;
+}
+
+.team-card h3,
+.team-card h4 {
+  margin: 0;
+}
+
+.team-card-body {
+  display: grid;
+  gap: 14px;
+}
+
+.team-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.team-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.team-chip {
+  display: inline-flex;
+  min-width: 130px;
+  min-height: 50px;
+  flex: 1 1 calc(50% - 4px);
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 3px;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--text);
+  background: #ffffff;
+  text-align: left;
+}
+
+.team-chip strong,
+.team-chip span {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.team-chip strong {
+  font-size: 0.9rem;
+  font-weight: 900;
+}
+
+.team-chip span {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.team-chip.active {
+  border-color: rgba(232, 16, 16, 0.68);
+  background:
+    linear-gradient(90deg, var(--hornet-red) 0 5px, transparent 5px),
+    #f7f8f9;
+}
+
+.team-form-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.inline-mini-form {
+  display: grid;
+  gap: 6px;
+}
+
+.inline-mini-form label {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.inline-input-action {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.team-roster-block,
+.team-add-player-form {
+  display: grid;
+  gap: 10px;
+}
+
+.compact-head {
+  align-items: flex-end;
+}
+
+.team-note {
+  margin: 0;
+}
+
 .two-actions {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }

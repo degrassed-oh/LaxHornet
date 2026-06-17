@@ -7,6 +7,9 @@ const STORAGE_KEYS = {
   deletedEvents: "laxhornet.deletedEvents",
   activeGame: "laxhornet.activeGame",
   reviewGameId: "laxhornet.reviewGameId",
+  teams: "laxhornet.teams",
+  rosterPlayers: "laxhornet.rosterPlayers",
+  activeTeamId: "laxhornet.activeTeamId",
 };
 
 const SUPABASE_CONFIG = {
@@ -230,6 +233,8 @@ const DEFAULT_PLAYER = {
   notes: "",
 };
 
+const DEFAULT_TEAM_INVITE_LENGTH = 6;
+
 const app = document.querySelector("#app");
 const startupParams = new URLSearchParams(window.location.search);
 const startupShareCode = startupParams.get("share")?.trim().toUpperCase() || "";
@@ -253,6 +258,9 @@ const state = {
   players: initialPlayers,
   activePlayerId: safeActivePlayerId,
   player: activePlayerFrom(initialPlayers, safeActivePlayerId),
+  teams: normalizeTeams(loadJSON(STORAGE_KEYS.teams, [])),
+  rosterPlayers: normalizeRosterPlayers(loadJSON(STORAGE_KEYS.rosterPlayers, [])),
+  activeTeamId: loadJSON(STORAGE_KEYS.activeTeamId, ""),
   games: loadJSON(STORAGE_KEYS.games, []),
   activeGame: loadJSON(STORAGE_KEYS.activeGame, null),
   reviewGameId: loadJSON(STORAGE_KEYS.reviewGameId, null),
@@ -267,10 +275,12 @@ const state = {
   deletedGameIds: loadJSON(STORAGE_KEYS.deletedGames, []),
   deletedEventIds: loadJSON(STORAGE_KEYS.deletedEvents, []),
   watchShareExpanded: false,
+  teamRosterExpanded: true,
   toast: "",
   authBusy: false,
 };
 
+mergeRosterPlayersIntoPlayers();
 syncActivePlayer();
 state.games = state.games.map((game) => normalizeGame(game, state.player));
 state.activeGame = state.activeGame ? normalizeGame(state.activeGame, state.player) : null;
@@ -296,6 +306,8 @@ function uid(prefix = "id") {
 
 function normalizePlayer(player = {}, options = {}) {
   const id = player.id || player.playerId || player.player_id || (options.createId ? uid("player") : "");
+  const teamId = player.teamId || player.team_id || "";
+  const rosterPlayerId = player.rosterPlayerId || player.roster_player_id || (teamId ? id : "");
   return {
     id,
     name: String(player.name || "").trim() || DEFAULT_PLAYER.name,
@@ -303,7 +315,114 @@ function normalizePlayer(player = {}, options = {}) {
     team: String(player.team || "").trim(),
     position: String(player.position || "").trim(),
     notes: String(player.notes || "").trim(),
+    teamId,
+    rosterPlayerId,
+    source: player.source || (teamId ? "teamRoster" : "local"),
   };
+}
+
+function normalizeTeam(team = {}) {
+  const id = team.id || team.teamId || team.team_id || "";
+  return {
+    id,
+    name: String(team.name || "").trim() || "Team",
+    inviteCode: String(team.inviteCode || team.invite_code || "").trim().toUpperCase(),
+    role: String(team.role || "member").trim() || "member",
+    createdBy: team.createdBy || team.created_by || "",
+    createdAt: team.createdAt || team.created_at || new Date().toISOString(),
+  };
+}
+
+function normalizeTeams(teams = []) {
+  const merged = new Map();
+  (Array.isArray(teams) ? teams : []).forEach((team) => {
+    const normalized = normalizeTeam(team);
+    if (normalized.id) merged.set(normalized.id, { ...merged.get(normalized.id), ...normalized });
+  });
+  return [...merged.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function normalizeRosterPlayer(player = {}) {
+  const teamId = player.teamId || player.team_id || "";
+  const id = player.id || player.rosterPlayerId || player.roster_player_id || (teamId ? uid("roster") : "");
+  return {
+    id,
+    teamId,
+    name: String(player.name || "").trim() || "Roster Player",
+    number: String(player.number || "").trim(),
+    position: String(player.position || "").trim(),
+    active: player.active !== false,
+    createdAt: player.createdAt || player.created_at || new Date().toISOString(),
+  };
+}
+
+function normalizeRosterPlayers(players = []) {
+  const merged = new Map();
+  (Array.isArray(players) ? players : []).forEach((player) => {
+    const normalized = normalizeRosterPlayer(player);
+    if (normalized.id && normalized.teamId) merged.set(normalized.id, { ...merged.get(normalized.id), ...normalized });
+  });
+  return [...merged.values()].sort((a, b) => {
+    const numberDiff = Number(a.number) - Number(b.number);
+    if (Number.isFinite(numberDiff) && numberDiff !== 0) return numberDiff;
+    return a.name.localeCompare(b.name);
+  });
+}
+
+function teamById(teamId) {
+  return state.teams.find((team) => team.id === teamId) || null;
+}
+
+function activeTeam() {
+  return teamById(state.activeTeamId) || state.teams[0] || null;
+}
+
+function rosterPlayerToPlayer(rosterPlayer = {}) {
+  const normalized = normalizeRosterPlayer(rosterPlayer);
+  const team = teamById(normalized.teamId);
+  return normalizePlayer({
+    id: normalized.id,
+    rosterPlayerId: normalized.id,
+    teamId: normalized.teamId,
+    name: normalized.name,
+    number: normalized.number,
+    team: team?.name || "",
+    position: normalized.position,
+    source: "teamRoster",
+  });
+}
+
+function mergeRosterPlayersIntoPlayers() {
+  const localPlayers = state.players.filter((player) => !player.teamId);
+  const rosterPlayers = state.rosterPlayers.filter((player) => player.active !== false).map(rosterPlayerToPlayer);
+  state.players = dedupePlayers([...localPlayers, ...rosterPlayers], state.activePlayerId).players;
+  if (state.activeTeamId && !state.teams.some((team) => team.id === state.activeTeamId)) {
+    state.activeTeamId = state.teams[0]?.id || "";
+  }
+}
+
+function activeTeamRoster() {
+  const team = activeTeam();
+  if (!team) return [];
+  return state.rosterPlayers.filter((player) => player.teamId === team.id && player.active !== false);
+}
+
+function teamIds() {
+  return state.teams.map((team) => team.id).filter(Boolean);
+}
+
+function makeInviteCode() {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+  for (let i = 0; i < DEFAULT_TEAM_INVITE_LENGTH; i += 1) {
+    code += alphabet[Math.floor(Math.random() * alphabet.length)];
+  }
+  return code;
+}
+
+function isTeamPlayer(player = {}) {
+  const normalized = normalizePlayer(player);
+  return Boolean(normalized.teamId && normalized.rosterPlayerId);
 }
 
 function normalizePlayers(players, fallbackPlayer = legacyPlayer) {
@@ -322,6 +441,11 @@ function activePlayerFrom(players, activePlayerId) {
 
 function playerIdentityKey(player = {}) {
   const normalized = normalizePlayer(player);
+  if (normalized.teamId) {
+    return ["team", normalized.teamId, normalized.rosterPlayerId || normalized.id, normalized.number]
+      .map((value) => String(value || "").trim().toLowerCase())
+      .join("|");
+  }
   return [normalized.name, normalized.number, normalized.team, normalized.position]
     .map((value) => value.trim().toLowerCase())
     .join("|");
@@ -335,6 +459,9 @@ function mergePlayerDetails(base, next) {
     team: base.team || next.team,
     position: base.position || next.position,
     notes: base.notes || next.notes,
+    teamId: base.teamId || next.teamId || "",
+    rosterPlayerId: base.rosterPlayerId || next.rosterPlayerId || "",
+    source: base.source || next.source || "local",
   };
 }
 
@@ -392,6 +519,14 @@ function playerSubline(player = state.player) {
 
 function gamePlayerId(game = {}) {
   return game.playerId || game.player_id || game.playerSnapshot?.id || game.player_snapshot?.id || "";
+}
+
+function gameTeamId(game = {}) {
+  return game.teamId || game.team_id || game.playerSnapshot?.teamId || game.player_snapshot?.team_id || "";
+}
+
+function gameRosterPlayerId(game = {}) {
+  return game.rosterPlayerId || game.roster_player_id || game.playerSnapshot?.rosterPlayerId || game.player_snapshot?.roster_player_id || "";
 }
 
 function gamePlayerSnapshot(game = {}) {
@@ -612,6 +747,8 @@ function normalizeEvent(event = {}, gameId = "") {
     id: event.id || uid("event"),
     gameId: event.gameId || gameId,
     userId: event.userId || event.user_id || "",
+    teamId: event.teamId || event.team_id || "",
+    rosterPlayerId: event.rosterPlayerId || event.roster_player_id || "",
     timestamp: event.timestamp || new Date().toISOString(),
     quarter: event.quarter || "Q1",
     statType: stat.key,
@@ -635,7 +772,10 @@ function normalizeGame(game = {}, fallbackPlayer = null) {
   const rawSnapshot = game.playerSnapshot || game.player_snapshot || fallbackSnapshot || {};
   let playerSnapshot = normalizePlayer(rawSnapshot);
   const playerId = game.playerId || game.player_id || playerSnapshot.id || fallbackSnapshot?.id || "";
+  const teamId = game.teamId || game.team_id || playerSnapshot.teamId || "";
+  const rosterPlayerId = game.rosterPlayerId || game.roster_player_id || playerSnapshot.rosterPlayerId || (teamId ? playerId : "");
   if (playerId && !playerSnapshot.id) playerSnapshot = { ...playerSnapshot, id: playerId };
+  if (teamId) playerSnapshot = { ...playerSnapshot, teamId, rosterPlayerId: rosterPlayerId || playerSnapshot.rosterPlayerId || playerId };
   if ((!playerSnapshot.name || playerSnapshot.name === DEFAULT_PLAYER.name) && fallbackSnapshot?.name) {
     playerSnapshot = { ...fallbackSnapshot, id: playerId || fallbackSnapshot.id };
   }
@@ -643,21 +783,29 @@ function normalizeGame(game = {}, fallbackPlayer = null) {
     ...game,
     id,
     playerId: playerId || playerSnapshot.id || "",
+    teamId,
+    rosterPlayerId,
     playerSnapshot,
     shareCode: game.shareCode || game.share_code || makeShareCode(),
     userId: game.userId || game.user_id || "",
     isShared: Boolean(game.isShared ?? game.is_shared ?? false),
     periodFormat,
     currentQuarter: periods.includes(currentQuarter) ? currentQuarter : periods[0],
-    events: (game.events || []).filter((event) => !isDeletedEvent(event.id)).map((event) => normalizeEvent(event, id)),
+    events: (game.events || [])
+      .filter((event) => !isDeletedEvent(event.id))
+      .map((event) => normalizeEvent({ ...event, teamId: event.teamId || event.team_id || teamId, rosterPlayerId: event.rosterPlayerId || event.roster_player_id || rosterPlayerId }, id)),
   };
 }
 
 function persistAll() {
+  mergeRosterPlayersIntoPlayers();
   syncActivePlayer();
   saveJSON(STORAGE_KEYS.player, state.player);
   saveJSON(STORAGE_KEYS.players, state.players);
   saveJSON(STORAGE_KEYS.activePlayerId, state.activePlayerId);
+  saveJSON(STORAGE_KEYS.teams, state.teams);
+  saveJSON(STORAGE_KEYS.rosterPlayers, state.rosterPlayers);
+  saveJSON(STORAGE_KEYS.activeTeamId, state.activeTeamId);
   saveJSON(STORAGE_KEYS.deletedGames, uniqueIds(state.deletedGameIds));
   saveJSON(STORAGE_KEYS.deletedEvents, uniqueIds(state.deletedEventIds));
   saveJSON(STORAGE_KEYS.games, state.games);
@@ -718,9 +866,13 @@ function updateReviewGame(gameId, updater, message = "Game updated") {
 function makeGame(formData) {
   const periodFormat = PERIOD_FORMATS[formData.get("periodFormat")] ? formData.get("periodFormat") : "quarters";
   const player = { ...state.player };
+  const teamId = player.teamId || "";
+  const rosterPlayerId = player.rosterPlayerId || (teamId ? player.id : "");
   return {
     id: uid("game"),
     playerId: player.id,
+    teamId,
+    rosterPlayerId,
     shareCode: makeShareCode(),
     userId: currentUserId() || "",
     isShared: false,
@@ -843,9 +995,13 @@ function pct(value) {
 
 function visibleGames() {
   const userId = currentUserId();
+  const joinedTeamIds = teamIds();
   const userGames = userId
-    ? state.games.filter((game) => !game.userId || game.userId === userId)
-    : state.games.filter((game) => !game.userId);
+    ? state.games.filter((game) => {
+        const teamGameId = gameTeamId(game);
+        return !game.userId || game.userId === userId || (teamGameId && joinedTeamIds.includes(teamGameId));
+      })
+    : state.games.filter((game) => !game.userId && !gameTeamId(game));
   if (!state.activePlayerId) return userGames;
   return userGames.filter((game) => {
     const playerId = gamePlayerId(game);
@@ -888,6 +1044,8 @@ function logEvent(statKey) {
     id: uid("event"),
     gameId: state.activeGame.id,
     userId: state.activeGame.userId || currentUserId() || "",
+    teamId: state.activeGame.teamId || "",
+    rosterPlayerId: state.activeGame.rosterPlayerId || "",
     timestamp: new Date().toISOString(),
     quarter: state.activeGame.currentQuarter,
     statType: stat.key,
@@ -1027,6 +1185,9 @@ function buildCSV() {
   const headers = [
     "gameId",
     "playerId",
+    "teamId",
+    "teamName",
+    "rosterPlayerId",
     "playerName",
     "playerNumber",
     "gameDate",
@@ -1048,6 +1209,9 @@ function buildCSV() {
       return [
       game.id,
       gamePlayerId(game),
+      gameTeamId(game),
+      teamById(gameTeamId(game))?.name || player.team || "",
+      gameRosterPlayerId(game),
       player.name,
       player.number,
       game.date,
@@ -1092,7 +1256,10 @@ function exportJSON() {
     exportedAt: new Date().toISOString(),
     player: state.player,
     players: state.players,
+    teams: state.teams,
+    rosterPlayers: state.rosterPlayers,
     activePlayerId: state.activePlayerId,
+    activeTeamId: state.activeTeamId,
     games: state.games.map(normalizeGame),
   };
   downloadFile(
@@ -1127,6 +1294,23 @@ function importJSONFile(file) {
         syncActivePlayer();
       }
 
+      const importedTeams = Array.isArray(payload.teams) ? normalizeTeams(payload.teams) : [];
+      if (importedTeams.length) {
+        state.teams = normalizeTeams([...state.teams, ...importedTeams]);
+        if (payload.activeTeamId && state.teams.some((team) => team.id === payload.activeTeamId)) {
+          state.activeTeamId = payload.activeTeamId;
+        }
+      }
+
+      const importedRosterPlayers = Array.isArray(payload.rosterPlayers)
+        ? normalizeRosterPlayers(payload.rosterPlayers)
+        : [];
+      if (importedRosterPlayers.length) {
+        state.rosterPlayers = normalizeRosterPlayers([...state.rosterPlayers, ...importedRosterPlayers]);
+        mergeRosterPlayersIntoPlayers();
+        syncActivePlayer();
+      }
+
       const merged = new Map(state.games.map((game) => [game.id, normalizeGame(game)]));
       importedGames.map(normalizeGame).forEach((game) => merged.set(game.id, game));
       state.games = [...merged.values()].sort(
@@ -1149,6 +1333,8 @@ function gameToSupabaseRow(game) {
   return {
     id: normalized.id,
     player_id: normalized.playerId || normalized.playerSnapshot?.id || "",
+    team_id: normalized.teamId || "",
+    roster_player_id: normalized.rosterPlayerId || "",
     user_id: userId,
     share_code: normalized.shareCode,
     is_shared: Boolean(normalized.isShared),
@@ -1176,6 +1362,8 @@ function eventToSupabaseRow(event) {
     id: normalized.id,
     game_id: normalized.gameId,
     user_id: userId,
+    team_id: normalized.teamId || game?.teamId || "",
+    roster_player_id: normalized.rosterPlayerId || game?.rosterPlayerId || "",
     timestamp: normalized.timestamp,
     quarter: normalized.quarter,
     stat_type: normalized.statType,
@@ -1196,6 +1384,8 @@ function eventFromSupabaseRow(row) {
       id: row.id,
       gameId: row.game_id,
       userId: row.user_id || "",
+      teamId: row.team_id || "",
+      rosterPlayerId: row.roster_player_id || "",
       timestamp: row.timestamp,
       quarter: row.quarter,
       statType: row.stat_type,
@@ -1216,6 +1406,8 @@ function gameFromSupabaseRow(row, events = []) {
   return normalizeGame({
     id: row.id,
     playerId: row.player_id || row.player_snapshot?.id || "",
+    teamId: row.team_id || "",
+    rosterPlayerId: row.roster_player_id || "",
     userId: row.user_id || "",
     shareCode: row.share_code,
     isShared: Boolean(row.is_shared),
@@ -1303,11 +1495,79 @@ function mergeGames(localGames, cloudGames) {
   return [...merged.values()].sort((a, b) => new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt));
 }
 
+function teamFromSupabaseRows(memberRow = {}) {
+  const team = memberRow.teams || memberRow.team || memberRow;
+  return normalizeTeam({
+    id: team.id || memberRow.team_id,
+    name: team.name,
+    inviteCode: team.invite_code,
+    role: memberRow.role || team.role || "member",
+    createdBy: team.created_by,
+    createdAt: team.created_at,
+  });
+}
+
+function rosterPlayerFromSupabaseRow(row = {}) {
+  return normalizeRosterPlayer({
+    id: row.id,
+    teamId: row.team_id,
+    name: row.name,
+    number: row.number,
+    position: row.position,
+    active: row.active,
+    createdAt: row.created_at,
+  });
+}
+
+async function loadCloudTeams(options = {}) {
+  if (!supabaseClient || !currentUserId()) return;
+  const { data: memberRows, error: memberError } = await supabaseClient
+    .from("team_members")
+    .select("team_id, role, teams(*)")
+    .eq("user_id", currentUserId());
+
+  if (memberError) {
+    if (!options.silent) reportSyncError(memberError);
+    return;
+  }
+
+  const cloudTeams = normalizeTeams((memberRows || []).map(teamFromSupabaseRows));
+  state.teams = normalizeTeams([...state.teams, ...cloudTeams]);
+  if (!state.activeTeamId || !state.teams.some((team) => team.id === state.activeTeamId)) {
+    state.activeTeamId = state.teams[0]?.id || "";
+  }
+
+  const ids = teamIds();
+  if (ids.length) {
+    const { data: rosterRows, error: rosterError } = await supabaseClient
+      .from("roster_players")
+      .select("*")
+      .in("team_id", ids)
+      .order("number", { ascending: true });
+
+    if (rosterError) {
+      if (!options.silent) reportSyncError(rosterError);
+      return;
+    }
+
+    state.rosterPlayers = normalizeRosterPlayers([...state.rosterPlayers, ...(rosterRows || []).map(rosterPlayerFromSupabaseRow)]);
+  }
+
+  mergeRosterPlayersIntoPlayers();
+  syncActivePlayer();
+  persistAll();
+  if (!options.silent) {
+    render();
+    showToast(state.teams.length ? "Team roster synced" : "No team rosters found");
+  }
+}
+
 async function loadCloudGames(options = {}) {
   if (!supabaseClient || !currentUserId()) return;
+  await loadCloudTeams({ silent: true });
   await flushDeletedCloudRecords();
   const uploadedCount = await syncLocalGamesToCloud();
-  const { data, error } = await supabaseClient
+  const { data: ownData, error } = await supabaseClient
     .from("games")
     .select("*, events(*)")
     .eq("user_id", currentUserId())
@@ -1318,7 +1578,22 @@ async function loadCloudGames(options = {}) {
     return;
   }
 
-  const cloudGames = (data || []).map((game) => gameFromSupabaseRow(game, game.events || []));
+  let teamData = [];
+  if (teamIds().length) {
+    const { data: sharedData, error: teamError } = await supabaseClient
+      .from("games")
+      .select("*, events(*)")
+      .in("team_id", teamIds())
+      .order("game_date", { ascending: false });
+    if (teamError) {
+      if (!options.silent) reportSyncError(teamError);
+    } else {
+      teamData = sharedData || [];
+    }
+  }
+
+  const rowsById = new Map([...(ownData || []), ...teamData].map((game) => [game.id, game]));
+  const cloudGames = [...rowsById.values()].map((game) => gameFromSupabaseRow(game, game.events || []));
   state.games = mergeGames(state.games, cloudGames);
   mergePlayersFromGames(state.games);
   const newestCloudGame = cloudGames.find((game) => !isDeletedGame(game.id));
@@ -1445,6 +1720,141 @@ async function signOut() {
   showToast("Signed out");
 }
 
+async function createTeam(formData) {
+  if (!supabaseClient || !currentUserId()) {
+    showToast("Sign in to create a team");
+    return;
+  }
+  const name = formData.get("teamName")?.trim();
+  if (!name) {
+    showToast("Enter a team name");
+    return;
+  }
+  const team = normalizeTeam({
+    id: uid("team"),
+    name,
+    inviteCode: makeInviteCode(),
+    role: "admin",
+    createdBy: currentUserId(),
+  });
+
+  const { error: teamError } = await supabaseClient.from("teams").insert({
+    id: team.id,
+    name: team.name,
+    invite_code: team.inviteCode,
+    created_by: currentUserId(),
+  });
+  if (teamError) {
+    reportSyncError(teamError);
+    return;
+  }
+
+  const { error: memberError } = await supabaseClient.from("team_members").insert({
+    id: uid("member"),
+    team_id: team.id,
+    user_id: currentUserId(),
+    role: "admin",
+  });
+  if (memberError) {
+    reportSyncError(memberError);
+    return;
+  }
+
+  state.teams = normalizeTeams([...state.teams, team]);
+  state.activeTeamId = team.id;
+  persistAll();
+  render();
+  showToast(`Team created. Invite code ${team.inviteCode}`);
+}
+
+async function joinTeam(formData) {
+  if (!supabaseClient || !currentUserId()) {
+    showToast("Sign in to join a team");
+    return;
+  }
+  const inviteCode = formData.get("inviteCode")?.trim().toUpperCase();
+  if (!inviteCode) {
+    showToast("Enter an invite code");
+    return;
+  }
+  const { data: teamRow, error: teamError } = await supabaseClient
+    .from("teams")
+    .select("*")
+    .eq("invite_code", inviteCode)
+    .maybeSingle();
+  if (teamError) {
+    reportSyncError(teamError);
+    return;
+  }
+  if (!teamRow) {
+    showToast("Team invite not found");
+    return;
+  }
+
+  const team = normalizeTeam({ ...teamRow, role: "member" });
+  const { error: memberError } = await supabaseClient
+    .from("team_members")
+    .upsert(
+      {
+        id: `${team.id}-${currentUserId()}`,
+        team_id: team.id,
+        user_id: currentUserId(),
+        role: "member",
+      },
+      { onConflict: "team_id,user_id" },
+    );
+  if (memberError) {
+    reportSyncError(memberError);
+    return;
+  }
+
+  state.teams = normalizeTeams([...state.teams, team]);
+  state.activeTeamId = team.id;
+  await loadCloudTeams({ silent: true });
+  await loadCloudGames({ silent: true });
+  render();
+  showToast(`Joined ${team.name}`);
+}
+
+async function addRosterPlayer(formData) {
+  const team = activeTeam();
+  if (!team) {
+    showToast("Create or join a team first");
+    return;
+  }
+  if (!currentUserId()) {
+    showToast("Sign in to add team players");
+    return;
+  }
+  const rosterPlayer = normalizeRosterPlayer({
+    id: uid("roster"),
+    teamId: team.id,
+    name: formData.get("rosterName")?.trim() || "Roster Player",
+    number: formData.get("rosterNumber")?.trim() || "",
+    position: formData.get("rosterPosition")?.trim() || "",
+  });
+  const { error } = await supabaseClient.from("roster_players").insert({
+    id: rosterPlayer.id,
+    team_id: rosterPlayer.teamId,
+    name: rosterPlayer.name,
+    number: rosterPlayer.number,
+    position: rosterPlayer.position,
+    active: true,
+  });
+  if (error) {
+    reportSyncError(error);
+    return;
+  }
+
+  state.rosterPlayers = normalizeRosterPlayers([...state.rosterPlayers, rosterPlayer]);
+  mergeRosterPlayersIntoPlayers();
+  state.activePlayerId = rosterPlayer.id;
+  syncActivePlayer();
+  persistAll();
+  render();
+  showToast(`${playerTitle(state.player)} added`);
+}
+
 async function syncGameToSupabase(game, options = {}) {
   if (!supabaseClient || !game) return false;
   if (isDeletedGame(game.id)) return false;
@@ -1456,6 +1866,8 @@ async function syncGameToSupabase(game, options = {}) {
   const normalized = normalizeGame({ ...game, userId: game.userId || userId });
   const { error, skipped } = await upsertWithOptionalColumns("games", gameToSupabaseRow(normalized), [
     "player_id",
+    "team_id",
+    "roster_player_id",
     "period_format",
   ]);
   if (error) {
@@ -1467,7 +1879,7 @@ async function syncGameToSupabase(game, options = {}) {
     const { error: eventsError, skipped: skippedEventColumns } = await upsertWithOptionalColumns(
       "events",
       normalized.events.map((event) => eventToSupabaseRow({ ...event, userId })),
-      ["tags", "field_zone", "corrected_at", "tags_updated_at"],
+      ["tags", "team_id", "roster_player_id", "field_zone", "corrected_at", "tags_updated_at"],
     );
     if (eventsError) {
       reportSyncError(eventsError);
@@ -1488,6 +1900,8 @@ async function syncLoggedEvent(game, event) {
   if (!gameSynced) return;
   const { error, skipped } = await upsertWithOptionalColumns("events", eventToSupabaseRow(event), [
     "tags",
+    "team_id",
+    "roster_player_id",
     "field_zone",
     "corrected_at",
     "tags_updated_at",
@@ -1682,7 +2096,7 @@ function renderAccountCard() {
   return `
     <form class="card pad form-grid account-card" data-form="auth">
       <h3>User Profile</h3>
-      <p class="muted small">Sign in so each user keeps their own players, games, and season dashboard separate.</p>
+      <p class="muted small">Sign in for cloud backup. Personal players stay private; team roster players can be shared with parents you invite.</p>
       <div class="field">
         <label for="authEmail">Email</label>
         <input id="authEmail" name="email" type="email" autocomplete="email" required />
@@ -1730,6 +2144,136 @@ function renderPlayerSwitcher(options = {}) {
   `;
 }
 
+function renderTeamRosterCard(options = {}) {
+  const compact = Boolean(options.compact);
+  const expanded = compact ? state.teamRosterExpanded : true;
+  if (!supabaseClient || !state.authUser) {
+    return `
+      <section class="card pad team-card">
+        <h3>Team Roster</h3>
+        <p class="muted small">Sign in with a User Profile to create or join a shared team roster.</p>
+      </section>
+    `;
+  }
+
+  const team = activeTeam();
+  const roster = activeTeamRoster();
+  const teams = state.teams
+    .map((item) => {
+      const active = item.id === state.activeTeamId;
+      return `
+        <button class="team-chip ${active ? "active" : ""}" type="button" data-team-select="${item.id}" aria-pressed="${active}">
+          <strong>${escapeHTML(item.name)}</strong>
+          <span>${escapeHTML(item.inviteCode || "No code")}</span>
+        </button>
+      `;
+    })
+    .join("");
+  const rosterChips = roster.length
+    ? roster
+        .map((item) => {
+          const player = rosterPlayerToPlayer(item);
+          const active = player.id === state.activePlayerId;
+          return `
+            <button class="player-chip ${active ? "active" : ""}" type="button" data-player-select="${player.id}" aria-pressed="${active}">
+              <strong>${escapeHTML(player.name)}</strong>
+              <span>${item.number ? `#${escapeHTML(item.number)}` : "No jersey"}${item.position ? ` - ${escapeHTML(item.position)}` : ""}</span>
+            </button>
+          `;
+        })
+        .join("")
+    : `<p class="muted small">No rostered players yet. Add players by name and jersey number.</p>`;
+
+  return `
+    <section class="card pad team-card ${compact && !expanded ? "collapsed" : ""}">
+      <div class="collapsible-card-head">
+        <div>
+          <h3>Team Roster</h3>
+          <p class="muted small">${
+            team
+              ? `Shared roster for ${escapeHTML(team.name)}. Invite code: ${escapeHTML(team.inviteCode)}`
+              : "Create a team or join with an invite code."
+          }</p>
+        </div>
+        ${
+          compact
+            ? `<button class="collapse-icon" type="button" data-action="toggle-team-roster" aria-expanded="${expanded}" aria-label="${expanded ? "Minimize Team Roster" : "Expand Team Roster"}">
+                <span aria-hidden="true">${expanded ? "v" : ">"}</span>
+              </button>`
+            : ""
+        }
+      </div>
+
+      ${
+        expanded
+          ? `
+            <div class="team-card-body">
+              <div class="team-actions">
+                <button class="mini-btn light" type="button" data-action="sync-team-roster">Sync Teams</button>
+              </div>
+              ${
+                teams
+                  ? `<div class="team-chip-row">${teams}</div>`
+                  : `<p class="muted small">No teams yet. Create one for your roster or join with a code from another parent.</p>`
+              }
+
+              <div class="team-form-grid">
+                <form class="inline-mini-form" data-form="create-team">
+                  <label for="teamName">Create team</label>
+                  <div class="inline-input-action">
+                    <input id="teamName" name="teamName" placeholder="Team name" />
+                    <button class="mini-btn" type="submit">Create</button>
+                  </div>
+                </form>
+                <form class="inline-mini-form" data-form="join-team">
+                  <label for="inviteCode">Join team</label>
+                  <div class="inline-input-action">
+                    <input id="inviteCode" name="inviteCode" placeholder="Invite code" autocapitalize="characters" />
+                    <button class="mini-btn" type="submit">Join</button>
+                  </div>
+                </form>
+              </div>
+
+              ${
+                team
+                  ? `
+                    <div class="team-roster-block">
+                      <div class="section-head compact-head">
+                        <div>
+                          <h4>Rostered Players</h4>
+                          <p class="muted small">Stats follow the rostered player across every parent account.</p>
+                        </div>
+                      </div>
+                      <div class="player-chip-row">${rosterChips}</div>
+                    </div>
+                    <form class="team-add-player-form" data-form="add-roster-player">
+                      <div class="form-grid two">
+                        <div class="field">
+                          <label for="rosterName">Player name</label>
+                          <input id="rosterName" name="rosterName" placeholder="Player name" required />
+                        </div>
+                        <div class="field">
+                          <label for="rosterNumber">Jersey #</label>
+                          <input id="rosterNumber" name="rosterNumber" inputmode="numeric" placeholder="12" />
+                        </div>
+                      </div>
+                      <div class="inline-input-action">
+                        <input name="rosterPosition" placeholder="Position" />
+                        <button class="mini-btn" type="submit">Add Player</button>
+                      </div>
+                    </form>
+                  `
+                  : ""
+              }
+              <p class="muted small team-note">Best practice: pick one official tracker for a player/game so two parents do not log the same play twice.</p>
+            </div>
+          `
+          : ""
+      }
+    </section>
+  `;
+}
+
 function renderHome() {
   const season = calculateSeasonTotals();
   const active = state.activeGame;
@@ -1767,6 +2311,8 @@ function renderHome() {
 
       ${renderAccountCard()}
 
+      ${renderTeamRosterCard({ compact: true })}
+
       <form class="card pad form-grid share-watch-form ${watchExpanded ? "expanded" : "collapsed"}" data-form="watch-share">
         <div class="collapsible-card-head">
           <div>
@@ -1774,7 +2320,7 @@ function renderHome() {
             <p class="muted small">Enter a family share code to watch a read-only live game.</p>
           </div>
           <button class="collapse-icon" type="button" data-action="toggle-watch-share" aria-expanded="${watchExpanded}" aria-controls="watchShareFields" aria-label="${watchExpanded ? "Minimize Watch Shared Game" : "Expand Watch Shared Game"}">
-            <span aria-hidden="true">${watchExpanded ? "⌄" : "›"}</span>
+            <span aria-hidden="true">${watchExpanded ? "v" : ">"}</span>
           </button>
         </div>
         ${
@@ -1798,12 +2344,14 @@ function renderSettings() {
   return renderShell(`
     <section class="screen-title">
       <h2>Player Settings</h2>
-      <p>Add players, pick the active player, and edit details saved on this device.</p>
+      <p>Add personal players or manage a shared team roster for parent accounts.</p>
     </section>
 
     <section class="stack">
+      ${renderTeamRosterCard()}
+
       ${renderPlayerSwitcher({
-        title: "Player Roster",
+        title: "Active Tracking Player",
         helper: "Tap a player to make them active before starting a game.",
         showManage: false,
       })}
@@ -1816,6 +2364,11 @@ function renderSettings() {
 
       <form class="card pad form-grid" data-form="settings">
         <h3>Edit ${escapeHTML(playerTitle(state.player))}</h3>
+        ${
+          isTeamPlayer(state.player)
+            ? `<p class="muted small">This player came from a shared team roster. Changes here affect local snapshots; edit the team roster entry from Team Roster before new games.</p>`
+            : ""
+        }
         <div class="form-grid two">
           <div class="field">
             <label for="playerName">Player name</label>
@@ -2480,36 +3033,46 @@ function renderTutorial() {
     <section class="stack tutorial-list">
       <div class="card pad">
         <h3>1. Set Up The Player</h3>
-        <p class="muted small">Open Player Settings to add one or more players, tap the player you want active, and enter name, number, team, and position. New games are saved under the active player.</p>
+        <p class="muted small">Open Player Settings to add personal players or use Team Roster for a shared team list. Tap the player you want active before starting a game.</p>
       </div>
 
       <div class="card pad">
         <h3>2. Sign In For Cloud Sync</h3>
-        <p class="muted small">Use a User Profile when you want games backed up online. Each user only sees their own synced games and season dashboard.</p>
+        <p class="muted small">Use a User Profile when you want games backed up online. Personal players stay separate, while team roster players can be shared with parents who join the same team.</p>
       </div>
 
       <div class="card pad">
-        <h3>3. Start A Game</h3>
+        <h3>3. Create Or Join A Team</h3>
+        <p class="muted small">Create a team to get an invite code, then add rostered players by name and jersey number. Another parent can join with the code and see the same roster, games, and player totals.</p>
+      </div>
+
+      <div class="card pad">
+        <h3>4. Pick One Tracker</h3>
+        <p class="muted small">For the cleanest stats, pick one official tracker for each player/game. Multiple parents can watch and sync the same data, but two people logging the same player at once can create duplicate events.</p>
+      </div>
+
+      <div class="card pad">
+        <h3>5. Start A Game</h3>
         <p class="muted small">Tap Start New Game, double-check the player selector, enter the opponent, and choose Quarters or Halves. In Live Game, use the subtle period buttons so each event lands in the right part of the game.</p>
       </div>
 
       <div class="card pad">
-        <h3>4. Track Fast</h3>
+        <h3>6. Track Fast</h3>
         <p class="muted small">Live stats are grouped by game flow: Offense, Possession / IQ, Defense / Clears, and Specialty. The most common field events stay higher on the page, while faceoff, goalie, and note buttons sit lower.</p>
       </div>
 
       <div class="card pad">
-        <h3>5. Save, Undo, And Share</h3>
+        <h3>7. Save, Undo, And Share</h3>
         <p class="muted small">Undo removes the last event. Save keeps the game locally and syncs it when you are signed in. Live Share is a small link beside the game date so family can watch from another iPhone, phone, tablet, or computer. The link automatically copies to the clipboard, so just paste it into a text or email.</p>
       </div>
 
       <div class="card pad">
-        <h3>6. Review, Correct, And Tag</h3>
+        <h3>8. Review, Correct, And Tag</h3>
         <p class="muted small">After a game, open Game Review to edit events, correct notes, add tags, and check totals like Impact Score, Effort Score, Faceoff %, Save %, and shooting percentages. Season Dashboard and Past Games follow the active player, so switch players when you want another player's totals.</p>
       </div>
 
       <div class="card pad">
-        <h3>7. Watch A Shared Game</h3>
+        <h3>9. Watch A Shared Game</h3>
         <p class="muted small">On Home, expand Watch Shared Game, enter the share code or open a shared link, and follow the read-only live timeline from another device.</p>
       </div>
 
@@ -2568,6 +3131,18 @@ function handleSubmit(event) {
 
   if (form.dataset.form === "auth") {
     handleAuthSubmit(formData);
+  }
+
+  if (form.dataset.form === "create-team") {
+    createTeam(formData);
+  }
+
+  if (form.dataset.form === "join-team") {
+    joinTeam(formData);
+  }
+
+  if (form.dataset.form === "add-roster-player") {
+    addRosterPlayer(formData);
   }
 
   if (form.dataset.form === "start-game") {
@@ -2662,6 +3237,15 @@ function handleClick(event) {
     return;
   }
 
+  const teamSelect = event.target.closest("[data-team-select]");
+  if (teamSelect) {
+    state.activeTeamId = teamSelect.dataset.teamSelect;
+    persistAll();
+    render();
+    showToast("Team selected");
+    return;
+  }
+
   const statButton = event.target.closest("[data-stat]");
   if (statButton) {
     logEvent(statButton.dataset.stat);
@@ -2707,10 +3291,15 @@ function handleClick(event) {
     if (action.dataset.action === "copy-share-link") copyShareLink();
     if (action.dataset.action === "sign-out") signOut();
     if (action.dataset.action === "sync-cloud-games") loadCloudGames();
+    if (action.dataset.action === "sync-team-roster") loadCloudTeams();
     if (action.dataset.action === "add-player") addPlayer();
     if (action.dataset.action === "delete-player") deleteActivePlayer();
     if (action.dataset.action === "toggle-watch-share") {
       state.watchShareExpanded = !state.watchShareExpanded;
+      render();
+    }
+    if (action.dataset.action === "toggle-team-roster") {
+      state.teamRosterExpanded = !state.teamRosterExpanded;
       render();
     }
     return;
