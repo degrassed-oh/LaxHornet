@@ -21,7 +21,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v123";
+const APP_VERSION = "v124";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -2708,7 +2708,13 @@ async function requestTeamAccessByCode(accessCode, options = {}) {
 }
 
 async function joinTeam(formData) {
-  await requestTeamAccessByCode(formData.get("inviteCode"));
+  const accessCode = formData.get("inviteCode")?.trim().toUpperCase() || "";
+  const childJerseyNumber = formData.get("joinChildJerseyNumber")?.trim() || "";
+  if (!accessCode || !childJerseyNumber) {
+    showToast("Enter team code and jersey number");
+    return;
+  }
+  await requestTeamAccessByCode(accessCode, { childJerseyNumber });
 }
 
 async function addRosterPlayer(formData) {
@@ -4053,10 +4059,14 @@ function renderTeamAccessTools() {
           expanded
             ? `<form class="inline-mini-form" data-form="join-team">
                 <label for="inviteCode">Team access code</label>
-                <div class="inline-input-action">
+                <div class="form-grid two">
                   <input id="inviteCode" name="inviteCode" placeholder="ABC123" autocapitalize="characters" autocomplete="off" />
+                  <input id="joinChildJerseyNumber" name="joinChildJerseyNumber" inputmode="numeric" placeholder="Jersey #" />
+                </div>
+                <div class="team-form-actions">
                   <button class="mini-btn" type="submit">Request</button>
                 </div>
+                <p class="muted small">Use the jersey number for the player you need to track on that team.</p>
               </form>`
             : ""
         }
