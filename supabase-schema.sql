@@ -66,6 +66,18 @@ create table if not exists public.roster_players (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.user_profiles (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  email text not null default '',
+  requested_role text not null default 'viewer',
+  approved_role text not null default 'viewer',
+  admin_status text not null default 'approved',
+  reviewed_by uuid references auth.users(id) on delete set null,
+  reviewed_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 alter table public.games add column if not exists user_id uuid references auth.users(id) on delete cascade;
 alter table public.games add column if not exists is_shared boolean not null default false;
 alter table public.games add column if not exists period_format text not null default 'quarters';
@@ -96,6 +108,8 @@ create index if not exists teams_created_by_idx on public.teams (created_by);
 create index if not exists team_members_team_id_idx on public.team_members (team_id);
 create index if not exists team_members_user_id_idx on public.team_members (user_id);
 create index if not exists roster_players_team_id_idx on public.roster_players (team_id);
+create index if not exists user_profiles_email_idx on public.user_profiles (lower(email));
+create index if not exists user_profiles_admin_status_idx on public.user_profiles (admin_status);
 
 grant select on public.games to anon, authenticated;
 grant select on public.events to anon, authenticated;
@@ -107,12 +121,15 @@ grant select on public.team_members to authenticated;
 grant insert, update, delete on public.team_members to authenticated;
 grant select on public.roster_players to authenticated;
 grant insert, update, delete on public.roster_players to authenticated;
+grant select on public.user_profiles to authenticated;
+grant insert, update on public.user_profiles to authenticated;
 
 alter table public.games enable row level security;
 alter table public.events enable row level security;
 alter table public.teams enable row level security;
 alter table public.team_members enable row level security;
 alter table public.roster_players enable row level security;
+alter table public.user_profiles enable row level security;
 
 create or replace function public.laxhornet_is_team_member(check_team_id text)
 returns boolean
@@ -126,6 +143,228 @@ as $$
     where team_id = check_team_id
       and user_id = (select auth.uid())
   );
+$$;
+
+create or replace function public.laxhornet_is_platform_reviewer()
+returns boolean
+language sql
+security definer
+set search_path = public
+as $$
+  select lower(coalesce((auth.jwt() ->> 'email'), '')) = 'degrassed@gmail.com';
+$$;
+
+create or replace function public.laxhornet_approved_app_role()
+returns text
+language sql
+security definer
+set search_path = public
+as $$
+  select case
+    when (select public.laxhornet_is_platform_reviewer()) then 'admin'
+    else coalesce(
+      (
+        select approved_role
+        from public.user_profiles
+        where user_id = (select auth.uid())
+        limit 1
+      ),
+      'viewer'
+    )
+  end;
+$$;
+
+create or replace function public.laxhornet_can_create_team()
+returns boolean
+language sql
+security definer
+set search_path = public
+as $$
+  select (select public.laxhornet_approved_app_role()) = 'admin';
+$$;
+
+create or replace function public.laxhornet_request_user_role(requested_app_role text)
+returns table(
+  user_id uuid,
+  email text,
+  requested_role text,
+  approved_role text,
+  admin_status text,
+  reviewed_by uuid,
+  reviewed_at timestamptz,
+  created_at timestamptz,
+  updated_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  clean_role text;
+  user_email text;
+  next_approved_role text;
+  next_admin_status text;
+begin
+  clean_role := lower(coalesce(requested_app_role, 'viewer'));
+  if clean_role not in ('viewer', 'tracker', 'admin') then
+    clean_role := 'viewer';
+  end if;
+
+  user_email := lower(coalesce((auth.jwt() ->> 'email'), ''));
+
+  if (select public.laxhornet_is_platform_reviewer()) then
+    next_approved_role := 'admin';
+    next_admin_status := 'approved';
+  elsif clean_role = 'admin' then
+    next_approved_role := 'viewer';
+    next_admin_status := 'pending';
+  else
+    next_approved_role := clean_role;
+    next_admin_status := 'approved';
+  end if;
+
+  insert into public.user_profiles (
+    user_id,
+    email,
+    requested_role,
+    approved_role,
+    admin_status,
+    reviewed_by,
+    reviewed_at,
+    created_at,
+    updated_at
+  )
+  values (
+    (select auth.uid()),
+    user_email,
+    clean_role,
+    next_approved_role,
+    next_admin_status,
+    case when next_admin_status = 'approved' and clean_role = 'admin' then (select auth.uid()) else null end,
+    case when next_admin_status = 'approved' and clean_role = 'admin' then now() else null end,
+    now(),
+    now()
+  )
+  on conflict (user_id) do update
+  set email = excluded.email,
+      requested_role = excluded.requested_role,
+      approved_role = case
+        when public.user_profiles.approved_role = 'admin' then 'admin'
+        else excluded.approved_role
+      end,
+      admin_status = case
+        when public.user_profiles.approved_role = 'admin' then 'approved'
+        else excluded.admin_status
+      end,
+      updated_at = now();
+
+  return query
+  select
+    profiles.user_id,
+    profiles.email,
+    profiles.requested_role,
+    profiles.approved_role,
+    profiles.admin_status,
+    profiles.reviewed_by,
+    profiles.reviewed_at,
+    profiles.created_at,
+    profiles.updated_at
+  from public.user_profiles profiles
+  where profiles.user_id = (select auth.uid());
+end;
+$$;
+
+create or replace function public.laxhornet_my_profile()
+returns table(
+  user_id uuid,
+  email text,
+  requested_role text,
+  approved_role text,
+  admin_status text,
+  reviewed_by uuid,
+  reviewed_at timestamptz,
+  created_at timestamptz,
+  updated_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not exists (select 1 from public.user_profiles where user_profiles.user_id = (select auth.uid())) then
+    perform public.laxhornet_request_user_role(coalesce((auth.jwt() -> 'user_metadata' ->> 'requested_role'), 'viewer'));
+  end if;
+
+  return query
+  select
+    profiles.user_id,
+    profiles.email,
+    profiles.requested_role,
+    case when (select public.laxhornet_is_platform_reviewer()) then 'admin' else profiles.approved_role end as approved_role,
+    case when (select public.laxhornet_is_platform_reviewer()) then 'approved' else profiles.admin_status end as admin_status,
+    profiles.reviewed_by,
+    profiles.reviewed_at,
+    profiles.created_at,
+    profiles.updated_at
+  from public.user_profiles profiles
+  where profiles.user_id = (select auth.uid());
+end;
+$$;
+
+create or replace function public.laxhornet_pending_admin_requests()
+returns table(
+  user_id uuid,
+  email text,
+  requested_role text,
+  approved_role text,
+  admin_status text,
+  reviewed_by uuid,
+  reviewed_at timestamptz,
+  created_at timestamptz,
+  updated_at timestamptz
+)
+language sql
+security definer
+set search_path = public
+as $$
+  select
+    profiles.user_id,
+    profiles.email,
+    profiles.requested_role,
+    profiles.approved_role,
+    profiles.admin_status,
+    profiles.reviewed_by,
+    profiles.reviewed_at,
+    profiles.created_at,
+    profiles.updated_at
+  from public.user_profiles profiles
+  where (select public.laxhornet_is_platform_reviewer())
+    and profiles.requested_role = 'admin'
+    and profiles.admin_status = 'pending'
+  order by profiles.created_at asc;
+$$;
+
+create or replace function public.laxhornet_review_admin_request(request_user_id uuid, approve boolean)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not (select public.laxhornet_is_platform_reviewer()) then
+    raise exception 'Not authorized to review admin requests';
+  end if;
+
+  update public.user_profiles
+  set approved_role = case when approve then 'admin' else 'viewer' end,
+      admin_status = case when approve then 'approved' else 'rejected' end,
+      reviewed_by = (select auth.uid()),
+      reviewed_at = now(),
+      updated_at = now()
+  where user_profiles.user_id = request_user_id
+    and user_profiles.requested_role = 'admin'
+    and user_profiles.admin_status = 'pending';
+end;
 $$;
 
 create or replace function public.laxhornet_team_role(check_team_id text)
@@ -221,6 +460,13 @@ as $$
 $$;
 
 grant execute on function public.laxhornet_is_team_member(text) to authenticated;
+grant execute on function public.laxhornet_is_platform_reviewer() to authenticated;
+grant execute on function public.laxhornet_approved_app_role() to authenticated;
+grant execute on function public.laxhornet_can_create_team() to authenticated;
+grant execute on function public.laxhornet_request_user_role(text) to authenticated;
+grant execute on function public.laxhornet_my_profile() to authenticated;
+grant execute on function public.laxhornet_pending_admin_requests() to authenticated;
+grant execute on function public.laxhornet_review_admin_request(uuid, boolean) to authenticated;
 grant execute on function public.laxhornet_team_role(text) to authenticated;
 grant execute on function public.laxhornet_can_edit_team(text) to authenticated;
 grant execute on function public.laxhornet_join_team_by_code(text) to authenticated;
@@ -254,6 +500,25 @@ drop policy if exists "laxhornet read roster players" on public.roster_players;
 drop policy if exists "laxhornet insert roster players" on public.roster_players;
 drop policy if exists "laxhornet update roster players" on public.roster_players;
 drop policy if exists "laxhornet delete roster players" on public.roster_players;
+drop policy if exists "laxhornet read user profiles" on public.user_profiles;
+drop policy if exists "laxhornet insert user profiles" on public.user_profiles;
+drop policy if exists "laxhornet update user profiles" on public.user_profiles;
+
+create policy "laxhornet read user profiles"
+on public.user_profiles for select
+to authenticated
+using (user_id = (select auth.uid()) or (select public.laxhornet_is_platform_reviewer()));
+
+create policy "laxhornet insert user profiles"
+on public.user_profiles for insert
+to authenticated
+with check (user_id = (select auth.uid()));
+
+create policy "laxhornet update user profiles"
+on public.user_profiles for update
+to authenticated
+using (user_id = (select auth.uid()) or (select public.laxhornet_is_platform_reviewer()))
+with check (user_id = (select auth.uid()) or (select public.laxhornet_is_platform_reviewer()));
 
 create policy "laxhornet read teams"
 on public.teams for select
@@ -266,7 +531,7 @@ using (
 create policy "laxhornet insert teams"
 on public.teams for insert
 to authenticated
-with check (created_by = (select auth.uid()));
+with check (created_by = (select auth.uid()) and (select public.laxhornet_can_create_team()));
 
 create policy "laxhornet update teams"
 on public.teams for update
@@ -290,6 +555,7 @@ to authenticated
 with check (
   user_id = (select auth.uid())
   and role = 'admin'
+  and (select public.laxhornet_can_create_team())
   and exists (
     select 1
     from public.teams

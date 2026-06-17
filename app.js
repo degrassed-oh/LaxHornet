@@ -17,6 +17,8 @@ const SUPABASE_CONFIG = {
   publishableKey: "sb_publishable_-RUc79OPosRLNP5B6JIH2A_f3I_2A0M",
 };
 
+const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
+
 const PERIOD_FORMATS = {
   quarters: {
     label: "Quarters",
@@ -235,6 +237,7 @@ const DEFAULT_PLAYER = {
 
 const DEFAULT_TEAM_INVITE_LENGTH = 6;
 const TEAM_EDIT_ROLES = ["admin", "tracker"];
+const APP_ROLES = ["viewer", "tracker", "admin"];
 
 const app = document.querySelector("#app");
 const startupParams = new URLSearchParams(window.location.search);
@@ -266,6 +269,8 @@ const state = {
   activeGame: loadJSON(STORAGE_KEYS.activeGame, null),
   reviewGameId: loadJSON(STORAGE_KEYS.reviewGameId, null),
   authUser: null,
+  userProfile: null,
+  adminRequests: [],
   sharedGame: null,
   sharedCode: startupShareCode,
   syncStatus: supabaseClient ? "Live Share ready" : "Live Share unavailable",
@@ -695,6 +700,49 @@ function currentUserId() {
 
 function userEmail() {
   return state.authUser?.email || "";
+}
+
+function normalizeAppRole(role = "viewer") {
+  const cleanRole = String(role || "").trim().toLowerCase();
+  return APP_ROLES.includes(cleanRole) ? cleanRole : "viewer";
+}
+
+function appRoleLabel(role = "viewer") {
+  const cleanRole = normalizeAppRole(role);
+  if (cleanRole === "admin") return "Admin";
+  if (cleanRole === "tracker") return "Tracker";
+  return "Viewer";
+}
+
+function isPlatformReviewer() {
+  return userEmail().trim().toLowerCase() === PLATFORM_REVIEWER_EMAIL.toLowerCase();
+}
+
+function normalizeUserProfile(profile = {}) {
+  return {
+    userId: profile.userId || profile.user_id || currentUserId() || "",
+    email: profile.email || userEmail(),
+    requestedRole: normalizeAppRole(profile.requestedRole || profile.requested_role || "viewer"),
+    approvedRole: normalizeAppRole(profile.approvedRole || profile.approved_role || (isPlatformReviewer() ? "admin" : "viewer")),
+    adminStatus: String(profile.adminStatus || profile.admin_status || "approved").trim().toLowerCase(),
+    reviewedBy: profile.reviewedBy || profile.reviewed_by || "",
+    reviewedAt: profile.reviewedAt || profile.reviewed_at || null,
+    createdAt: profile.createdAt || profile.created_at || null,
+    updatedAt: profile.updatedAt || profile.updated_at || null,
+  };
+}
+
+function currentAppRole() {
+  if (isPlatformReviewer()) return "admin";
+  return normalizeAppRole(state.userProfile?.approvedRole || "viewer");
+}
+
+function requestedAdminPending() {
+  return state.userProfile?.requestedRole === "admin" && state.userProfile?.adminStatus === "pending";
+}
+
+function canCreateTeams() {
+  return currentAppRole() === "admin";
 }
 
 function authRedirectUrl() {
@@ -1802,6 +1850,7 @@ async function handleAuthSubmit(formData) {
   const email = formData.get("email")?.trim();
   const password = formData.get("password") || "";
   const authAction = formData.get("authAction");
+  const requestedRole = normalizeAppRole(formData.get("requestedRole") || "viewer");
   if (!email || password.length < 6) {
     showToast("Use an email and 6+ character password");
     return;
@@ -1817,6 +1866,9 @@ async function handleAuthSubmit(formData) {
           password,
           options: {
             emailRedirectTo: authRedirectUrl(),
+            data: {
+              requested_role: requestedRole,
+            },
           },
         })
       : await supabaseClient.auth.signInWithPassword({ email, password });
@@ -1835,6 +1887,8 @@ async function handleAuthSubmit(formData) {
   }
 
   state.authUser = result.data.user || result.data.session?.user || state.authUser;
+  if (state.authUser && authAction === "sign-up") await requestUserRole(requestedRole, { silent: true });
+  if (state.authUser) await loadUserProfile({ silent: true });
   state.syncStatus = state.authUser ? "Signed in" : "Check email to confirm account";
   if (state.authUser) await loadCloudGames({ silent: true });
   render();
@@ -1845,14 +1899,80 @@ async function signOut() {
   if (!supabaseClient) return;
   await supabaseClient.auth.signOut();
   state.authUser = null;
+  state.userProfile = null;
+  state.adminRequests = [];
   state.syncStatus = "Signed out";
   render();
   showToast("Signed out");
 }
 
+async function requestUserRole(role, options = {}) {
+  if (!supabaseClient || !currentUserId()) return null;
+  const requestedRole = normalizeAppRole(role);
+  const { data, error } = await supabaseClient.rpc("laxhornet_request_user_role", {
+    requested_app_role: requestedRole,
+  });
+  if (error) {
+    if (!options.silent) reportTeamSetupError(error);
+    return null;
+  }
+  const row = Array.isArray(data) ? data[0] : data;
+  state.userProfile = normalizeUserProfile(row || {});
+  if (!options.silent) {
+    render();
+    showToast(requestedRole === "admin" ? "Admin request submitted" : `${appRoleLabel(requestedRole)} role saved`);
+  }
+  return state.userProfile;
+}
+
+async function loadUserProfile(options = {}) {
+  if (!supabaseClient || !currentUserId()) return null;
+  const { data, error } = await supabaseClient.rpc("laxhornet_my_profile");
+  if (error) {
+    if (!options.silent) reportTeamSetupError(error);
+    return null;
+  }
+  const row = Array.isArray(data) ? data[0] : data;
+  state.userProfile = normalizeUserProfile(row || {});
+  if (isPlatformReviewer()) await loadAdminRequests({ silent: true });
+  if (!options.silent) render();
+  return state.userProfile;
+}
+
+async function loadAdminRequests(options = {}) {
+  if (!supabaseClient || !currentUserId() || !isPlatformReviewer()) return [];
+  const { data, error } = await supabaseClient.rpc("laxhornet_pending_admin_requests");
+  if (error) {
+    if (!options.silent) reportTeamSetupError(error);
+    return [];
+  }
+  state.adminRequests = (Array.isArray(data) ? data : []).map(normalizeUserProfile);
+  if (!options.silent) render();
+  return state.adminRequests;
+}
+
+async function reviewAdminRequest(userId, approved) {
+  if (!supabaseClient || !isPlatformReviewer()) return;
+  const { error } = await supabaseClient.rpc("laxhornet_review_admin_request", {
+    request_user_id: userId,
+    approve: Boolean(approved),
+  });
+  if (error) {
+    reportTeamSetupError(error);
+    return;
+  }
+  await loadAdminRequests({ silent: true });
+  render();
+  showToast(approved ? "Admin approved" : "Admin rejected");
+}
+
 async function createTeam(formData) {
   if (!supabaseClient || !currentUserId()) {
     showToast("Sign in to create a team");
+    return;
+  }
+  if (!canCreateTeams()) {
+    showToast(requestedAdminPending() ? "Admin approval pending" : "Admin approval required");
     return;
   }
   const name = formData.get("teamName")?.trim();
@@ -2206,18 +2326,34 @@ function renderAccountCard() {
   }
 
   if (state.authUser) {
+    const role = currentAppRole();
+    const pendingCopy = requestedAdminPending()
+      ? `<p class="muted small">Admin request pending review by ${escapeHTML(PLATFORM_REVIEWER_EMAIL)}. You can still use viewer access.</p>`
+      : "";
     return `
       <section class="card pad account-card">
         <h3>User Profile</h3>
         <p class="muted small">${escapeHTML(userEmail())}</p>
+        <p class="muted small">Role: ${escapeHTML(isPlatformReviewer() ? "Reviewer / Admin" : appRoleLabel(role))}</p>
+        ${pendingCopy}
         <p class="muted small">${escapeHTML(state.syncStatus)}</p>
         <div class="account-actions">
           <button class="btn neutral" type="button" data-action="sync-cloud-games">Sync Cloud Games</button>
+          <button class="btn secondary" type="button" data-action="refresh-profile">Refresh Profile</button>
           <button class="btn secondary" type="button" data-action="sign-out">Sign Out</button>
         </div>
       </section>
+      ${renderAdminReviewCard()}
     `;
   }
+
+  const roleOptions = [
+    ["viewer", "Viewer - review roster and stats"],
+    ["tracker", "Tracker - join teams with tracker code"],
+    ["admin", "Admin - request approval to create teams"],
+  ]
+    .map(([value, label]) => `<option value="${value}">${label}</option>`)
+    .join("");
 
   return `
     <form class="card pad form-grid account-card" data-form="auth">
@@ -2231,11 +2367,52 @@ function renderAccountCard() {
         <label for="authPassword">Password</label>
         <input id="authPassword" name="password" type="password" autocomplete="current-password" minlength="6" required />
       </div>
+      <div class="field">
+        <label for="requestedRole">Role for new account</label>
+        <select id="requestedRole" name="requestedRole">${roleOptions}</select>
+      </div>
       <div class="account-actions">
         <button class="btn positive" type="submit" name="authAction" value="sign-in" ${state.authBusy ? "disabled" : ""}>${state.authBusy ? "Working..." : "Sign In"}</button>
         <button class="btn secondary" type="submit" name="authAction" value="sign-up" ${state.authBusy ? "disabled" : ""}>${state.authBusy ? "Sending..." : "Create Account"}</button>
       </div>
     </form>
+  `;
+}
+
+function renderAdminReviewCard() {
+  if (!isPlatformReviewer()) return "";
+  return `
+    <section class="card pad admin-review-card">
+      <div class="section-head">
+        <div>
+          <h3>Admin Requests</h3>
+          <p class="muted small">Approve parents before they can create teams.</p>
+        </div>
+        <button class="mini-btn light" type="button" data-action="refresh-admin-requests">Refresh</button>
+      </div>
+      ${
+        state.adminRequests.length
+          ? `<div class="admin-request-list">
+              ${state.adminRequests
+                .map(
+                  (request) => `
+                    <div class="admin-request-row">
+                      <span>
+                        <strong>${escapeHTML(request.email || "Unknown email")}</strong>
+                        <small>${request.createdAt ? formatTime(request.createdAt) : "Pending admin request"}</small>
+                      </span>
+                      <span class="event-actions">
+                        <button class="mini-btn" type="button" data-review-admin="${request.userId}" data-approved="true">Approve</button>
+                        <button class="mini-btn danger" type="button" data-review-admin="${request.userId}" data-approved="false">Reject</button>
+                      </span>
+                    </div>
+                  `,
+                )
+                .join("")}
+            </div>`
+          : `<p class="muted small">No pending admin requests.</p>`
+      }
+    </section>
   `;
 }
 
@@ -2354,8 +2531,13 @@ function renderTeamRosterCard(options = {}) {
                   <label for="teamName">Create team</label>
                   <div class="inline-input-action">
                     <input id="teamName" name="teamName" placeholder="Team name" />
-                    <button class="mini-btn" type="submit">Create</button>
+                    <button class="mini-btn" type="submit" ${canCreateTeams() ? "" : "disabled"}>Create</button>
                   </div>
+                  ${
+                    canCreateTeams()
+                      ? ""
+                      : `<p class="muted small">${requestedAdminPending() ? "Admin approval is pending." : "Create Team requires approved Admin access."}</p>`
+                  }
                 </form>
                 <form class="inline-mini-form" data-form="join-team">
                   <label for="inviteCode">Join team</label>
@@ -3436,6 +3618,8 @@ function handleClick(event) {
     if (action.dataset.action === "export-json") exportJSON();
     if (action.dataset.action === "copy-share-link") copyShareLink();
     if (action.dataset.action === "sign-out") signOut();
+    if (action.dataset.action === "refresh-profile") loadUserProfile();
+    if (action.dataset.action === "refresh-admin-requests") loadAdminRequests();
     if (action.dataset.action === "sync-cloud-games") loadCloudGames();
     if (action.dataset.action === "sync-team-roster") loadCloudTeams();
     if (action.dataset.action === "add-player") addPlayer();
@@ -3448,6 +3632,12 @@ function handleClick(event) {
       state.teamRosterExpanded = !state.teamRosterExpanded;
       render();
     }
+    return;
+  }
+
+  const reviewAdmin = event.target.closest("[data-review-admin]");
+  if (reviewAdmin) {
+    reviewAdminRequest(reviewAdmin.dataset.reviewAdmin, reviewAdmin.dataset.approved === "true");
     return;
   }
 
@@ -3534,10 +3724,16 @@ async function initApp() {
     supabaseClient.auth.onAuthStateChange(async (_event, session) => {
       state.authUser = session?.user || null;
       state.syncStatus = state.authUser ? "Signed in" : "Signed out";
-      if (state.authUser) await loadCloudGames({ silent: true });
+      if (state.authUser) {
+        await loadUserProfile({ silent: true });
+        await loadCloudGames({ silent: true });
+      }
       render();
     });
-    if (state.authUser) await loadCloudGames({ silent: true });
+    if (state.authUser) {
+      await loadUserProfile({ silent: true });
+      await loadCloudGames({ silent: true });
+    }
   }
 
   if (startupShareCode) {
