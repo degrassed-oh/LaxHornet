@@ -274,6 +274,7 @@ const state = {
   sharedGame: null,
   sharedCode: startupShareCode,
   syncStatus: supabaseClient ? "Live Share ready" : "Live Share unavailable",
+  cloudError: "",
   editingEventId: null,
   editingGameDetails: false,
   tagEditingEventId: null,
@@ -1586,6 +1587,10 @@ function supabaseErrorText(error = {}) {
   return `${error.message || ""} ${error.details || ""} ${error.hint || ""} ${error.code || ""}`.trim();
 }
 
+function readableSupabaseError(error = {}) {
+  return supabaseErrorText(error).replace(/\s+/g, " ").slice(0, 220);
+}
+
 function isTeamSetupError(error = {}) {
   const text = supabaseErrorText(error);
   return /teams|team_members|roster_players|tracker_code|laxhornet_|schema cache|relation|column|function|permission|policy/i.test(text);
@@ -1593,16 +1598,17 @@ function isTeamSetupError(error = {}) {
 
 function isPermissionError(error = {}) {
   const text = supabaseErrorText(error);
-  return /row-level security|violates row-level security|permission denied|policy|not authorized|42501/i.test(text);
+  return /admin approval required|row-level security|violates row-level security|permission denied|policy|not authorized|42501/i.test(text);
 }
 
 function reportTeamSetupError(error) {
   console.warn("LaxHornet team roster setup failed:", error);
   state.syncStatus = "Team roster database update needed";
+  state.cloudError = readableSupabaseError(error);
   const now = Date.now();
   if (now - lastSyncErrorAt > 8000) {
     lastSyncErrorAt = now;
-    showToast("Run the Supabase team roster SQL");
+    showToast(state.cloudError ? `Supabase error: ${state.cloudError}` : "Run the Supabase team roster SQL");
   } else {
     render();
   }
@@ -1612,7 +1618,8 @@ function reportTeamCreateError(error) {
   console.warn("LaxHornet create team failed:", error);
   if (isPermissionError(error)) {
     state.syncStatus = "Admin approval required";
-    showToast("Admin approval required");
+    state.cloudError = readableSupabaseError(error);
+    showToast(state.cloudError || "Admin approval required");
     return;
   }
   reportTeamSetupError(error);
@@ -2348,6 +2355,7 @@ function renderAccountCard() {
             : ""
         }
         <p class="muted small">${escapeHTML(state.syncStatus)}</p>
+        ${state.cloudError ? `<p class="muted small">Last Supabase error: ${escapeHTML(state.cloudError)}</p>` : ""}
         <div class="account-actions">
           <button class="btn neutral" type="button" data-action="sync-cloud-games">Sync Cloud Games</button>
           ${

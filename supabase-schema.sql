@@ -151,18 +151,18 @@ language sql
 security definer
 set search_path = public
 as $$
-  select lower(
+  select lower(trim(
     coalesce(
+      nullif(auth.jwt() ->> 'email', ''),
       (
         select users.email
         from auth.users users
         where users.id = (select auth.uid())
         limit 1
       ),
-      (auth.jwt() ->> 'email'),
       ''
     )
-  ) = 'degrassed@gmail.com';
+  )) = 'degrassed@gmail.com';
 $$;
 
 create or replace function public.laxhornet_approved_app_role()
