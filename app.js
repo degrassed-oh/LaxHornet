@@ -21,7 +21,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v117";
+const APP_VERSION = "v118";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -721,6 +721,16 @@ function gamePlayerSnapshot(game = {}) {
 
 function playerGameCount(playerId) {
   return state.games.filter((game) => gamePlayerId(game) === playerId).length;
+}
+
+function playerHasAnyGames(player = state.player) {
+  const normalized = normalizePlayer(player);
+  const rosterPlayerId = normalized.rosterPlayerId || (normalized.teamId ? normalized.id : "");
+  const matchesPlayer = (game) => {
+    const gameRosterId = gameRosterPlayerId(game);
+    return gamePlayerId(game) === normalized.id || (rosterPlayerId && gameRosterId === rosterPlayerId);
+  };
+  return Boolean((state.activeGame && matchesPlayer(state.activeGame)) || state.games.some(matchesPlayer));
 }
 
 function setActivePlayer(playerId, message = "") {
@@ -2763,6 +2773,47 @@ async function removeRosterPlayer() {
   showToast(`${playerTitle(player)} removed from roster`);
 }
 
+async function removeClaimedRosterPlayer() {
+  if (!supabaseClient || !currentUserId()) {
+    showToast("Sign in to remove this player");
+    return;
+  }
+  const player = normalizePlayer(state.player);
+  const rosterPlayerId = player.rosterPlayerId || player.id;
+  if (!isTeamPlayer(player) || !hasPlayerClaim(player.teamId, rosterPlayerId)) {
+    showToast("No verified player selected");
+    return;
+  }
+  if (playerHasAnyGames(player)) {
+    showToast("Delete this player's games first");
+    return;
+  }
+  if (!window.confirm(`Remove ${playerTitle(player)} from your account? This will not delete the team roster player for other parents.`)) return;
+
+  const { error } = await supabaseClient.rpc("laxhornet_delete_player_claim", {
+    p_team_id: player.teamId,
+    p_roster_player_id: rosterPlayerId,
+  });
+  if (error) {
+    reportTeamSetupError(error);
+    return;
+  }
+
+  state.playerClaims = state.playerClaims.filter(
+    (claim) => !(claim.teamId === player.teamId && claim.rosterPlayerId === rosterPlayerId),
+  );
+  state.rosterPlayers = state.rosterPlayers.filter((item) => !(item.teamId === player.teamId && item.id === rosterPlayerId));
+  state.players = state.players.filter((item) => !(item.teamId === player.teamId && (item.rosterPlayerId || item.id) === rosterPlayerId));
+  if (!state.players.length) state.players = [normalizePlayer(DEFAULT_PLAYER, { createId: true })];
+  mergeRosterPlayersIntoPlayers();
+  const nextVisiblePlayer = visiblePlayers()[0] || state.players[0];
+  state.activePlayerId = nextVisiblePlayer?.id || "";
+  syncActivePlayer();
+  persistAll();
+  render();
+  showToast(`${playerTitle(player)} removed from your account`);
+}
+
 async function deleteActiveTeam() {
   if (!supabaseClient || !currentUserId()) {
     showToast("Sign in to delete a team");
@@ -3843,6 +3894,9 @@ function renderPlayerPage() {
   const team = activeTeam();
   const selectedRosterPlayer = isTeamPlayer(state.player) ? normalizePlayer(state.player) : null;
   const canEditSelectedRosterPlayer = selectedRosterPlayer ? canManageRoster(selectedRosterPlayer.teamId) : false;
+  const canRemoveClaimedRosterPlayer = selectedRosterPlayer
+    ? !canEditSelectedRosterPlayer && hasPlayerClaim(selectedRosterPlayer.teamId, selectedRosterPlayer.rosterPlayerId || selectedRosterPlayer.id)
+    : false;
   const rosterEditCard = selectedRosterPlayer
     ? canEditSelectedRosterPlayer
       ? `
@@ -3865,13 +3919,26 @@ function renderPlayerPage() {
             ${renderPositionPicker({ name: "position", selected: selectedRosterPlayer.position, label: "Positions" })}
           </div>
           <div class="inline-input-action">
-            <button class="mini-btn danger" type="button" data-action="remove-roster-player">Remove from Roster</button>
+            <button class="mini-btn danger" type="button" data-action="remove-roster-player">Delete Player</button>
             <button class="mini-btn" type="submit">Save Player</button>
           </div>
         </form>
       `
       : ""
     : "";
+  const playerDeleteCard = selectedRosterPlayer
+    ? canRemoveClaimedRosterPlayer
+      ? `<section class="card pad">
+          <h3>Remove Player From My Account</h3>
+          <p class="muted small">This removes your access to ${escapeHTML(playerTitle(selectedRosterPlayer))}. It will not delete the team roster player for other parents.</p>
+          <button class="btn danger" type="button" data-action="remove-claimed-player">Remove from My Account</button>
+        </section>`
+      : ""
+    : `<section class="card pad">
+        <h3>Delete Player</h3>
+        <p class="muted small">Remove this locally saved player from this device.</p>
+        <button class="btn danger" type="button" data-action="delete-player">Delete Player</button>
+      </section>`;
   return renderShell(`
     <section class="screen-title">
       <h2>Player</h2>
@@ -3892,6 +3959,7 @@ function renderPlayerPage() {
         <button class="mini-btn" type="button" data-nav="team">Open Team</button>
       </section>`}
       ${rosterEditCard}
+      ${playerDeleteCard}
     </section>
   `);
 }
@@ -4979,6 +5047,7 @@ function handleClick(event) {
     if (action.dataset.action === "add-player") addPlayer();
     if (action.dataset.action === "delete-player") deleteActivePlayer();
     if (action.dataset.action === "remove-roster-player") removeRosterPlayer();
+    if (action.dataset.action === "remove-claimed-player") removeClaimedRosterPlayer();
     if (action.dataset.action === "delete-team") deleteActiveTeam();
     if (action.dataset.action === "toggle-watch-share") {
       state.watchShareExpanded = !state.watchShareExpanded;
