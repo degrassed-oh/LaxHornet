@@ -21,7 +21,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v132";
+const APP_VERSION = "v133";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -3198,7 +3198,7 @@ function renderBottomNav() {
     { screen: trackTarget, label: state.activeGame ? "Live" : "Track", icon: "track", active: ["start", "live"].includes(state.screen) },
     { screen: "past", label: "Games", icon: "games", active: ["past", "review"].includes(state.screen) },
     { screen: "dashboard", label: "Season", icon: "season", active: state.screen === "dashboard" },
-    { screen: "more", label: "Manage", icon: "manage", active: ["more", "player", "settings", "team", "teamAccess", "profileSetup", "tutorial", "help", "launchKit"].includes(state.screen) },
+    { screen: "more", label: "Manage", icon: "manage", active: ["more", "player", "settings", "team", "teamAccess", "profileSetup", "tutorial", "help", "launchKit", "promoDemo"].includes(state.screen) },
   ];
   return `
     <nav class="bottom-nav" aria-label="Primary">
@@ -4353,22 +4353,35 @@ function renderStartGame() {
 }
 
 function renderStatButton(stat, options = {}) {
+  const promoStep = Number.isFinite(options.promoStep) ? Number(options.promoStep) : null;
+  const statAttr = options.interactive === false ? `data-promo-stat="${stat.key}"` : `data-stat="${stat.key}"`;
+  const promoAttrs =
+    promoStep === null
+      ? ""
+      : ` data-promo-step="${promoStep}" style="--promo-step: ${promoStep};"`;
   return `
-    <button class="stat-button ${stat.tone}${options.compact ? " compact" : ""}" type="button" data-stat="${stat.key}">
+    <button class="stat-button ${stat.tone}${options.compact ? " compact" : ""}${promoStep === null ? "" : " promo-hit"}" type="button" ${statAttr}${promoAttrs}>
       <span class="label">${stat.label}</span>
       <span class="points">${stat.points === 0 ? "note" : `${pointText(stat.points)} impact`}</span>
     </button>
   `;
 }
 
-function renderLiveStatGroups() {
+function renderLiveStatGroups(options = {}) {
+  const stepByKey = options.stepByKey || {};
   return `
-    <section class="live-stat-groups" aria-label="Stat buttons">
+    <section class="live-stat-groups${options.demo ? " promo-demo-groups" : ""}" aria-label="Stat buttons">
       ${LIVE_STAT_GROUPS.map((group) => {
         const buttons = group.keys
           .map((key) => STAT_BY_KEY[key])
           .filter(Boolean)
-          .map((stat) => renderStatButton(stat, { compact: group.compact }))
+          .map((stat) =>
+            renderStatButton(stat, {
+              compact: group.compact,
+              interactive: options.interactive,
+              promoStep: Number.isFinite(stepByKey[stat.key]) ? stepByKey[stat.key] : null,
+            }),
+          )
           .join("");
         return `
           <div class="stat-group ${group.compact ? "compact" : ""}">
@@ -5058,6 +5071,55 @@ function renderHelp() {
   `);
 }
 
+const PROMO_DEMO_STEPS = [
+  {
+    stat: "groundBall",
+    field: "Wins the loose ball",
+    caption: "Ground Ball +3",
+    detail: "One tap captures possession.",
+  },
+  {
+    stat: "shotOnGoal",
+    field: "Dodges and gets a shot on cage",
+    caption: "Shot on Goal +2",
+    detail: "Track quality chances instantly.",
+  },
+  {
+    stat: "backedUpShot",
+    field: "Sprints to the endline",
+    caption: "Backed Up Shot +2",
+    detail: "Reward the hustle that saves possession.",
+  },
+  {
+    stat: "assist",
+    field: "Finds the open teammate",
+    caption: "Assist +4",
+    detail: "Scoring plays update points and impact.",
+  },
+  {
+    stat: "goal",
+    field: "Finishes the chance",
+    caption: "Goal +5",
+    detail: "Big plays land in the timeline.",
+  },
+  {
+    stat: "causedTurnover",
+    field: "Forces a rushed pass",
+    caption: "Caused Turnover +3",
+    detail: "Defense gets counted too.",
+  },
+  {
+    stat: "hustlePlay",
+    field: "Rides hard through the whistle",
+    caption: "Hustle Play +1",
+    detail: "Capture the plays box scores miss.",
+  },
+];
+
+const PROMO_STEP_BY_KEY = Object.fromEntries(PROMO_DEMO_STEPS.map((step, index) => [step.stat, index]));
+const PROMO_STEP_DURATION_SECONDS = 2.4;
+const PROMO_CYCLE_SECONDS = PROMO_DEMO_STEPS.length * PROMO_STEP_DURATION_SECONDS;
+
 const LAUNCH_KIT_GROUPS = [
   {
     title: "Complete Package",
@@ -5117,6 +5179,101 @@ function renderLaunchKitFile(file) {
   `;
 }
 
+function renderPromoDemoPage() {
+  if (!isPlatformReviewer()) {
+    return renderShell(`
+      <section class="screen-title">
+        <h2>Promo Demo</h2>
+        <p>Admin access is required to open the recording demo.</p>
+      </section>
+      <section class="stack">
+        <section class="card pad">
+          <h3>Admin Only</h3>
+          <p class="muted small">Switch to Admin Mode or sign in with the approved admin account.</p>
+          <button class="btn secondary" type="button" data-nav="more">Back to Manage</button>
+        </section>
+      </section>
+    `);
+  }
+
+  const impactTotal = PROMO_DEMO_STEPS.reduce((sum, step) => sum + (STAT_BY_KEY[step.stat]?.points || 0), 0);
+  const lacrossePoints = PROMO_DEMO_STEPS.filter((step) => ["goal", "assist"].includes(step.stat)).length;
+  const cycleStyle = `--promo-step-count: ${PROMO_DEMO_STEPS.length}; --promo-step-duration: ${PROMO_STEP_DURATION_SECONDS}s; --promo-cycle: ${PROMO_CYCLE_SECONDS}s;`;
+
+  return renderShell(`
+    <section class="screen-title">
+      <h2>Promo Recording Demo</h2>
+      <p>Screen-record this looping demo, then place your real lacrosse footage over the left panel in Canva, CapCut, or iMovie.</p>
+    </section>
+
+    <section class="stack promo-recording-screen" style="${cycleStyle}">
+      <section class="card pad promo-instructions-card">
+        <div>
+          <h3>Recording Tip</h3>
+          <p class="muted small">Start recording, wait for the loop to restart at Ground Ball, then trim the clip to the cleanest 18-20 seconds.</p>
+        </div>
+        <div class="promo-action-row">
+          <button class="mini-btn light" type="button" data-nav="launchKit">Launch Kit</button>
+          <button class="mini-btn" type="button" data-action="restart-promo-demo">Restart Loop</button>
+        </div>
+      </section>
+
+      <section class="promo-recording-frame" aria-label="LaxHornet promotional recording frame">
+        <div class="promo-field-panel">
+          <div class="promo-field-lines" aria-hidden="true"></div>
+          <div class="promo-player-marker" aria-hidden="true"></div>
+          <div class="promo-field-copy">
+            <span>Replace this side with game footage</span>
+            <strong>Follow one player through the shift</strong>
+          </div>
+          <div class="promo-caption-stack">
+            ${PROMO_DEMO_STEPS.map(
+              (step, index) => `
+                <article class="promo-caption" style="--promo-step: ${index};">
+                  <span>On-field moment</span>
+                  <strong>${escapeHTML(step.field)}</strong>
+                  <small>${escapeHTML(step.caption)}</small>
+                </article>
+              `,
+            ).join("")}
+          </div>
+        </div>
+
+        <div class="promo-phone-shell">
+          <div class="promo-phone-top">
+            <span>LaxHornet Live Game</span>
+            <strong>CT Blazers vs Rival</strong>
+          </div>
+          <div class="period-tabs promo-period-tabs" role="group" aria-label="Demo period selector">
+            <button class="period-tab active" type="button">Q1</button>
+            <button class="period-tab" type="button">Q2</button>
+            <button class="period-tab" type="button">Q3</button>
+            <button class="period-tab" type="button">Q4</button>
+          </div>
+          <section class="live-summary" aria-label="Demo game summary">
+            <div class="live-pill"><strong>${impactTotal}</strong><span>Impact</span></div>
+            <div class="live-pill"><strong>${lacrossePoints}</strong><span>Points</span></div>
+            <div class="live-pill"><strong>${PROMO_DEMO_STEPS.length}</strong><span>Events</span></div>
+          </section>
+          ${renderLiveStatGroups({ demo: true, interactive: false, stepByKey: PROMO_STEP_BY_KEY })}
+          <section class="promo-log-card">
+            <h3>Recent Log</h3>
+            ${PROMO_DEMO_STEPS.slice(-4).reverse().map((step, index) => {
+              const stat = STAT_BY_KEY[step.stat];
+              return `
+                <div class="promo-log-row ${stat?.tone || "neutral"}" style="--promo-log-index: ${index};">
+                  <span>${escapeHTML(stat?.label || step.caption)}</span>
+                  <strong>${pointText(stat?.points || 0)}</strong>
+                </div>
+              `;
+            }).join("")}
+          </section>
+        </div>
+      </section>
+    </section>
+  `, { hideNav: true });
+}
+
 function renderLaunchKitPage() {
   if (!isPlatformReviewer()) {
     return renderShell(`
@@ -5146,7 +5303,10 @@ function renderLaunchKitPage() {
           <h3>Team Launch Files</h3>
           <p class="muted small">Use these for parent emails, team chats, printed handouts, QR sharing, and admin setup.</p>
         </div>
-        <a class="mini-btn" href="LaxHornet-launch-kit.zip" download>Download ZIP</a>
+        <div class="launch-kit-actions">
+          <button class="mini-btn light" type="button" data-nav="promoDemo">Promo Demo</button>
+          <a class="mini-btn" href="LaxHornet-launch-kit.zip" download>Download ZIP</a>
+        </div>
       </section>
 
       ${LAUNCH_KIT_GROUPS.map(
@@ -5302,6 +5462,7 @@ function render() {
     team: renderTeamPage,
     teamAccess: renderTeamAccess,
     launchKit: renderLaunchKitPage,
+    promoDemo: renderPromoDemoPage,
     tutorial: renderTutorial,
     settings: renderSettings,
     start: renderStartGame,
@@ -5611,6 +5772,10 @@ function handleClick(event) {
     if (action.dataset.action === "dismiss-update") {
       state.updateAvailable = false;
       render();
+    }
+    if (action.dataset.action === "restart-promo-demo") {
+      render();
+      showToast("Promo loop restarted");
     }
     return;
   }
