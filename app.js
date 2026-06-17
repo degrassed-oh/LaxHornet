@@ -20,7 +20,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v101";
+const APP_VERSION = "v103";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -241,6 +241,7 @@ const DEFAULT_PLAYER = {
 const DEFAULT_TEAM_INVITE_LENGTH = 6;
 const TEAM_MANAGE_ROLES = ["admin"];
 const APP_ROLES = ["tracker", "admin"];
+const PLAYER_POSITIONS = ["Attack", "Midfield", "Defense", "Goalie", "Faceoff", "LSM", "SSDM"];
 
 const app = document.querySelector("#app");
 const startupParams = new URLSearchParams(window.location.search);
@@ -2617,12 +2618,17 @@ async function addRosterPlayer(formData) {
     showToast("Team admin access required");
     return;
   }
+  const position = positionValueFromForm(formData, "rosterPosition");
+  if (!position) {
+    showToast("Pick at least one position");
+    return;
+  }
   const rosterPlayer = normalizeRosterPlayer({
     id: uid("roster"),
     teamId: team.id,
     name: formData.get("rosterName")?.trim() || "Roster Player",
     number: formData.get("rosterNumber")?.trim() || "",
-    position: formData.get("rosterPosition")?.trim() || "",
+    position,
   });
   const { data: rosterRows, error } = await supabaseClient.rpc("laxhornet_create_roster_player", {
     p_roster_player_id: rosterPlayer.id,
@@ -2656,13 +2662,18 @@ async function saveRosterPlayer(formData) {
     showToast("Team admin access required");
     return;
   }
+  const position = positionValueFromForm(formData, "position");
+  if (!position) {
+    showToast("Pick at least one position");
+    return;
+  }
 
   const rosterPlayer = normalizeRosterPlayer({
     id: player.rosterPlayerId || player.id,
     teamId: player.teamId,
     name: formData.get("name")?.trim() || "Roster Player",
     number: formData.get("number")?.trim() || "",
-    position: formData.get("position")?.trim() || "",
+    position,
     active: true,
   });
 
@@ -3347,8 +3358,8 @@ function renderTeamRosterCard(options = {}) {
                                 <input id="rosterNumber" name="rosterNumber" inputmode="numeric" placeholder="12" />
                               </div>
                             </div>
-                            <div class="inline-input-action">
-                              <input name="rosterPosition" placeholder="Position" />
+                            ${renderPositionPicker({ name: "rosterPosition", label: "Positions" })}
+                            <div class="team-form-actions">
                               <button class="mini-btn" type="submit">Add Player</button>
                             </div>
                           </form>`
@@ -3752,10 +3763,7 @@ function renderPlayerPage() {
               <label for="editRosterNumber">Jersey #</label>
               <input id="editRosterNumber" name="number" value="${escapeHTML(selectedRosterPlayer.number)}" inputmode="numeric" />
             </div>
-            <div class="field">
-              <label for="editRosterPosition">Position</label>
-              <input id="editRosterPosition" name="position" value="${escapeHTML(selectedRosterPlayer.position)}" />
-            </div>
+            ${renderPositionPicker({ name: "position", selected: selectedRosterPlayer.position, label: "Positions" })}
           </div>
           <div class="inline-input-action">
             <button class="mini-btn danger" type="button" data-action="remove-roster-player">Remove from Roster</button>
@@ -4331,8 +4339,68 @@ function renderGameListRow(game) {
   `;
 }
 
+function metricTile(value, label) {
+  return `<div class="metric"><strong>${escapeHTML(String(value))}</strong><span>${escapeHTML(label)}</span></div>`;
+}
+
+function positionListFromValue(value = "") {
+  return String(value || "")
+    .split(/[,/;]+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function positionValueFromForm(formData, name) {
+  return formData
+    .getAll(name)
+    .map((item) => String(item || "").trim())
+    .filter(Boolean)
+    .join(", ");
+}
+
+function renderPositionPicker({ name, selected = "", label = "Positions" } = {}) {
+  const selectedPositions = new Set(positionListFromValue(selected));
+  return `
+    <fieldset class="position-picker">
+      <legend>${escapeHTML(label)}</legend>
+      <div class="position-options">
+        ${PLAYER_POSITIONS.map(
+          (position) => `
+            <label class="position-option">
+              <input type="checkbox" name="${escapeHTML(name)}" value="${escapeHTML(position)}" ${selectedPositions.has(position) ? "checked" : ""} />
+              <span>${escapeHTML(position)}</span>
+            </label>
+          `,
+        ).join("")}
+      </div>
+    </fieldset>
+  `;
+}
+
+function dashboardHeadlineMetrics(totals, player = state.player) {
+  const position = String(player.position || "").toLowerCase();
+  const metrics = [
+    [totals.gamesPlayed, "Games Played"],
+    [totals.averageImpact.toFixed(1), "Avg Impact"],
+    [totals.points, "Points"],
+    [totals.goals, "Goals"],
+    [totals.assists, "Assists"],
+  ];
+
+  if (position.includes("goalie") || position.includes("goal")) {
+    metrics.push([totals.saves, "Saves"], [pct(totals.savePct), "Save %"], [totals.goalsAllowed, "Goals Allowed"], [totals.effortScore, "Effort Score"]);
+  } else if (position.includes("face") || position.includes("fogo")) {
+    metrics.push([totals.faceoffWins, "Faceoff Wins"], [pct(totals.faceoffPct), "Faceoff %"], [totals.groundBalls, "Ground Balls"], [totals.effortScore, "Effort Score"]);
+  } else {
+    metrics.push([totals.shots, "Shots"], [pct(totals.shotOnGoalPct), "SOG %"], [totals.groundBalls, "Ground Balls"], [totals.effortScore, "Effort Score"]);
+  }
+
+  return metrics;
+}
+
 function renderDashboard() {
   const totals = calculateSeasonTotals();
+  const headlineMetrics = dashboardHeadlineMetrics(totals, state.player);
   return renderShell(`
     <section class="screen-title">
       <h2>Season Dashboard</h2>
@@ -4344,15 +4412,7 @@ function renderDashboard() {
         helper: "Switch players to see a separate season dashboard.",
       })}
       <div class="metric-grid">
-        <div class="metric"><strong>${totals.gamesPlayed}</strong><span>Games Played</span></div>
-        <div class="metric"><strong>${totals.averageImpact.toFixed(1)}</strong><span>Avg Impact</span></div>
-        <div class="metric"><strong>${totals.goals}</strong><span>Goals</span></div>
-        <div class="metric"><strong>${totals.assists}</strong><span>Assists</span></div>
-        <div class="metric"><strong>${totals.points}</strong><span>Points</span></div>
-        <div class="metric"><strong>${totals.saves}</strong><span>Saves</span></div>
-        <div class="metric"><strong>${pct(totals.faceoffPct)}</strong><span>Faceoff %</span></div>
-        <div class="metric"><strong>${totals.effortScore}</strong><span>Effort Score</span></div>
-        <div class="metric"><strong>${pct(totals.shootingPct)}</strong><span>Shooting %</span></div>
+        ${headlineMetrics.map(([value, label]) => metricTile(value, label)).join("")}
       </div>
       ${renderTotalsTable(totals)}
     </section>

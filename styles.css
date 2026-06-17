@@ -586,6 +586,65 @@ button:disabled {
   gap: 10px;
 }
 
+.team-form-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.position-picker {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+}
+
+.position-picker legend {
+  margin-bottom: 2px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.position-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.position-option {
+  min-width: 0;
+}
+
+.position-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.position-option span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #ffffff;
+  color: var(--text);
+  font-size: 0.86rem;
+  font-weight: 900;
+  text-align: center;
+}
+
+.position-option input:checked + span {
+  border-color: rgba(232, 16, 16, 0.72);
+  background:
+    linear-gradient(90deg, var(--hornet-red) 0 5px, transparent 5px),
+    #f7f8f9;
+}
+
 .player-chip-wrap {
   display: grid;
   gap: 6px;
