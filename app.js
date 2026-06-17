@@ -20,7 +20,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v84";
+const APP_VERSION = "v85";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -3775,12 +3775,7 @@ function renderSettings() {
           </div>
         </form>
       `
-      : `
-        <section class="card pad">
-          <h3>${escapeHTML(selectedRosterPlayer.name)}</h3>
-          <p class="muted small">This roster player is view-only for your account. Ask a team admin if roster details need to be changed.</p>
-        </section>
-      `
+      : ""
     : "";
   return renderShell(`
     <section class="screen-title">
