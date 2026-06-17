@@ -20,7 +20,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v97";
+const APP_VERSION = "v98";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -285,6 +285,7 @@ const state = {
   deletedEventIds: initialStoredState.deletedEventIds,
   watchShareExpanded: false,
   teamRosterExpanded: true,
+  exportToolsExpanded: false,
   signupDraft: null,
   accessRequestSummary: null,
   toast: "",
@@ -4226,6 +4227,7 @@ function renderTotalsTable(totals) {
 
 function renderPastGames() {
   const games = visibleGames();
+  const exportExpanded = state.exportToolsExpanded;
   return renderShell(`
     <section class="screen-title">
       <h2>Past Games</h2>
@@ -4237,22 +4239,36 @@ function renderPastGames() {
         helper: "Switch players to review a different player's games.",
       })}
 
-      <section class="card pad export-card">
-        <h3>Backup & Export</h3>
-        <p class="muted small">Exports include player info, event tags, notes, categories, and impact values.</p>
-        <div class="export-actions">
-          <button class="btn neutral" type="button" data-action="export-csv">Export CSV</button>
-          <button class="btn neutral" type="button" data-action="export-json">Export JSON</button>
-          <label class="btn secondary import-label" for="jsonImport">Import JSON</label>
-          <input class="import-input" id="jsonImport" type="file" accept="application/json,.json" data-import-json />
-        </div>
-      </section>
-
       <section class="card">
         ${
           games.length
             ? games.map(renderGameListRow).join("")
             : `<div class="empty">No saved games yet.</div>`
+        }
+      </section>
+
+      <section class="card pad export-card ${exportExpanded ? "expanded" : "collapsed"}">
+        <div class="collapsible-card-head">
+          <div>
+            <h3>Backup & Export</h3>
+            <p class="muted small">CSV, JSON backup, and restore tools.</p>
+          </div>
+          <button class="collapse-icon" type="button" data-action="toggle-export-tools" aria-expanded="${exportExpanded}" aria-label="${exportExpanded ? "Minimize Backup and Export" : "Expand Backup and Export"}">
+            <span aria-hidden="true">${exportExpanded ? "v" : ">"}</span>
+          </button>
+        </div>
+        ${
+          exportExpanded
+            ? `<div class="export-card-body">
+                <p class="muted small">Exports include player info, event tags, notes, categories, and impact values.</p>
+                <div class="export-actions">
+                  <button class="btn neutral" type="button" data-action="export-csv">Export CSV</button>
+                  <button class="btn neutral" type="button" data-action="export-json">Export JSON</button>
+                  <label class="btn secondary import-label" for="jsonImport">Import JSON</label>
+                  <input class="import-input" id="jsonImport" type="file" accept="application/json,.json" data-import-json />
+                </div>
+              </div>`
+            : ""
         }
       </section>
     </section>
@@ -4767,6 +4783,10 @@ function handleClick(event) {
     }
     if (action.dataset.action === "toggle-team-roster") {
       state.teamRosterExpanded = !state.teamRosterExpanded;
+      render();
+    }
+    if (action.dataset.action === "toggle-export-tools") {
+      state.exportToolsExpanded = !state.exportToolsExpanded;
       render();
     }
     return;

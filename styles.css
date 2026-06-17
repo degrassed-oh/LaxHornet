@@ -1198,6 +1198,11 @@ button:disabled {
   gap: 0;
 }
 
+.export-card.collapsed {
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
 .share-watch-form .muted {
   margin-bottom: 0;
 }
@@ -1404,14 +1409,30 @@ button:disabled {
 }
 
 .export-card {
-  margin-bottom: 12px;
+  gap: 0;
+  border-color: rgba(17, 19, 23, 0.1);
+  box-shadow: none;
+}
+
+.export-card h3 {
+  margin: 0;
+  font-size: 0.98rem;
+}
+
+.export-card .muted {
+  margin: 0;
+}
+
+.export-card-body {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
 }
 
 .export-actions {
   display: grid;
   grid-template-columns: 1fr;
   gap: 10px;
-  margin-top: 12px;
 }
 
 .import-label {
