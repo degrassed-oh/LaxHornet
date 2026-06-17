@@ -20,7 +20,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v74";
+const APP_VERSION = "v75";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -253,26 +253,22 @@ const supabaseClient =
 
 let sharedGameChannel = null;
 let lastSyncErrorAt = 0;
-const legacyPlayer = normalizePlayer(loadJSON(STORAGE_KEYS.player, DEFAULT_PLAYER), { createId: true });
-const initialPlayers = normalizePlayers(loadJSON(STORAGE_KEYS.players, null), legacyPlayer);
-const initialActivePlayerId = loadJSON(STORAGE_KEYS.activePlayerId, legacyPlayer.id);
-const safeActivePlayerId = initialPlayers.some((player) => player.id === initialActivePlayerId)
-  ? initialActivePlayerId
-  : initialPlayers[0].id;
+let activeStorageUserId = "";
+const initialStoredState = readStoredAccountState();
 
 const state = {
   screen: "home",
-  players: initialPlayers,
-  activePlayerId: safeActivePlayerId,
-  player: activePlayerFrom(initialPlayers, safeActivePlayerId),
-  teams: normalizeTeams(loadJSON(STORAGE_KEYS.teams, [])),
-  rosterPlayers: normalizeRosterPlayers(loadJSON(STORAGE_KEYS.rosterPlayers, [])),
-  activeTeamId: loadJSON(STORAGE_KEYS.activeTeamId, ""),
-  teamAccessRequests: loadJSON(STORAGE_KEYS.teamAccessRequests, []),
-  playerClaims: loadJSON(STORAGE_KEYS.playerClaims, []),
-  games: loadJSON(STORAGE_KEYS.games, []),
-  activeGame: loadJSON(STORAGE_KEYS.activeGame, null),
-  reviewGameId: loadJSON(STORAGE_KEYS.reviewGameId, null),
+  players: initialStoredState.players,
+  activePlayerId: initialStoredState.activePlayerId,
+  player: activePlayerFrom(initialStoredState.players, initialStoredState.activePlayerId),
+  teams: initialStoredState.teams,
+  rosterPlayers: initialStoredState.rosterPlayers,
+  activeTeamId: initialStoredState.activeTeamId,
+  teamAccessRequests: initialStoredState.teamAccessRequests,
+  playerClaims: initialStoredState.playerClaims,
+  games: initialStoredState.games,
+  activeGame: initialStoredState.activeGame,
+  reviewGameId: initialStoredState.reviewGameId,
   authUser: null,
   authUserId: "",
   userProfile: null,
@@ -285,8 +281,8 @@ const state = {
   editingGameDetails: false,
   tagEditingEventId: null,
   tagDraftTags: [],
-  deletedGameIds: loadJSON(STORAGE_KEYS.deletedGames, []),
-  deletedEventIds: loadJSON(STORAGE_KEYS.deletedEvents, []),
+  deletedGameIds: initialStoredState.deletedGameIds,
+  deletedEventIds: initialStoredState.deletedEventIds,
   watchShareExpanded: false,
   teamRosterExpanded: true,
   toast: "",
@@ -294,8 +290,8 @@ const state = {
 };
 
 mergeRosterPlayersIntoPlayers();
-if (initialActivePlayerId && state.players.some((player) => player.id === initialActivePlayerId)) {
-  state.activePlayerId = initialActivePlayerId;
+if (initialStoredState.activePlayerId && state.players.some((player) => player.id === initialStoredState.activePlayerId)) {
+  state.activePlayerId = initialStoredState.activePlayerId;
 }
 ensureActiveTeamRosterPlayer();
 syncActivePlayer();
@@ -306,7 +302,7 @@ persistAll();
 
 function loadJSON(key, fallback) {
   try {
-    const raw = localStorage.getItem(key);
+    const raw = localStorage.getItem(scopedStorageKey(key));
     return raw ? JSON.parse(raw) : fallback;
   } catch {
     return fallback;
@@ -314,7 +310,38 @@ function loadJSON(key, fallback) {
 }
 
 function saveJSON(key, value) {
-  localStorage.setItem(key, JSON.stringify(value));
+  localStorage.setItem(scopedStorageKey(key), JSON.stringify(value));
+}
+
+function removeStoredItem(key) {
+  localStorage.removeItem(scopedStorageKey(key));
+}
+
+function scopedStorageKey(key) {
+  return activeStorageUserId ? `${key}.user.${activeStorageUserId}` : key;
+}
+
+function readStoredAccountState(userId = activeStorageUserId) {
+  activeStorageUserId = userId || "";
+  const storedPlayer = normalizePlayer(loadJSON(STORAGE_KEYS.player, DEFAULT_PLAYER), { createId: true });
+  const players = normalizePlayers(loadJSON(STORAGE_KEYS.players, null), storedPlayer);
+  const activePlayerId = loadJSON(STORAGE_KEYS.activePlayerId, storedPlayer.id);
+  const safeActivePlayerId = players.some((player) => player.id === activePlayerId) ? activePlayerId : players[0].id;
+
+  return {
+    players,
+    activePlayerId: safeActivePlayerId,
+    teams: normalizeTeams(loadJSON(STORAGE_KEYS.teams, [])),
+    rosterPlayers: normalizeRosterPlayers(loadJSON(STORAGE_KEYS.rosterPlayers, [])),
+    activeTeamId: loadJSON(STORAGE_KEYS.activeTeamId, ""),
+    teamAccessRequests: normalizeTeamAccessRequests(loadJSON(STORAGE_KEYS.teamAccessRequests, [])),
+    playerClaims: normalizePlayerClaims(loadJSON(STORAGE_KEYS.playerClaims, [])),
+    games: loadJSON(STORAGE_KEYS.games, []),
+    activeGame: loadJSON(STORAGE_KEYS.activeGame, null),
+    reviewGameId: loadJSON(STORAGE_KEYS.reviewGameId, null),
+    deletedGameIds: loadJSON(STORAGE_KEYS.deletedGames, []),
+    deletedEventIds: loadJSON(STORAGE_KEYS.deletedEvents, []),
+  };
 }
 
 function uid(prefix = "id") {
@@ -554,7 +581,7 @@ function isTeamPlayer(player = {}) {
   return Boolean(normalized.teamId && normalized.rosterPlayerId);
 }
 
-function normalizePlayers(players, fallbackPlayer = legacyPlayer) {
+function normalizePlayers(players, fallbackPlayer = normalizePlayer(DEFAULT_PLAYER, { createId: true })) {
   const source = Array.isArray(players) && players.length ? players : [fallbackPlayer];
   const merged = new Map();
   source.forEach((player) => {
@@ -1025,9 +1052,39 @@ function persistAll() {
   if (state.activeGame) {
     saveJSON(STORAGE_KEYS.activeGame, state.activeGame);
   } else {
-    localStorage.removeItem(STORAGE_KEYS.activeGame);
+    removeStoredItem(STORAGE_KEYS.activeGame);
   }
   saveJSON(STORAGE_KEYS.reviewGameId, state.reviewGameId);
+}
+
+function applyStoredAccountState(userId) {
+  const stored = readStoredAccountState(userId);
+  state.players = stored.players;
+  state.activePlayerId = stored.activePlayerId;
+  state.player = activePlayerFrom(stored.players, stored.activePlayerId);
+  state.teams = stored.teams;
+  state.rosterPlayers = stored.rosterPlayers;
+  state.activeTeamId = stored.activeTeamId;
+  state.teamAccessRequests = stored.teamAccessRequests;
+  state.playerClaims = stored.playerClaims;
+  state.games = stored.games;
+  state.activeGame = stored.activeGame;
+  state.reviewGameId = stored.reviewGameId;
+  state.deletedGameIds = stored.deletedGameIds;
+  state.deletedEventIds = stored.deletedEventIds;
+  state.userProfile = null;
+  state.adminRequests = [];
+  state.editingEventId = null;
+  state.editingGameDetails = false;
+  state.tagEditingEventId = null;
+  state.tagDraftTags = [];
+  mergeRosterPlayersIntoPlayers();
+  ensureActiveTeamRosterPlayer();
+  syncActivePlayer();
+  state.games = state.games.map((game) => normalizeGame(game, state.player));
+  state.activeGame = state.activeGame ? normalizeGame(state.activeGame, state.player) : null;
+  mergePlayersFromGames([state.activeGame, ...state.games].filter(Boolean));
+  persistAll();
 }
 
 function resetCloudAccountState() {
@@ -1038,7 +1095,7 @@ function resetCloudAccountState() {
   state.playerClaims = [];
   state.userProfile = null;
   state.adminRequests = [];
-  state.players = normalizePlayers(state.players.filter((player) => !player.teamId), legacyPlayer);
+  state.players = normalizePlayers(state.players.filter((player) => !player.teamId), normalizePlayer(DEFAULT_PLAYER, { createId: true }));
   state.activePlayerId = state.players[0]?.id || "";
   syncActivePlayer();
   persistAll();
@@ -1047,10 +1104,13 @@ function resetCloudAccountState() {
 function setAuthUser(user) {
   const nextUserId = user?.id || "";
   if (nextUserId !== state.authUserId) {
-    resetCloudAccountState();
+    if (state.authUserId && activeStorageUserId === state.authUserId) persistAll();
     state.authUserId = nextUserId;
+    state.authUser = user || null;
+    applyStoredAccountState(nextUserId);
+  } else {
+    state.authUser = user || null;
   }
-  state.authUser = user || null;
 }
 
 function showToast(message) {
