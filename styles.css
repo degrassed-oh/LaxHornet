@@ -1166,6 +1166,17 @@ button:disabled {
   background: var(--hornet-yellow);
 }
 
+.mode-toggle {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.mode-toggle .mini-btn {
+  width: 100%;
+}
+
 .edit-event-form {
   border-color: rgba(17, 132, 71, 0.32);
 }

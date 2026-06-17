@@ -12,6 +12,7 @@ const STORAGE_KEYS = {
   activeTeamId: "laxhornet.activeTeamId",
   teamAccessRequests: "laxhornet.teamAccessRequests",
   playerClaims: "laxhornet.playerClaims",
+  adminViewMode: "laxhornet.adminViewMode",
 };
 
 const SUPABASE_CONFIG = {
@@ -20,7 +21,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v116";
+const APP_VERSION = "v117";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -292,6 +293,7 @@ const state = {
   teamAccessExpanded: false,
   exportToolsExpanded: false,
   helpExpanded: false,
+  adminViewMode: initialStoredState.adminViewMode,
   signupDraft: null,
   accessRequestSummary: null,
   toast: "",
@@ -338,6 +340,7 @@ function readStoredAccountState(userId = activeStorageUserId) {
   const players = normalizePlayers(loadJSON(STORAGE_KEYS.players, null), storedPlayer);
   const activePlayerId = loadJSON(STORAGE_KEYS.activePlayerId, storedPlayer.id);
   const safeActivePlayerId = players.some((player) => player.id === activePlayerId) ? activePlayerId : players[0].id;
+  const adminViewMode = loadJSON(STORAGE_KEYS.adminViewMode, "admin") === "tracker" ? "tracker" : "admin";
 
   return {
     players,
@@ -352,6 +355,7 @@ function readStoredAccountState(userId = activeStorageUserId) {
     reviewGameId: loadJSON(STORAGE_KEYS.reviewGameId, null),
     deletedGameIds: loadJSON(STORAGE_KEYS.deletedGames, []),
     deletedEventIds: loadJSON(STORAGE_KEYS.deletedEvents, []),
+    adminViewMode,
   };
 }
 
@@ -877,8 +881,12 @@ function appRoleLabel(role = "tracker") {
   return "Parent Tracker";
 }
 
-function isPlatformReviewer() {
+function isReviewerAccount() {
   return userEmail().trim().toLowerCase() === PLATFORM_REVIEWER_EMAIL.toLowerCase();
+}
+
+function isPlatformReviewer() {
+  return isReviewerAccount() && state.adminViewMode !== "tracker";
 }
 
 function normalizeUserProfile(profile = {}) {
@@ -891,7 +899,7 @@ function normalizeUserProfile(profile = {}) {
     childJerseyNumber: String(profile.childJerseyNumber || profile.child_jersey_number || "").trim(),
     onboardingCompleted: Boolean(profile.onboardingCompleted ?? profile.onboarding_completed ?? false),
     requestedRole: normalizeAppRole(profile.requestedRole || profile.requested_role || "tracker"),
-    approvedRole: normalizeAppRole(profile.approvedRole || profile.approved_role || (isPlatformReviewer() ? "admin" : "tracker")),
+    approvedRole: normalizeAppRole(profile.approvedRole || profile.approved_role || (isReviewerAccount() ? "admin" : "tracker")),
     adminStatus: String(profile.adminStatus || profile.admin_status || "approved").trim().toLowerCase(),
     reviewedBy: profile.reviewedBy || profile.reviewed_by || "",
     reviewedAt: profile.reviewedAt || profile.reviewed_at || null,
@@ -901,7 +909,7 @@ function normalizeUserProfile(profile = {}) {
 }
 
 function currentAppRole() {
-  if (isPlatformReviewer()) return "admin";
+  if (isReviewerAccount()) return isPlatformReviewer() ? "admin" : "tracker";
   return normalizeAppRole(state.userProfile?.approvedRole || "tracker");
 }
 
@@ -911,6 +919,17 @@ function requestedAdminPending() {
 
 function canCreateTeams() {
   return isPlatformReviewer();
+}
+
+function setAdminViewMode(mode) {
+  if (!isReviewerAccount()) return;
+  state.adminViewMode = mode === "tracker" ? "tracker" : "admin";
+  mergeRosterPlayersIntoPlayers();
+  ensureActiveTeamRosterPlayer();
+  syncActivePlayer();
+  persistAll();
+  render();
+  showToast(state.adminViewMode === "tracker" ? "Tracker mode on" : "Admin mode on");
 }
 
 function authRedirectUrl() {
@@ -1077,6 +1096,7 @@ function persistAll() {
   saveJSON(STORAGE_KEYS.activeTeamId, state.activeTeamId);
   saveJSON(STORAGE_KEYS.teamAccessRequests, normalizeTeamAccessRequests(state.teamAccessRequests));
   saveJSON(STORAGE_KEYS.playerClaims, normalizePlayerClaims(state.playerClaims));
+  saveJSON(STORAGE_KEYS.adminViewMode, state.adminViewMode === "tracker" ? "tracker" : "admin");
   saveJSON(STORAGE_KEYS.deletedGames, uniqueIds(state.deletedGameIds));
   saveJSON(STORAGE_KEYS.deletedEvents, uniqueIds(state.deletedEventIds));
   saveJSON(STORAGE_KEYS.games, state.games);
@@ -1098,6 +1118,7 @@ function applyStoredAccountState(userId) {
   state.activeTeamId = stored.activeTeamId;
   state.teamAccessRequests = stored.teamAccessRequests;
   state.playerClaims = stored.playerClaims;
+  state.adminViewMode = stored.adminViewMode;
   state.games = stored.games;
   state.activeGame = stored.activeGame;
   state.reviewGameId = stored.reviewGameId;
@@ -1124,6 +1145,7 @@ function resetCloudAccountState() {
   state.activeTeamId = "";
   state.teamAccessRequests = [];
   state.playerClaims = [];
+  state.adminViewMode = "admin";
   state.userProfile = null;
   state.adminRequests = [];
   state.players = normalizePlayers(state.players.filter((player) => !player.teamId), normalizePlayer(DEFAULT_PLAYER, { createId: true }));
@@ -2256,7 +2278,7 @@ async function signOut() {
 
 async function requestUserRole(role, options = {}) {
   if (!supabaseClient || !currentUserId()) return null;
-  const requestedRole = isPlatformReviewer() && normalizeAppRole(role) === "admin" ? "admin" : "tracker";
+  const requestedRole = isReviewerAccount() && normalizeAppRole(role) === "admin" ? "admin" : "tracker";
   const { data, error } = await supabaseClient.rpc("laxhornet_request_user_role", {
     requested_app_role: requestedRole,
   });
@@ -2274,7 +2296,7 @@ async function requestUserRole(role, options = {}) {
 }
 
 function needsParentProfileSetup() {
-  if (!state.authUser || isPlatformReviewer()) return false;
+  if (!state.authUser || isReviewerAccount()) return false;
   const profile = state.userProfile || {};
   return !profile.onboardingCompleted || !profile.firstName || !profile.lastName;
 }
@@ -2306,8 +2328,8 @@ async function saveParentProfile(formData) {
     last_name: lastName,
     phone,
     child_jersey_number: childJerseyNumber,
-    requested_role: isPlatformReviewer() ? "admin" : "tracker",
-    approved_role: isPlatformReviewer() ? "admin" : "tracker",
+    requested_role: isReviewerAccount() ? "admin" : "tracker",
+    approved_role: isReviewerAccount() ? "admin" : "tracker",
     admin_status: "approved",
     onboarding_completed: true,
     updated_at: new Date().toISOString(),
@@ -2335,8 +2357,8 @@ async function saveParentProfile(formData) {
     lastName,
     phone,
     childJerseyNumber,
-    requestedRole: isPlatformReviewer() ? "admin" : "tracker",
-    approvedRole: isPlatformReviewer() ? "admin" : "tracker",
+    requestedRole: isReviewerAccount() ? "admin" : "tracker",
+    approvedRole: isReviewerAccount() ? "admin" : "tracker",
     adminStatus: "approved",
     onboardingCompleted: true,
     updatedAt: new Date().toISOString(),
@@ -2741,6 +2763,48 @@ async function removeRosterPlayer() {
   showToast(`${playerTitle(player)} removed from roster`);
 }
 
+async function deleteActiveTeam() {
+  if (!supabaseClient || !currentUserId()) {
+    showToast("Sign in to delete a team");
+    return;
+  }
+  const team = activeTeam();
+  if (!team) {
+    showToast("Pick a team first");
+    return;
+  }
+  if (!canManageRoster(team.id)) {
+    showToast("Admin mode required");
+    return;
+  }
+  if (!window.confirm(`Delete ${team.name}? This removes the team roster, access requests, and parent access. Saved games will stay in history.`)) return;
+
+  const { error } = await supabaseClient.rpc("laxhornet_delete_team", {
+    p_team_id: team.id,
+  });
+  if (error) {
+    reportTeamSetupError(error);
+    return;
+  }
+
+  const deletedTeamId = team.id;
+  state.teams = state.teams.filter((item) => item.id !== deletedTeamId);
+  state.rosterPlayers = state.rosterPlayers.filter((player) => player.teamId !== deletedTeamId);
+  state.teamAccessRequests = state.teamAccessRequests.filter((request) => request.teamId !== deletedTeamId);
+  state.playerClaims = state.playerClaims.filter((claim) => claim.teamId !== deletedTeamId);
+  state.players = state.players.filter((player) => player.teamId !== deletedTeamId);
+  state.activeTeamId = state.teams[0]?.id || "";
+  state.activePlayerId = state.players.some((player) => player.id === state.activePlayerId)
+    ? state.activePlayerId
+    : state.players[0]?.id || "";
+  mergeRosterPlayersIntoPlayers();
+  ensureActiveTeamRosterPlayer();
+  syncActivePlayer();
+  persistAll();
+  render();
+  showToast(`${team.name} deleted`);
+}
+
 async function syncGameToSupabase(game, options = {}) {
   if (!supabaseClient || !game) return false;
   if (isDeletedGame(game.id)) return false;
@@ -3021,15 +3085,22 @@ function renderAccountCard() {
 
   if (state.authUser) {
     const role = currentAppRole();
+    const modeToggle = isReviewerAccount()
+      ? `<div class="mode-toggle" role="group" aria-label="Admin view mode">
+          <button class="mini-btn ${isPlatformReviewer() ? "" : "light"}" type="button" data-admin-view-mode="admin" aria-pressed="${isPlatformReviewer()}">Admin Mode</button>
+          <button class="mini-btn ${!isPlatformReviewer() ? "" : "light"}" type="button" data-admin-view-mode="tracker" aria-pressed="${!isPlatformReviewer()}">Tracker Mode</button>
+        </div>`
+      : "";
     return `
       <section class="card pad account-card">
         <h3>User Profile</h3>
         <p class="muted small">${escapeHTML([state.userProfile?.firstName, state.userProfile?.lastName].filter(Boolean).join(" ") || userEmail())}</p>
         <p class="muted small">${escapeHTML(userEmail())}</p>
-        <p class="muted small">Role: ${escapeHTML(isPlatformReviewer() ? "Reviewer / Admin" : appRoleLabel(role))}</p>
+        <p class="muted small">Role: ${escapeHTML(isReviewerAccount() ? `Reviewer / ${appRoleLabel(role)}` : appRoleLabel(role))}</p>
         <p class="muted small">${escapeHTML(state.syncStatus)}</p>
         <p class="muted small">App version: ${escapeHTML(APP_VERSION)}</p>
         ${state.cloudError ? `<p class="muted small">Last Supabase error: ${escapeHTML(state.cloudError)}</p>` : ""}
+        ${modeToggle}
         <div class="account-actions">
           <button class="btn neutral" type="button" data-action="sync-cloud-games">Sync Cloud Games</button>
           <button class="btn secondary" type="button" data-nav="profileSetup">Edit Profile</button>
@@ -3350,6 +3421,7 @@ function renderTeamRosterCard(options = {}) {
               <div class="team-actions">
                 <button class="mini-btn light" type="button" data-action="sync-team-roster">Sync</button>
                 <button class="mini-btn light" type="button" data-action="toggle-team-access">Request Access</button>
+                ${manageRoster ? `<button class="mini-btn danger" type="button" data-action="delete-team">Delete Team</button>` : ""}
               </div>
               ${
                 teams
@@ -3454,6 +3526,12 @@ function renderMore() {
   const active = state.activeGame;
   const activePlayer = active ? gamePlayerSnapshot(active) : null;
   const helpExpanded = state.helpExpanded;
+  const accountModeToggle = isReviewerAccount()
+    ? `<div class="mode-toggle" role="group" aria-label="Admin view mode">
+        <button class="mini-btn ${isPlatformReviewer() ? "" : "light"}" type="button" data-admin-view-mode="admin" aria-pressed="${isPlatformReviewer()}">Admin Mode</button>
+        <button class="mini-btn ${!isPlatformReviewer() ? "" : "light"}" type="button" data-admin-view-mode="tracker" aria-pressed="${!isPlatformReviewer()}">Tracker Mode</button>
+      </div>`
+    : "";
 
   return renderShell(`
     <section class="screen-title">
@@ -3511,6 +3589,7 @@ function renderMore() {
             <strong>${escapeHTML(APP_VERSION)}</strong>
           </div>
         </div>
+        ${accountModeToggle}
         ${state.cloudError ? `<div class="notice-card error-card"><strong>Last Supabase error</strong><p class="muted small">${escapeHTML(state.cloudError)}</p></div>` : ""}
         <div class="more-action-list">
           <button class="more-action" type="button" data-nav="profileSetup">
@@ -4828,6 +4907,12 @@ function handleClick(event) {
     return;
   }
 
+  const adminViewModeButton = event.target.closest("[data-admin-view-mode]");
+  if (adminViewModeButton) {
+    setAdminViewMode(adminViewModeButton.dataset.adminViewMode);
+    return;
+  }
+
   const statButton = event.target.closest("[data-stat]");
   if (statButton) {
     logEvent(statButton.dataset.stat);
@@ -4894,6 +4979,7 @@ function handleClick(event) {
     if (action.dataset.action === "add-player") addPlayer();
     if (action.dataset.action === "delete-player") deleteActivePlayer();
     if (action.dataset.action === "remove-roster-player") removeRosterPlayer();
+    if (action.dataset.action === "delete-team") deleteActiveTeam();
     if (action.dataset.action === "toggle-watch-share") {
       state.watchShareExpanded = !state.watchShareExpanded;
       render();

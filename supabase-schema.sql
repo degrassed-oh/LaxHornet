@@ -1131,6 +1131,38 @@ begin
 end;
 $laxhornet_create_team$;
 
+create or replace function public.laxhornet_delete_team(
+  p_team_id text
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $laxhornet_delete_team$
+declare
+  deleted_count integer;
+begin
+  if (select auth.uid()) is null then
+    raise exception 'Sign in required';
+  end if;
+
+  if not (
+    (select public.laxhornet_is_platform_reviewer())
+    or (select public.laxhornet_team_role(p_team_id)) = 'admin'
+  ) then
+    raise exception 'Team admin access required';
+  end if;
+
+  delete from public.teams
+  where teams.id = p_team_id;
+
+  get diagnostics deleted_count = row_count;
+  if deleted_count = 0 then
+    raise exception 'Team not found';
+  end if;
+end;
+$laxhornet_delete_team$;
+
 create or replace function public.laxhornet_create_roster_player(
   p_roster_player_id text,
   p_team_id text,
@@ -1409,6 +1441,7 @@ grant execute on function public.laxhornet_pending_team_access_requests() to aut
 grant execute on function public.laxhornet_my_team_access_requests() to authenticated;
 grant execute on function public.laxhornet_review_team_access_request(text, boolean) to authenticated;
 grant execute on function public.laxhornet_create_team(text, text, text, text, text) to authenticated;
+grant execute on function public.laxhornet_delete_team(text) to authenticated;
 grant execute on function public.laxhornet_create_roster_player(text, text, text, text, text) to authenticated;
 grant execute on function public.laxhornet_update_roster_player(text, text, text, text, text) to authenticated;
 grant execute on function public.laxhornet_remove_roster_player(text, text) to authenticated;
