@@ -89,7 +89,7 @@ button:disabled {
   max-width: 760px;
   min-height: 100dvh;
   margin: 0 auto;
-  padding: 18px 14px calc(96px + var(--safe-bottom));
+  padding: 18px 14px calc(112px + var(--safe-bottom));
 }
 
 .topbar {
@@ -1224,6 +1224,67 @@ button:disabled {
   border-color: rgba(17, 132, 71, 0.36);
 }
 
+.more-card {
+  display: grid;
+  gap: 12px;
+}
+
+.more-action-list {
+  display: grid;
+  gap: 8px;
+}
+
+.more-action {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  grid-template-areas:
+    "icon title"
+    "icon copy";
+  gap: 2px 10px;
+  min-height: 62px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid rgba(17, 19, 23, 0.1);
+  border-radius: var(--radius);
+  color: var(--text);
+  background: #f6f7f8;
+  text-align: left;
+}
+
+.more-action > span {
+  grid-area: icon;
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 999px;
+  color: var(--hornet-red);
+  background: #ffffff;
+  box-shadow: inset 0 0 0 1px rgba(232, 16, 16, 0.16);
+}
+
+.more-action svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+
+.more-action strong {
+  grid-area: title;
+  min-width: 0;
+  font-size: 0.96rem;
+  line-height: 1.15;
+}
+
+.more-action small {
+  grid-area: copy;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 750;
+  line-height: 1.28;
+}
+
 .request-summary {
   display: grid;
   gap: 8px;
@@ -1413,20 +1474,65 @@ button:disabled {
 .bottom-nav {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 7px;
-  margin-top: 16px;
+  gap: 4px;
+  position: fixed;
+  right: 10px;
+  bottom: 0;
+  left: 10px;
+  z-index: 35;
+  max-width: 732px;
+  margin: 0 auto;
+  padding: 8px 8px calc(8px + var(--safe-bottom));
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-bottom: 0;
+  border-radius: 14px 14px 0 0;
+  background: rgba(13, 13, 13, 0.97);
+  box-shadow: 0 -12px 32px rgba(0, 0, 0, 0.38);
+  backdrop-filter: blur(16px);
 }
 
-.bottom-nav .btn {
-  min-height: 44px;
-  padding: 9px 5px;
-  font-size: 0.74rem;
+.nav-tab {
+  display: grid;
+  min-width: 0;
+  min-height: 56px;
+  place-items: center;
+  gap: 4px;
+  padding: 7px 2px 6px;
+  border-radius: 10px;
+  color: #b9bec5;
+  background: transparent;
+  font-size: 0.68rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.nav-tab svg {
+  width: 21px;
+  height: 21px;
+  fill: currentColor;
+}
+
+.nav-tab span {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nav-tab.active {
+  color: #ffffff;
+  background: rgba(232, 16, 16, 0.18);
+}
+
+.nav-tab.active svg {
+  color: var(--hornet-red);
 }
 
 .toast {
   position: fixed;
   right: 14px;
-  bottom: calc(82px + var(--safe-bottom));
+  bottom: calc(92px + var(--safe-bottom));
   left: 14px;
   z-index: 40;
   max-width: 732px;

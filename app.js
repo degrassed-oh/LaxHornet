@@ -20,7 +20,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v80";
+const APP_VERSION = "v81";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -2903,15 +2903,39 @@ function renderShell(content, options = {}) {
 }
 
 function renderBottomNav() {
+  const trackTarget = state.activeGame ? "live" : "start";
+  const navItems = [
+    { screen: "home", label: "Home", icon: "home", active: state.screen === "home" },
+    { screen: trackTarget, label: state.activeGame ? "Live" : "Track", icon: "track", active: ["start", "live"].includes(state.screen) },
+    { screen: "past", label: "Games", icon: "games", active: ["past", "review"].includes(state.screen) },
+    { screen: "dashboard", label: "Season", icon: "season", active: state.screen === "dashboard" },
+    { screen: "more", label: "More", icon: "more", active: ["more", "settings", "profileSetup", "tutorial", "help"].includes(state.screen) },
+  ];
   return `
     <nav class="bottom-nav" aria-label="Primary">
-      <button class="btn ghost" type="button" data-nav="home">Home</button>
-      <button class="btn ghost" type="button" data-nav="past">Past</button>
-      <button class="btn ghost" type="button" data-nav="dashboard">Season</button>
-      <button class="btn ghost" type="button" data-nav="settings">Player</button>
-      <button class="btn ghost" type="button" data-nav="tutorial">Guide</button>
+      ${navItems
+        .map(
+          (item) => `
+            <button class="nav-tab ${item.active ? "active" : ""}" type="button" data-nav="${item.screen}" aria-label="${escapeHTML(item.label)}" aria-current="${item.active ? "page" : "false"}">
+              ${renderNavIcon(item.icon)}
+              <span>${escapeHTML(item.label)}</span>
+            </button>
+          `,
+        )
+        .join("")}
     </nav>
   `;
+}
+
+function renderNavIcon(icon) {
+  const icons = {
+    home: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10.5 12 4l8 6.5V20h-5.2v-5.8H9.2V20H4z"/></svg>`,
+    track: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.2a8.8 8.8 0 1 0 0 17.6 8.8 8.8 0 0 0 0-17.6Zm0 3.2a5.6 5.6 0 1 1 0 11.2 5.6 5.6 0 0 1 0-11.2Zm0 3.1a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5Z"/></svg>`,
+    games: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14a1.5 1.5 0 0 1 1.5 1.5v13A1.5 1.5 0 0 1 19 20H5a1.5 1.5 0 0 1-1.5-1.5v-13A1.5 1.5 0 0 1 5 4Zm1.8 4.2h10.4V6.8H6.8v1.4Zm0 4.1h10.4v-1.4H6.8v1.4Zm0 4.1h6.8V15H6.8v1.4Z"/></svg>`,
+    season: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19h14v1.7H5V19Zm1.3-7.2h3v5.6h-3v-5.6Zm4.2-6.6h3v12.2h-3V5.2Zm4.2 3.9h3v8.3h-3V9.1Z"/></svg>`,
+    more: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.4 13.9a1.9 1.9 0 1 1 0-3.8 1.9 1.9 0 0 1 0 3.8Zm5.6 0a1.9 1.9 0 1 1 0-3.8 1.9 1.9 0 0 1 0 3.8Zm5.6 0a1.9 1.9 0 1 1 0-3.8 1.9 1.9 0 0 1 0 3.8Z"/></svg>`,
+  };
+  return icons[icon] || icons.more;
 }
 
 function renderAccountCard() {
@@ -3365,16 +3389,62 @@ function renderHome() {
             ? `<button class="btn positive" type="button" data-nav="live">Resume ${escapeHTML(playerTitle(activePlayer))}</button>`
             : `<button class="btn positive" type="button" data-nav="start">Start New Game</button>`
         }
-        <button class="btn neutral" type="button" data-nav="dashboard">Season Dashboard</button>
-        <button class="btn secondary" type="button" data-nav="past">Past Games</button>
-        <button class="btn secondary" type="button" data-nav="settings">Player Settings</button>
+        <button class="btn neutral" type="button" data-nav="past">Review Games</button>
       </div>
+    </section>
+  `);
+}
+
+function renderMore() {
+  return renderShell(`
+    <section class="screen-title">
+      <h2>More</h2>
+      <p>Manage your player, account, team access, and app help.</p>
+    </section>
+
+    <section class="stack">
+      <section class="card pad more-card">
+        <div class="section-head">
+          <div>
+            <h3>My Player</h3>
+            <p class="muted small">${escapeHTML(playerTitle(state.player))} - ${escapeHTML(playerSubline(state.player))}</p>
+          </div>
+        </div>
+        <div class="more-action-list">
+          <button class="more-action" type="button" data-nav="settings">
+            <span>${renderNavIcon("track")}</span>
+            <strong>Player & Team</strong>
+            <small>Choose from the roster and check player access.</small>
+          </button>
+          <button class="more-action" type="button" data-nav="profileSetup">
+            <span>${renderNavIcon("more")}</span>
+            <strong>User Profile</strong>
+            <small>Edit parent details or request team access.</small>
+          </button>
+        </div>
+      </section>
 
       ${renderAccountCard()}
 
       ${renderTeamRosterCard({ compact: true })}
 
       ${renderWatchSharedGameForm()}
+
+      <section class="card pad more-card">
+        <h3>Help</h3>
+        <div class="more-action-list">
+          <button class="more-action" type="button" data-nav="tutorial">
+            <span>${renderNavIcon("games")}</span>
+            <strong>Quick Guide</strong>
+            <small>Learn the game-day flow and sharing tools.</small>
+          </button>
+          <button class="more-action" type="button" data-nav="help">
+            <span>${renderNavIcon("season")}</span>
+            <strong>Impact Help</strong>
+            <small>See how Impact Score and percentages work.</small>
+          </button>
+        </div>
+      </section>
     </section>
   `);
 }
@@ -3533,7 +3603,7 @@ function renderSettings() {
     : "";
   return renderShell(`
     <section class="screen-title">
-      <h2>Player Settings</h2>
+      <h2>Player & Team</h2>
       <p>Pick a player from the Team Roster. Roster edits require admin access; Parent Trackers must verify their child before tracking.</p>
     </section>
 
@@ -4239,7 +4309,7 @@ function renderTutorial() {
     <section class="stack tutorial-list">
       <div class="card pad">
         <h3>1. Set Up The Player</h3>
-        <p class="muted small">Open Player Settings to pick from the preloaded Team Roster. Parent Trackers verify their player before tracking shared team stats.</p>
+        <p class="muted small">Open Player & Team to pick from the preloaded Team Roster. Parent Trackers verify their player before tracking shared team stats.</p>
       </div>
 
       <div class="card pad">
@@ -4307,6 +4377,7 @@ function render() {
     authSuccess: renderAuthSuccess,
     requestSubmitted: renderRequestSubmitted,
     profileSetup: renderProfileSetup,
+    more: renderMore,
     tutorial: renderTutorial,
     settings: renderSettings,
     start: renderStartGame,

@@ -4,7 +4,7 @@ LaxHornet is a mobile-first offline PWA for tracking youth lacrosse stats during
 
 ## Features
 
-- Home, Player Settings, Start New Game, Live Game Tracker, Game Review, Past Games, and Season Dashboard screens
+- Home, Track, Games, Season Dashboard, Player & Team, More, and Live Game Tracker screens
 - Preloaded team roster picker with active-player switching
 - Big one-handed live stat buttons for game-day use
 - Game format selector for Quarters or Halves, with OT support
