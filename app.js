@@ -18,7 +18,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v67";
+const APP_VERSION = "v68";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -622,6 +622,40 @@ function updatePlayerInRoster(player) {
   state.games
     .filter((game) => gamePlayerId(game) === normalized.id)
     .forEach((game) => syncGameToSupabase(game));
+}
+
+function applyRosterPlayerUpdate(rosterPlayer, options = {}) {
+  const normalizedRosterPlayer = normalizeRosterPlayer(rosterPlayer);
+  const nextRosterPlayers = state.rosterPlayers.filter((item) => item.id !== normalizedRosterPlayer.id);
+  state.rosterPlayers = normalizeRosterPlayers([...nextRosterPlayers, normalizedRosterPlayer]);
+
+  const nextPlayer = rosterPlayerToPlayer(normalizedRosterPlayer);
+  if (normalizedRosterPlayer.active !== false) {
+    state.players = dedupePlayers([...state.players.filter((item) => item.id !== nextPlayer.id), nextPlayer], nextPlayer.id).players;
+    state.activePlayerId = nextPlayer.id;
+  } else if (state.activePlayerId === normalizedRosterPlayer.id) {
+    const replacement = activeTeamRoster().find((item) => item.id !== normalizedRosterPlayer.id) || state.rosterPlayers.find((item) => item.active !== false);
+    state.activePlayerId = replacement?.id || state.players.find((item) => item.id !== normalizedRosterPlayer.id)?.id || state.players[0]?.id || "";
+  }
+
+  const applySnapshot = (game) => {
+    if (normalizedRosterPlayer.active === false) return game;
+    return gameRosterPlayerId(game) === normalizedRosterPlayer.id || gamePlayerId(game) === normalizedRosterPlayer.id
+      ? normalizeGame({ ...game, playerId: nextPlayer.id, rosterPlayerId: nextPlayer.rosterPlayerId, playerSnapshot: { ...nextPlayer } }, nextPlayer)
+      : game;
+  };
+
+  state.games = state.games.map(applySnapshot);
+  if (state.activeGame) state.activeGame = applySnapshot(state.activeGame);
+  mergeRosterPlayersIntoPlayers();
+  syncActivePlayer();
+  persistAll();
+
+  if (options.syncGames && normalizedRosterPlayer.active !== false) {
+    state.games
+      .filter((game) => gameRosterPlayerId(game) === normalizedRosterPlayer.id || gamePlayerId(game) === normalizedRosterPlayer.id)
+      .forEach((game) => syncGameToSupabase(game));
+  }
 }
 
 function addPlayer() {
@@ -2106,6 +2140,81 @@ async function addRosterPlayer(formData) {
   showToast(`${playerTitle(state.player)} added`);
 }
 
+async function saveRosterPlayer(formData) {
+  const player = normalizePlayer(state.player);
+  if (!isTeamPlayer(player)) {
+    showToast("Pick a roster player first");
+    return;
+  }
+  if (!canEditTeam(player.teamId)) {
+    showToast("View-only team access");
+    return;
+  }
+
+  const rosterPlayer = normalizeRosterPlayer({
+    id: player.rosterPlayerId || player.id,
+    teamId: player.teamId,
+    name: formData.get("name")?.trim() || "Roster Player",
+    number: formData.get("number")?.trim() || "",
+    position: formData.get("position")?.trim() || "",
+    active: true,
+  });
+
+  const { data: rosterRows, error } = await supabaseClient.rpc("laxhornet_update_roster_player", {
+    p_roster_player_id: rosterPlayer.id,
+    p_team_id: rosterPlayer.teamId,
+    p_name: rosterPlayer.name,
+    p_number: rosterPlayer.number,
+    p_position: rosterPlayer.position,
+  });
+  if (error) {
+    reportTeamSetupError(error);
+    return;
+  }
+
+  const savedRosterRow = Array.isArray(rosterRows) ? rosterRows[0] : rosterRows;
+  if (!savedRosterRow?.id) {
+    showToast("Roster player not found");
+    return;
+  }
+  const savedRosterPlayer = rosterPlayerFromSupabaseRow(savedRosterRow);
+  applyRosterPlayerUpdate(savedRosterPlayer, { syncGames: true });
+  render();
+  showToast(`${playerTitle(state.player)} saved`);
+}
+
+async function removeRosterPlayer() {
+  const player = normalizePlayer(state.player);
+  if (!isTeamPlayer(player)) {
+    deleteActivePlayer();
+    return;
+  }
+  if (!canEditTeam(player.teamId)) {
+    showToast("View-only team access");
+    return;
+  }
+  if (!window.confirm(`Remove ${playerTitle(player)} from the team roster? Past games will stay saved.`)) return;
+
+  const { data: rosterRows, error } = await supabaseClient.rpc("laxhornet_remove_roster_player", {
+    p_roster_player_id: player.rosterPlayerId || player.id,
+    p_team_id: player.teamId,
+  });
+  if (error) {
+    reportTeamSetupError(error);
+    return;
+  }
+
+  const removedRosterRow = Array.isArray(rosterRows) ? rosterRows[0] : rosterRows;
+  if (!removedRosterRow?.id) {
+    showToast("Roster player not found");
+    return;
+  }
+  const removedRosterPlayer = rosterPlayerFromSupabaseRow(removedRosterRow);
+  applyRosterPlayerUpdate({ ...removedRosterPlayer, active: false });
+  render();
+  showToast(`${playerTitle(player)} removed from roster`);
+}
+
 async function syncGameToSupabase(game, options = {}) {
   if (!supabaseClient || !game) return false;
   if (isDeletedGame(game.id)) return false;
@@ -2693,6 +2802,45 @@ function renderSettings() {
   const team = activeTeam();
   const rosterPlayers = activeTeamRoster().map(rosterPlayerToPlayer);
   const gameCount = playerGameCount(state.activePlayerId);
+  const selectedRosterPlayer = isTeamPlayer(state.player) ? normalizePlayer(state.player) : null;
+  const canEditSelectedRosterPlayer = selectedRosterPlayer ? canEditTeam(selectedRosterPlayer.teamId) : false;
+  const rosterEditCard = selectedRosterPlayer
+    ? canEditSelectedRosterPlayer
+      ? `
+        <form class="card pad form-grid" data-form="roster-player-edit">
+          <div class="section-head compact-head">
+            <div>
+              <h3>Edit ${escapeHTML(selectedRosterPlayer.name)}</h3>
+              <p class="muted small">Changes update the shared roster for every parent on this team.</p>
+            </div>
+          </div>
+          <div class="field">
+            <label for="editRosterName">Player name</label>
+            <input id="editRosterName" name="name" value="${escapeHTML(selectedRosterPlayer.name)}" required />
+          </div>
+          <div class="form-grid two">
+            <div class="field">
+              <label for="editRosterNumber">Jersey #</label>
+              <input id="editRosterNumber" name="number" value="${escapeHTML(selectedRosterPlayer.number)}" inputmode="numeric" />
+            </div>
+            <div class="field">
+              <label for="editRosterPosition">Position</label>
+              <input id="editRosterPosition" name="position" value="${escapeHTML(selectedRosterPlayer.position)}" />
+            </div>
+          </div>
+          <div class="inline-input-action">
+            <button class="mini-btn danger" type="button" data-action="remove-roster-player">Remove from Roster</button>
+            <button class="mini-btn" type="submit">Save Player</button>
+          </div>
+        </form>
+      `
+      : `
+        <section class="card pad">
+          <h3>${escapeHTML(selectedRosterPlayer.name)}</h3>
+          <p class="muted small">This roster player is view-only for your account. Ask a team admin for tracker access to edit roster details.</p>
+        </section>
+      `
+    : "";
   return renderShell(`
     <section class="screen-title">
       <h2>Player Settings</h2>
@@ -2718,6 +2866,7 @@ function renderSettings() {
               <p class="muted small">Join or sync a team roster first. If roster players need to be added, ask a team admin or tracker to preload them in Team Roster.</p>
             </section>`
       }
+      ${rosterEditCard}
     </section>
   `);
 }
@@ -3484,6 +3633,10 @@ function handleSubmit(event) {
     addRosterPlayer(formData);
   }
 
+  if (form.dataset.form === "roster-player-edit") {
+    saveRosterPlayer(formData);
+  }
+
   if (form.dataset.form === "start-game") {
     if (isTeamPlayer(state.player) && !canEditTeam(state.player.teamId)) {
       showToast("This roster player is view-only");
@@ -3653,6 +3806,7 @@ function handleClick(event) {
     if (action.dataset.action === "sync-team-roster") loadCloudTeams();
     if (action.dataset.action === "add-player") addPlayer();
     if (action.dataset.action === "delete-player") deleteActivePlayer();
+    if (action.dataset.action === "remove-roster-player") removeRosterPlayer();
     if (action.dataset.action === "toggle-watch-share") {
       state.watchShareExpanded = !state.watchShareExpanded;
       render();

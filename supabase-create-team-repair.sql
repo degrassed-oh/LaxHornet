@@ -193,6 +193,99 @@ $laxhornet_create_roster_player$;
 
 grant execute on function public.laxhornet_create_roster_player(text, text, text, text, text) to authenticated;
 
+create or replace function public.laxhornet_update_roster_player(
+  p_roster_player_id text,
+  p_team_id text,
+  p_name text,
+  p_number text,
+  p_position text
+)
+returns table(
+  id text,
+  team_id text,
+  name text,
+  number text,
+  "position" text,
+  active boolean,
+  created_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = public
+as $laxhornet_update_roster_player$
+begin
+  if (select auth.uid()) is null then
+    raise exception 'Sign in required';
+  end if;
+
+  if not (select public.laxhornet_can_edit_team(p_team_id)) then
+    raise exception 'Team editor access required';
+  end if;
+
+  return query
+  update public.roster_players
+  set name = nullif(trim(p_name), ''),
+      number = trim(coalesce(p_number, '')),
+      position = trim(coalesce(p_position, '')),
+      active = true
+  where roster_players.id = p_roster_player_id
+    and roster_players.team_id = p_team_id
+  returning
+    roster_players.id,
+    roster_players.team_id,
+    roster_players.name,
+    roster_players.number,
+    roster_players.position,
+    roster_players.active,
+    roster_players.created_at;
+end;
+$laxhornet_update_roster_player$;
+
+create or replace function public.laxhornet_remove_roster_player(
+  p_roster_player_id text,
+  p_team_id text
+)
+returns table(
+  id text,
+  team_id text,
+  name text,
+  number text,
+  "position" text,
+  active boolean,
+  created_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = public
+as $laxhornet_remove_roster_player$
+begin
+  if (select auth.uid()) is null then
+    raise exception 'Sign in required';
+  end if;
+
+  if not (select public.laxhornet_can_edit_team(p_team_id)) then
+    raise exception 'Team editor access required';
+  end if;
+
+  return query
+  update public.roster_players
+  set active = false
+  where roster_players.id = p_roster_player_id
+    and roster_players.team_id = p_team_id
+  returning
+    roster_players.id,
+    roster_players.team_id,
+    roster_players.name,
+    roster_players.number,
+    roster_players.position,
+    roster_players.active,
+    roster_players.created_at;
+end;
+$laxhornet_remove_roster_player$;
+
+grant execute on function public.laxhornet_update_roster_player(text, text, text, text, text) to authenticated;
+grant execute on function public.laxhornet_remove_roster_player(text, text) to authenticated;
+
 notify pgrst, 'reload schema';
 
 select
@@ -201,5 +294,10 @@ select
   routine_type
 from information_schema.routines
 where routine_schema = 'public'
-  and routine_name in ('laxhornet_create_team', 'laxhornet_create_roster_player')
+  and routine_name in (
+    'laxhornet_create_team',
+    'laxhornet_create_roster_player',
+    'laxhornet_update_roster_player',
+    'laxhornet_remove_roster_player'
+  )
 order by routine_name;
