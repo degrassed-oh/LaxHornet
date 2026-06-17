@@ -917,7 +917,7 @@ begin
   return query
   insert into public.player_claims (id, team_id, roster_player_id, user_id)
   values ('claim-' || p_team_id || '-' || (select auth.uid())::text, p_team_id, matched_roster_player.id, (select auth.uid()))
-  on conflict (team_id, user_id) do update
+  on conflict on constraint player_claims_team_user_key do update
   set roster_player_id = excluded.roster_player_id
   returning
     player_claims.id,
