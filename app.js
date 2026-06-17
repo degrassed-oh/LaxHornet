@@ -2012,11 +2012,11 @@ async function createTeam(formData) {
   });
 
   const { data: teamRows, error: createError } = await supabaseClient.rpc("laxhornet_create_team", {
-    team_id: team.id,
-    team_name: team.name,
-    invite_code: team.inviteCode,
-    tracker_code: team.trackerCode,
-    member_id: uid("member"),
+    p_team_id: team.id,
+    p_team_name: team.name,
+    p_invite_code: team.inviteCode,
+    p_tracker_code: team.trackerCode,
+    p_member_id: uid("member"),
   });
   if (createError) {
     reportTeamCreateError(createError);

@@ -459,11 +459,11 @@ end;
 $$;
 
 create or replace function public.laxhornet_create_team(
-  team_id text,
-  team_name text,
-  invite_code text,
-  tracker_code text,
-  member_id text
+  p_team_id text,
+  p_team_name text,
+  p_invite_code text,
+  p_tracker_code text,
+  p_member_id text
 )
 returns table(
   id text,
@@ -491,10 +491,10 @@ begin
   with inserted_team as (
     insert into public.teams (id, name, invite_code, tracker_code, created_by)
     values (
-      team_id,
-      nullif(trim(team_name), ''),
-      upper(invite_code),
-      upper(tracker_code),
+      p_team_id,
+      nullif(trim(p_team_name), ''),
+      upper(p_invite_code),
+      upper(p_tracker_code),
       (select auth.uid())
     )
     returning
@@ -507,7 +507,7 @@ begin
   ),
   inserted_member as (
     insert into public.team_members (id, team_id, user_id, role)
-    select member_id, inserted_team.id, (select auth.uid()), 'admin'
+    select p_member_id, inserted_team.id, (select auth.uid()), 'admin'
     from inserted_team
     on conflict (team_id, user_id) do update
     set role = 'admin'
