@@ -20,7 +20,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v93";
+const APP_VERSION = "v94";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -1316,59 +1316,6 @@ function visibleGames() {
     const playerId = gamePlayerId(game);
     return playerId ? playerId === state.activePlayerId : state.players.length <= 1;
   });
-}
-
-function teamStatsGames(teamId) {
-  if (!teamId) return [];
-  const games = [...state.games];
-  if (state.activeGame && !games.some((game) => game.id === state.activeGame.id)) games.push(state.activeGame);
-  return games
-    .filter((game) => !isDeletedGame(game.id) && gameTeamId(game) === teamId)
-    .filter((game) => canEditGame(game) || isPlatformReviewer());
-}
-
-function calculateTeamStatsRecord(teamId) {
-  const games = teamStatsGames(teamId);
-  const totals = games.reduce(
-    (acc, game) => {
-      const gameTotals = calculateTotals(game.events);
-      Object.keys(acc).forEach((key) => {
-        if (key !== "gamesPlayed") acc[key] += gameTotals[key] || 0;
-      });
-      return acc;
-    },
-    {
-      gamesPlayed: games.length,
-      impact: 0,
-      goals: 0,
-      assists: 0,
-      points: 0,
-      shots: 0,
-      shotsOnGoal: 0,
-      groundBalls: 0,
-      turnovers: 0,
-      causedTurnovers: 0,
-      defensiveStops: 0,
-      clears: 0,
-      failedClears: 0,
-      saves: 0,
-      goalsAllowed: 0,
-      faceoffWins: 0,
-      faceoffLosses: 0,
-      faceoffAttempts: 0,
-      hustlePlays: 0,
-      backedUpShots: 0,
-      effortScore: 0,
-      penalties: 0,
-    },
-  );
-
-  totals.shootingPct = totals.shots ? totals.goals / totals.shots : 0;
-  totals.shotOnGoalPct = totals.shots ? totals.shotsOnGoal / totals.shots : 0;
-  totals.savePct = totals.saves + totals.goalsAllowed ? totals.saves / (totals.saves + totals.goalsAllowed) : 0;
-  totals.faceoffPct = totals.faceoffAttempts ? totals.faceoffWins / totals.faceoffAttempts : 0;
-  totals.averageImpact = totals.gamesPlayed ? totals.impact / totals.gamesPlayed : 0;
-  return totals;
 }
 
 function currentReviewGame() {
@@ -3244,55 +3191,6 @@ function renderMyTeamAccessRequests() {
   `;
 }
 
-function renderTeamStatsRecord(team) {
-  if (!team) return "";
-  const totals = calculateTeamStatsRecord(team.id);
-  const rows = [
-    ["Games", totals.gamesPlayed],
-    ["Goals", totals.goals],
-    ["Assists", totals.assists],
-    ["Points", totals.points],
-    ["Shots", totals.shots],
-    ["SOG %", pct(totals.shotOnGoalPct)],
-    ["Ground Balls", totals.groundBalls],
-    ["Turnovers", totals.turnovers],
-    ["Caused TO", totals.causedTurnovers],
-    ["Def Stops", totals.defensiveStops],
-    ["Clears", totals.clears],
-    ["Failed Clears", totals.failedClears],
-    ["Saves", totals.saves],
-    ["Goals Allowed", totals.goalsAllowed],
-    ["Faceoff %", pct(totals.faceoffPct)],
-    ["Avg Impact", totals.averageImpact.toFixed(1)],
-  ];
-  return `
-    <div class="team-roster-block">
-      <div class="section-head compact-head">
-        <div>
-          <h4>Team Stats Record</h4>
-          <p class="muted small">Synced stats for ${escapeHTML(team.name)}${isTeamPlayer(state.player) ? ` - ${escapeHTML(playerTitle(state.player))}` : ""}.</p>
-        </div>
-      </div>
-      ${
-        totals.gamesPlayed
-          ? `<div class="team-stats-record">
-              ${rows
-                .map(
-                  ([label, value]) => `
-                    <div class="team-stat-cell">
-                      <span>${escapeHTML(label)}</span>
-                      <strong>${escapeHTML(String(value))}</strong>
-                    </div>
-                  `,
-                )
-                .join("")}
-            </div>`
-          : `<p class="muted small">No synced team games yet. Save or sync a team game to build this stats record.</p>`
-      }
-    </div>
-  `;
-}
-
 function renderTeamRosterCard(options = {}) {
   const compact = Boolean(options.compact);
   const expanded = compact ? state.teamRosterExpanded : true;
@@ -3392,8 +3290,6 @@ function renderTeamRosterCard(options = {}) {
                         : "No approved teams yet. Request access with a code from your team admin."
                     }</p>`
               }
-
-              ${team ? renderTeamStatsRecord(team) : ""}
 
               ${
                 team
