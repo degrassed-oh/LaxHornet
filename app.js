@@ -21,7 +21,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v126";
+const APP_VERSION = "v127";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -653,7 +653,7 @@ function activePlayerFrom(players, activePlayerId) {
 function playerIdentityKey(player = {}) {
   const normalized = normalizePlayer(player);
   if (normalized.teamId) {
-    return ["team", normalized.teamId, normalized.rosterPlayerId || normalized.id, normalized.number]
+    return ["team", normalized.teamId, normalized.rosterPlayerId || normalized.id]
       .map((value) => String(value || "").trim().toLowerCase())
       .join("|");
   }
@@ -663,6 +663,21 @@ function playerIdentityKey(player = {}) {
 }
 
 function mergePlayerDetails(base, next) {
+  if (base.teamId || next.teamId) {
+    return {
+      ...base,
+      ...next,
+      id: base.id || next.id,
+      name: next.name || base.name || DEFAULT_PLAYER.name,
+      number: next.number || "",
+      team: next.team || base.team || "",
+      position: next.position || "",
+      notes: next.notes || base.notes || "",
+      teamId: next.teamId || base.teamId || "",
+      rosterPlayerId: next.rosterPlayerId || base.rosterPlayerId || "",
+      source: next.source || base.source || "teamRoster",
+    };
+  }
   return {
     ...base,
     name: base.name && base.name !== DEFAULT_PLAYER.name ? base.name : next.name,
@@ -2816,6 +2831,13 @@ async function saveRosterPlayer(formData) {
   }
   const savedRosterPlayer = rosterPlayerFromSupabaseRow(savedRosterRow);
   applyRosterPlayerUpdate(savedRosterPlayer, { syncGames: true });
+  await loadCloudTeams({ silent: true });
+  const verifiedRosterPlayer = state.rosterPlayers.find((item) => item.id === savedRosterPlayer.id && item.teamId === savedRosterPlayer.teamId);
+  if (verifiedRosterPlayer && verifiedRosterPlayer.number !== savedRosterPlayer.number) {
+    showToast("Roster save did not stick. Try again after syncing.");
+    render();
+    return;
+  }
   render();
   showToast(`${playerTitle(state.player)} saved`);
 }
