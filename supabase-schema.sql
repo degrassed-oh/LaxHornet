@@ -872,6 +872,8 @@ begin
 end;
 $laxhornet_remove_roster_player$;
 
+drop function if exists public.laxhornet_claim_roster_player(text, text);
+
 create or replace function public.laxhornet_claim_roster_player(
   p_team_id text,
   p_jersey_number text
