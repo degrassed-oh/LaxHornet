@@ -21,7 +21,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v129";
+const APP_VERSION = "v131";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -3398,6 +3398,22 @@ function renderPlayerSwitcher(options = {}) {
   `;
 }
 
+function renderCompactPlayerContext(options = {}) {
+  const title = options.title || "Current Player";
+  const helper = options.helper || "";
+  return `
+    <section class="card pad compact-player-card">
+      <div>
+        <p class="eyebrow">${escapeHTML(title)}</p>
+        <h3>${escapeHTML(playerTitle(state.player))}</h3>
+        <p class="muted small">${escapeHTML(playerSubline(state.player))}</p>
+        ${helper ? `<p class="muted tiny">${escapeHTML(helper)}</p>` : ""}
+      </div>
+      <button class="mini-btn light" type="button" data-nav="player">Switch</button>
+    </section>
+  `;
+}
+
 function renderPlayerAssignmentCard(player) {
   const normalized = normalizePlayer(player);
   const active = normalized.id === state.activePlayerId;
@@ -3892,7 +3908,7 @@ function renderMore() {
     </section>
 
     <section class="stack">
-      <section class="card pad more-card">
+      <section class="card pad more-card primary-manage-card">
         <div>
           <h3>Game Day Manager</h3>
           <p class="muted small">${escapeHTML(gameDaySummary)}</p>
@@ -3928,43 +3944,43 @@ function renderMore() {
         </div>
       </section>
 
-      <section class="card pad more-card">
+      <section class="card pad more-card account-tools-card">
         <div>
-          <h3>Account</h3>
-          <p class="muted small">${escapeHTML(profileName || userEmail())}${userEmail() ? ` - ${escapeHTML(userEmail())}` : ""}</p>
+          <h3>Account & App</h3>
+          <p class="muted small">${escapeHTML(profileName || "Signed in")}${userEmail() ? ` - ${escapeHTML(userEmail())}` : ""}</p>
         </div>
         <div class="more-status-grid">
           <div class="more-status-cell">
-            <span>Status</span>
+            <span>Sync</span>
             <strong>${escapeHTML(state.syncStatus || "Signed in")}</strong>
           </div>
           <div class="more-status-cell">
-            <span>App</span>
+            <span>Version</span>
             <strong>${escapeHTML(APP_VERSION)}</strong>
           </div>
         </div>
         ${accountModeToggle}
         ${state.cloudError ? `<div class="notice-card error-card"><strong>Last Supabase error</strong><p class="muted small">${escapeHTML(state.cloudError)}</p></div>` : ""}
-        <div class="more-action-list">
+        <div class="more-action-list compact-actions">
           <button class="more-action" type="button" data-nav="profileSetup">
             <span>${renderNavIcon("more")}</span>
             <strong>User Profile</strong>
-            <small>Edit parent details and account information.</small>
+            <small>Edit account details.</small>
           </button>
           <button class="more-action" type="button" data-action="sync-cloud-games">
             <span>${renderNavIcon("season")}</span>
-            <strong>Sync Cloud Games</strong>
-            <small>Refresh saved games, teams, requests, and player access.</small>
+            <strong>Sync</strong>
+            <small>Refresh games, teams, and player access.</small>
           </button>
           <button class="more-action" type="button" data-action="check-app-update">
             <span>${renderNavIcon("manage")}</span>
-            <strong>Check for Updates</strong>
-            <small>Look for the newest LaxHornet version without reinstalling.</small>
+            <strong>Updates</strong>
+            <small>Check for the newest app version.</small>
           </button>
           <button class="more-action danger-link" type="button" data-action="sign-out">
             <span>${renderNavIcon("more")}</span>
             <strong>Sign Out</strong>
-            <small>Use this before switching parent accounts on the same device.</small>
+            <small>Switch accounts on this device.</small>
           </button>
         </div>
       </section>
@@ -4256,52 +4272,63 @@ function renderStartGame() {
       <p>${availablePlayers.length > 1 ? "Choose the player/team context, then set the game details." : "Set the opponent, choose the game format, then start tracking."}</p>
     </section>
 
-    <form class="card pad form-grid" data-form="start-game">
-      ${renderPlayerSwitcher({
-        title: availablePlayers.length > 1 ? "Who Are You Tracking?" : "Player For This Game",
-        helper: viewOnlyTeamPlayer
-          ? "Verify this roster player as your child before tracking."
-          : availablePlayers.length > 1
-            ? "Each player/team tile keeps stats separate."
-            : "Double-check this before the opening whistle.",
-        inline: true,
-      })}
-      ${
-        viewOnlyTeamPlayer
-          ? `<div class="notice-card">Select your child in Player before starting a shared team game.</div>`
-          : ""
-      }
-      <div class="field">
-        <label for="opponent">Opponent</label>
-        <input id="opponent" name="opponent" placeholder="Opponent team" required />
-      </div>
-      <div class="form-grid two">
-        <div class="field">
-          <label for="date">Date</label>
-          <input id="date" name="date" type="date" value="${todayISO()}" required />
+    <form class="start-game-form" data-form="start-game">
+      <section class="card pad form-grid">
+        ${renderPlayerSwitcher({
+          title: availablePlayers.length > 1 ? "Who Are You Tracking?" : "Player For This Game",
+          helper: viewOnlyTeamPlayer
+            ? "Verify this roster player as your child before tracking."
+            : availablePlayers.length > 1
+              ? "Each player/team tile keeps stats separate."
+              : "Double-check this before the opening whistle.",
+          inline: true,
+        })}
+        ${
+          viewOnlyTeamPlayer
+            ? `<div class="notice-card">Select your child in Player before starting a shared team game.</div>`
+            : ""
+        }
+      </section>
+
+      <section class="card pad form-grid">
+        <div class="section-head compact-head">
+          <div>
+            <h3>Game Details</h3>
+            <p class="muted small">Set the matchup, date, and format before the whistle.</p>
+          </div>
         </div>
         <div class="field">
-          <label for="gameType">Game type</label>
-          <select id="gameType" name="gameType">
-            <option>Regular season</option>
-            <option>Tournament</option>
-            <option>Playoff</option>
-            <option>Scrimmage</option>
+          <label for="opponent">Opponent</label>
+          <input id="opponent" name="opponent" placeholder="Opponent team" required />
+        </div>
+        <div class="form-grid two">
+          <div class="field">
+            <label for="date">Date</label>
+            <input id="date" name="date" type="date" value="${todayISO()}" required />
+          </div>
+          <div class="field">
+            <label for="gameType">Game type</label>
+            <select id="gameType" name="gameType">
+              <option>Regular season</option>
+              <option>Tournament</option>
+              <option>Playoff</option>
+              <option>Scrimmage</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label for="periodFormat">Game format</label>
+          <select id="periodFormat" name="periodFormat">
+            <option value="quarters">Quarters</option>
+            <option value="halves">Halves</option>
           </select>
         </div>
-      </div>
-      <div class="field">
-        <label for="periodFormat">Game format</label>
-        <select id="periodFormat" name="periodFormat">
-          <option value="quarters">Quarters</option>
-          <option value="halves">Halves</option>
-        </select>
-      </div>
-      <div class="field">
-        <label for="location">Location</label>
-        <input id="location" name="location" placeholder="Field or town" />
-      </div>
-      <button class="btn positive" type="submit" ${viewOnlyTeamPlayer ? "disabled" : ""}>Start Live Tracker</button>
+        <div class="field">
+          <label for="location">Location</label>
+          <input id="location" name="location" placeholder="Field or town" />
+        </div>
+        <button class="btn positive" type="submit" ${viewOnlyTeamPlayer ? "disabled" : ""}>Start Live Tracker</button>
+      </section>
     </form>
   `);
 }
@@ -4718,6 +4745,84 @@ function renderTotalsTable(totals) {
   `;
 }
 
+function renderSeasonTotalsGroups(totals) {
+  const groups = [
+    {
+      title: "Scoring",
+      rows: [
+        ["Shots", totals.shots],
+        ["Shots on goal", totals.shotsOnGoal],
+        ["Shooting %", pct(totals.shootingPct)],
+        ["Shot on goal %", pct(totals.shotOnGoalPct)],
+      ],
+    },
+    {
+      title: "Possession & Effort",
+      rows: [
+        ["Ground balls", totals.groundBalls],
+        ["Backed up shots", totals.backedUpShots],
+        ["Hustle plays", totals.hustlePlays],
+        ["Smart plays", totals.smartPlays],
+        ["Effort score", totals.effortScore],
+      ],
+    },
+    {
+      title: "Defense & Clears",
+      rows: [
+        ["Caused turnovers", totals.causedTurnovers],
+        ["Defensive stops", totals.defensiveStops],
+        ["Successful clears", totals.clears],
+        ["Failed clears", totals.failedClears],
+        ["Turnovers", totals.turnovers],
+        ["Penalties", totals.penalties],
+      ],
+    },
+    {
+      title: "Faceoff",
+      rows: [
+        ["Faceoff wins", totals.faceoffWins],
+        ["Faceoff losses", totals.faceoffLosses],
+        ["Faceoff attempts", totals.faceoffAttempts],
+        ["Faceoff win %", pct(totals.faceoffPct)],
+      ],
+    },
+    {
+      title: "Goalie",
+      rows: [
+        ["Saves", totals.saves],
+        ["Goals allowed", totals.goalsAllowed],
+        ["Save %", pct(totals.savePct)],
+      ],
+    },
+  ];
+
+  return `
+    <section class="season-groups" aria-label="Season stat groups">
+      ${groups
+        .map(
+          (group) => `
+            <section class="card pad season-stat-group">
+              <h3>${escapeHTML(group.title)}</h3>
+              <div class="stat-mini-grid">
+                ${group.rows
+                  .map(
+                    ([label, value]) => `
+                      <div class="stat-mini-row">
+                        <span>${escapeHTML(label)}</span>
+                        <strong>${escapeHTML(String(value))}</strong>
+                      </div>
+                    `,
+                  )
+                  .join("")}
+              </div>
+            </section>
+          `,
+        )
+        .join("")}
+    </section>
+  `;
+}
+
 function renderPastGames() {
   const games = visibleGames();
   const exportExpanded = state.exportToolsExpanded;
@@ -4728,8 +4833,9 @@ function renderPastGames() {
     </section>
 
     <section class="stack">
-      ${renderPlayerSwitcher({
-        helper: "Switch players to review a different player's games.",
+      ${renderCompactPlayerContext({
+        title: "Reviewing",
+        helper: "Switch players to review another player's saved games.",
       })}
 
       <section class="card">
@@ -4857,13 +4963,14 @@ function renderDashboard() {
     </section>
 
     <section class="stack">
-      ${renderPlayerSwitcher({
-        helper: "Switch players to see a separate season dashboard.",
+      ${renderCompactPlayerContext({
+        title: "Season For",
+        helper: "Switch players to see another season dashboard.",
       })}
       <div class="metric-grid">
         ${headlineMetrics.map(([value, label]) => metricTile(value, label)).join("")}
       </div>
-      ${renderTotalsTable(totals)}
+      ${renderSeasonTotalsGroups(totals)}
     </section>
   `);
 }
