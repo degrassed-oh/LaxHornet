@@ -20,7 +20,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v81";
+const APP_VERSION = "v82";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -1316,6 +1316,59 @@ function visibleGames() {
     const playerId = gamePlayerId(game);
     return playerId ? playerId === state.activePlayerId : state.players.length <= 1;
   });
+}
+
+function teamStatsGames(teamId) {
+  if (!teamId) return [];
+  const games = [...state.games];
+  if (state.activeGame && !games.some((game) => game.id === state.activeGame.id)) games.push(state.activeGame);
+  return games
+    .filter((game) => !isDeletedGame(game.id) && gameTeamId(game) === teamId)
+    .filter((game) => canEditGame(game) || isPlatformReviewer());
+}
+
+function calculateTeamStatsRecord(teamId) {
+  const games = teamStatsGames(teamId);
+  const totals = games.reduce(
+    (acc, game) => {
+      const gameTotals = calculateTotals(game.events);
+      Object.keys(acc).forEach((key) => {
+        if (key !== "gamesPlayed") acc[key] += gameTotals[key] || 0;
+      });
+      return acc;
+    },
+    {
+      gamesPlayed: games.length,
+      impact: 0,
+      goals: 0,
+      assists: 0,
+      points: 0,
+      shots: 0,
+      shotsOnGoal: 0,
+      groundBalls: 0,
+      turnovers: 0,
+      causedTurnovers: 0,
+      defensiveStops: 0,
+      clears: 0,
+      failedClears: 0,
+      saves: 0,
+      goalsAllowed: 0,
+      faceoffWins: 0,
+      faceoffLosses: 0,
+      faceoffAttempts: 0,
+      hustlePlays: 0,
+      backedUpShots: 0,
+      effortScore: 0,
+      penalties: 0,
+    },
+  );
+
+  totals.shootingPct = totals.shots ? totals.goals / totals.shots : 0;
+  totals.shotOnGoalPct = totals.shots ? totals.shotsOnGoal / totals.shots : 0;
+  totals.savePct = totals.saves + totals.goalsAllowed ? totals.saves / (totals.saves + totals.goalsAllowed) : 0;
+  totals.faceoffPct = totals.faceoffAttempts ? totals.faceoffWins / totals.faceoffAttempts : 0;
+  totals.averageImpact = totals.gamesPlayed ? totals.impact / totals.gamesPlayed : 0;
+  return totals;
 }
 
 function currentReviewGame() {
@@ -3169,7 +3222,7 @@ function renderMyTeamAccessRequests() {
                 <div class="admin-request-row">
                   <span>
                     <strong>${escapeHTML(request.teamName || "Team")}</strong>
-                    <small>${teamRoleLabel(request.requestedRole)} access - ${escapeHTML(request.status)}</small>
+                    <small>Access: ${escapeHTML(request.status)}</small>
                   </span>
                 </div>
                 ${needsClaim ? renderClaimByNumberForm(request.teamId, { suffix: request.id || request.teamId }) : ""}
@@ -3182,14 +3235,63 @@ function renderMyTeamAccessRequests() {
   `;
 }
 
+function renderTeamStatsRecord(team) {
+  if (!team) return "";
+  const totals = calculateTeamStatsRecord(team.id);
+  const rows = [
+    ["Games", totals.gamesPlayed],
+    ["Goals", totals.goals],
+    ["Assists", totals.assists],
+    ["Points", totals.points],
+    ["Shots", totals.shots],
+    ["SOG %", pct(totals.shotOnGoalPct)],
+    ["Ground Balls", totals.groundBalls],
+    ["Turnovers", totals.turnovers],
+    ["Caused TO", totals.causedTurnovers],
+    ["Def Stops", totals.defensiveStops],
+    ["Clears", totals.clears],
+    ["Failed Clears", totals.failedClears],
+    ["Saves", totals.saves],
+    ["Goals Allowed", totals.goalsAllowed],
+    ["Faceoff %", pct(totals.faceoffPct)],
+    ["Avg Impact", totals.averageImpact.toFixed(1)],
+  ];
+  return `
+    <div class="team-roster-block">
+      <div class="section-head compact-head">
+        <div>
+          <h4>Team Stats Record</h4>
+          <p class="muted small">Synced stats for ${escapeHTML(team.name)}${isTeamPlayer(state.player) ? ` - ${escapeHTML(playerTitle(state.player))}` : ""}.</p>
+        </div>
+      </div>
+      ${
+        totals.gamesPlayed
+          ? `<div class="team-stats-record">
+              ${rows
+                .map(
+                  ([label, value]) => `
+                    <div class="team-stat-cell">
+                      <span>${escapeHTML(label)}</span>
+                      <strong>${escapeHTML(String(value))}</strong>
+                    </div>
+                  `,
+                )
+                .join("")}
+            </div>`
+          : `<p class="muted small">No synced team games yet. Save or sync a team game to build this stats record.</p>`
+      }
+    </div>
+  `;
+}
+
 function renderTeamRosterCard(options = {}) {
   const compact = Boolean(options.compact);
   const expanded = compact ? state.teamRosterExpanded : true;
   if (!supabaseClient || !state.authUser) {
     return `
       <section class="card pad team-card">
-        <h3>Team Roster</h3>
-        <p class="muted small">Sign in with a User Profile to create or join a shared team roster.</p>
+        <h3>Team</h3>
+        <p class="muted small">Sign in with a User Profile to request team access and view synced team stats.</p>
       </section>
     `;
   }
@@ -3198,14 +3300,16 @@ function renderTeamRosterCard(options = {}) {
   const roster = activeTeamRoster();
   const editable = team ? canManageRoster(team.id) : false;
   const manageRoster = team ? canManageRoster(team.id) : false;
-  const roleCopy = team ? teamRoleLabel(team.role) : "";
   const teams = state.teams
     .map((item) => {
       const active = item.id === state.activeTeamId;
+      const accessCopy = item.role === "admin" && canCreateTeams()
+        ? `${item.inviteCode ? `Team code: ${item.inviteCode}` : "Access: approved"}`
+        : "Access: approved";
       return `
         <button class="team-chip ${active ? "active" : ""}" type="button" data-team-select="${item.id}" aria-pressed="${active}">
           <strong>${escapeHTML(item.name)}</strong>
-          <span>${teamRoleLabel(item.role)}${item.inviteCode ? ` - ${escapeHTML(item.inviteCode)}` : ""}</span>
+          <span>${escapeHTML(accessCopy)}</span>
         </button>
       `;
     })
@@ -3245,11 +3349,13 @@ function renderTeamRosterCard(options = {}) {
     <section class="card pad team-card ${compact && !expanded ? "collapsed" : ""}">
       <div class="collapsible-card-head">
         <div>
-          <h3>Team Roster</h3>
+          <h3>Team</h3>
           <p class="muted small">${
             team
-              ? `Shared roster for ${escapeHTML(team.name)}. ${roleCopy} access. Team code: ${escapeHTML(team.inviteCode)}${
-                  manageRoster && team.trackerCode ? ` Parent Tracker code: ${escapeHTML(team.trackerCode)}` : ""
+              ? `${escapeHTML(team.name)}. Access: approved${
+                  manageRoster && team.inviteCode ? `. Team code: ${escapeHTML(team.inviteCode)}` : ""
+                }${
+                  manageRoster && team.trackerCode ? `. Parent code: ${escapeHTML(team.trackerCode)}` : ""
                 }`
               : canCreateTeams()
                 ? "Create a team or request access with a team code."
@@ -3258,7 +3364,7 @@ function renderTeamRosterCard(options = {}) {
         </div>
         ${
           compact
-            ? `<button class="collapse-icon" type="button" data-action="toggle-team-roster" aria-expanded="${expanded}" aria-label="${expanded ? "Minimize Team Roster" : "Expand Team Roster"}">
+            ? `<button class="collapse-icon" type="button" data-action="toggle-team-roster" aria-expanded="${expanded}" aria-label="${expanded ? "Minimize Team" : "Expand Team"}">
                 <span aria-hidden="true">${expanded ? "v" : ">"}</span>
               </button>`
             : ""
@@ -3281,7 +3387,8 @@ function renderTeamRosterCard(options = {}) {
                         : "No approved teams yet. Request access with a code from your team admin."
                     }</p>`
               }
-              ${renderMyTeamAccessRequests()}
+
+              ${team ? renderTeamStatsRecord(team) : ""}
 
               <div class="team-form-grid">
                 ${
@@ -3307,23 +3414,19 @@ function renderTeamRosterCard(options = {}) {
               ${
                 team
                   ? `
-                    <div class="team-roster-block">
-                      <div class="section-head compact-head">
-                        <div>
-                          <h4>Rostered Players</h4>
-                          <p class="muted small">${
-                            editable
-                              ? "Stats follow the rostered player across every parent account."
-                              : "View-only access. You can review the roster and stats, but cannot add players or log shared stats."
-                          }</p>
-                        </div>
-                      </div>
-                      <div class="player-chip-row">${rosterContent}</div>
-                      ${claimByNumberForm}
-                    </div>
                     ${
                       manageRoster
-                        ? `<form class="team-add-player-form" data-form="add-roster-player">
+                        ? `<div class="team-roster-block">
+                            <div class="section-head compact-head">
+                              <div>
+                                <h4>Manage Team Players</h4>
+                                <p class="muted small">Admin-only roster tools for preloading players by name and jersey number.</p>
+                              </div>
+                            </div>
+                            <div class="player-chip-row">${rosterContent}</div>
+                            ${claimByNumberForm}
+                          </div>
+                          <form class="team-add-player-form" data-form="add-roster-player">
                             <div class="form-grid two">
                               <div class="field">
                                 <label for="rosterName">Player name</label>
@@ -3339,7 +3442,7 @@ function renderTeamRosterCard(options = {}) {
                               <button class="mini-btn" type="submit">Add Player</button>
                             </div>
                           </form>`
-                        : `<p class="muted small team-note">${teamRole(team.id) === "tracker" ? "Verify your child by jersey number before tracking." : "Ask the team admin for access if you should be able to enter shared stats."}</p>`
+                        : `${claimByNumberForm}`
                     }
                     ${
                       manageRoster
@@ -3349,7 +3452,7 @@ function renderTeamRosterCard(options = {}) {
                   `
                   : ""
               }
-              <p class="muted small team-note">Best practice: share team access codes only with parents assigned to enter stats.</p>
+              ${renderMyTeamAccessRequests()}
             </div>
           `
           : ""
@@ -3604,7 +3707,7 @@ function renderSettings() {
   return renderShell(`
     <section class="screen-title">
       <h2>Player & Team</h2>
-      <p>Pick a player from the Team Roster. Roster edits require admin access; Parent Trackers must verify their child before tracking.</p>
+      <p>Pick a player from the team player list. Roster edits require admin access; Parent Trackers must verify their child before tracking.</p>
     </section>
 
     <section class="stack">
@@ -3623,7 +3726,7 @@ function renderSettings() {
           `
           : `<section class="card pad">
               <h3>No Preloaded Players Yet</h3>
-              <p class="muted small">Join or sync a team roster first. If roster players need to be added, ask the team admin to preload them in Team Roster.</p>
+              <p class="muted small">Join or sync a team first. If players need to be added, ask the team admin to preload them.</p>
             </section>`
       }
       ${rosterEditCard}
@@ -3649,7 +3752,7 @@ function renderStartGame() {
       })}
       ${
         viewOnlyTeamPlayer
-          ? `<div class="notice-card">Select your child in Team Roster before starting a shared team game.</div>`
+          ? `<div class="notice-card">Select your child in Player & Team before starting a shared team game.</div>`
           : ""
       }
       <div class="field">
@@ -4309,7 +4412,7 @@ function renderTutorial() {
     <section class="stack tutorial-list">
       <div class="card pad">
         <h3>1. Set Up The Player</h3>
-        <p class="muted small">Open Player & Team to pick from the preloaded Team Roster. Parent Trackers verify their player before tracking shared team stats.</p>
+        <p class="muted small">Open Player & Team to pick from the preloaded team player list. Parent Trackers verify their player before tracking shared team stats.</p>
       </div>
 
       <div class="card pad">

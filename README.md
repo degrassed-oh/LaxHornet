@@ -14,7 +14,7 @@ LaxHornet is a mobile-first offline PWA for tracking youth lacrosse stats during
 - Game Impact Score calculated from each event
 - Per-player season totals and averages from saved games
 - Offline-ready `manifest.json` and service worker
-- Optional user profiles with Parent Tracker access for parents
+- Optional user profiles with approved team access for parents
 - Optional shared team rosters with parent access requests
 - Optional Live Share with a share code/link for read-only real-time viewing
 
@@ -82,9 +82,9 @@ Team creation and roster administration are limited to the platform reviewer acc
 
 `supabase-schema.sql` creates a `notification_queue` table for account request and approval email events. A static GitHub Pages app cannot send private transactional email by itself, so connect this queue to a Supabase Edge Function, Database Webhook, or Resend worker to deliver the queued messages.
 
-## Shared Team Rosters
+## Shared Teams
 
-Use **Team Roster** when multiple parents need to track or view stats for the same rostered players.
+Use **Team** when multiple parents need to track or view stats for the same approved rostered player.
 
 1. Sign in with a User Profile.
 2. Create a team to generate team access codes.

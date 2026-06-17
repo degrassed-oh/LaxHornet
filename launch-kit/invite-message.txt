@@ -13,4 +13,4 @@ For iPhone:
 3. Tap Add to Home Screen.
 4. Open LaxHornet from the new icon.
 
-Once inside, create a User Profile, add your player in Player Settings, and start tracking games.
+Once inside, create a User Profile, add your player in Player & Team, and start tracking games.
