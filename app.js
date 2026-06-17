@@ -1987,7 +1987,7 @@ async function createTeam(formData) {
     return;
   }
   if (!canCreateTeams()) {
-    showToast(requestedAdminPending() ? "Admin approval pending" : "Admin approval required");
+    showToast(requestedAdminPending() ? "Admin approval pending" : `Admin approval required for ${userEmail() || "this account"}`);
     return;
   }
   const name = formData.get("teamName")?.trim();
@@ -2345,15 +2345,26 @@ function renderAccountCard() {
     const pendingCopy = requestedAdminPending()
       ? `<p class="muted small">Admin request pending review by ${escapeHTML(PLATFORM_REVIEWER_EMAIL)}. You can still use viewer access.</p>`
       : "";
+    const canRequestAdmin = !isPlatformReviewer() && role !== "admin" && !requestedAdminPending();
     return `
       <section class="card pad account-card">
         <h3>User Profile</h3>
         <p class="muted small">${escapeHTML(userEmail())}</p>
         <p class="muted small">Role: ${escapeHTML(isPlatformReviewer() ? "Reviewer / Admin" : appRoleLabel(role))}</p>
         ${pendingCopy}
+        ${
+          !canCreateTeams()
+            ? `<p class="muted small">Team creation requires approved Admin access. Reviewer: ${escapeHTML(PLATFORM_REVIEWER_EMAIL)}.</p>`
+            : ""
+        }
         <p class="muted small">${escapeHTML(state.syncStatus)}</p>
         <div class="account-actions">
           <button class="btn neutral" type="button" data-action="sync-cloud-games">Sync Cloud Games</button>
+          ${
+            canRequestAdmin
+              ? `<button class="btn secondary" type="button" data-action="request-admin">Request Admin</button>`
+              : ""
+          }
           <button class="btn secondary" type="button" data-action="refresh-profile">Refresh Profile</button>
           <button class="btn secondary" type="button" data-action="sign-out">Sign Out</button>
         </div>
@@ -3634,6 +3645,7 @@ function handleClick(event) {
     if (action.dataset.action === "copy-share-link") copyShareLink();
     if (action.dataset.action === "sign-out") signOut();
     if (action.dataset.action === "refresh-profile") loadUserProfile();
+    if (action.dataset.action === "request-admin") requestUserRole("admin");
     if (action.dataset.action === "refresh-admin-requests") loadAdminRequests();
     if (action.dataset.action === "sync-cloud-games") loadCloudGames();
     if (action.dataset.action === "sync-team-roster") loadCloudTeams();
