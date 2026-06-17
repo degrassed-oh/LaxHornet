@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>LaxHornet Admin Launch Checklist</title>
+    <style>
+      :root {
+        --black: #090909;
+        --red: #e81010;
+        --paper: #ffffff;
+        --soft: #f4f5f6;
+        --line: #d8dadd;
+        --text: #111317;
+        --muted: #555d67;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: #d9dadd;
+        color: var(--text);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      main {
+        width: min(8.5in, 100%);
+        min-height: 11in;
+        margin: 0 auto;
+        padding: 34px 38px;
+        background: var(--paper);
+      }
+
+      img {
+        display: block;
+        width: min(320px, 70%);
+        height: auto;
+        margin-bottom: 24px;
+      }
+
+      h1,
+      h2,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: 34px;
+        line-height: 1.05;
+      }
+
+      .subtitle {
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 16px;
+        line-height: 1.45;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+        margin-top: 26px;
+      }
+
+      .card {
+        padding: 18px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--soft);
+      }
+
+      .card h2 {
+        margin-bottom: 10px;
+        font-size: 18px;
+      }
+
+      ol,
+      ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+
+      li {
+        margin: 8px 0;
+        color: #30343a;
+        font-size: 14px;
+        line-height: 1.35;
+      }
+
+      .callout {
+        margin-top: 18px;
+        padding: 18px;
+        border-left: 6px solid var(--red);
+        border-radius: 8px;
+        background: #fff4f4;
+      }
+
+      .callout p {
+        color: #30343a;
+        font-size: 14px;
+        line-height: 1.45;
+      }
+
+      .footer {
+        margin-top: 22px;
+        padding-top: 14px;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      @media print {
+        body {
+          background: #ffffff;
+        }
+
+        main {
+          width: 8.5in;
+          min-height: 11in;
+        }
+      }
+
+      @media (max-width: 720px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <img src="../assets/laxhornet-logo.png" alt="LaxHornet" />
+      <h1>Admin Launch Checklist</h1>
+      <p class="subtitle">Use this before inviting a full team so parent access, player rosters, and game-day tracking are clean from the start.</p>
+
+      <section class="grid">
+        <article class="card">
+          <h2>1. Create Team</h2>
+          <ol>
+            <li>Sign in with the approved admin account.</li>
+            <li>Open Manage, then Manage Teams.</li>
+            <li>Create or select the team.</li>
+            <li>Copy the team code for parent requests.</li>
+          </ol>
+        </article>
+
+        <article class="card">
+          <h2>2. Preload Roster</h2>
+          <ol>
+            <li>Add each player by full name and jersey number.</li>
+            <li>Select one or more positions if needed.</li>
+            <li>Use Sync after roster edits.</li>
+            <li>Review unclaimed players before game day.</li>
+          </ol>
+        </article>
+
+        <article class="card">
+          <h2>3. Invite Parents</h2>
+          <ol>
+            <li>Send the parent email or team chat post.</li>
+            <li>Include the correct team code.</li>
+            <li>Tell parents to enter their child's jersey number.</li>
+            <li>Remind iPhone users to Add to Home Screen.</li>
+          </ol>
+        </article>
+
+        <article class="card">
+          <h2>4. Approve Requests</h2>
+          <ol>
+            <li>Open Manage Teams as admin.</li>
+            <li>Review pending parent requests.</li>
+            <li>Approve only matching team and jersey requests.</li>
+            <li>Ask parents to sign out/in or Sync if needed.</li>
+          </ol>
+        </article>
+      </section>
+
+      <div class="callout">
+        <p>
+          Best practice: preload the roster first, then share the team code. Parents should not create teams. They request access, verify a child by jersey number, and then see only approved player/team contexts.
+        </p>
+      </div>
+
+      <p class="footer">LaxHornet Admin Launch Kit - https://degrasse-mastermind.github.io/LaxHornet/</p>
+    </main>
+  </body>
+</html>

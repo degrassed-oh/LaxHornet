@@ -1,0 +1,50 @@
+LAXHORNET TEAM CHAT POSTS
+
+Use these in GroupMe, SportsEngine, TeamSnap, iMessage, email, or any parent group chat.
+
+---
+
+SHORT ANNOUNCEMENT
+
+We are using LaxHornet to track lacrosse stats this season.
+
+Open here:
+https://degrasse-mastermind.github.io/LaxHornet/
+
+Create an account, enter team code __________, and enter your child's jersey number. Once approved, you will only see your verified player.
+
+---
+
+IPHONE INSTALL REMINDER
+
+Quick LaxHornet reminder:
+
+1. Open the link in Safari:
+   https://degrasse-mastermind.github.io/LaxHornet/
+2. Tap Share.
+3. Tap Add to Home Screen.
+4. Open LaxHornet from the new icon.
+
+Team code: __________
+
+---
+
+GAME DAY TRACKER REQUEST
+
+We need parent trackers for upcoming games. If you can help, please set up LaxHornet before game day:
+
+https://degrasse-mastermind.github.io/LaxHornet/
+
+Use team code __________ and your child's jersey number. After approval, you can track only your verified player.
+
+---
+
+LIVE SHARE REMINDER
+
+If you cannot make the game, ask the tracker to use Live Share in LaxHornet. The tracker can tap Live Share beside the game date, and the link copies automatically. Family can watch from another iPhone, phone, tablet, or computer.
+
+---
+
+POST-GAME REVIEW REMINDER
+
+LaxHornet saved game stats can be reviewed and corrected after the game. Open Games, choose the saved game, and review/edit events, notes, and tags.

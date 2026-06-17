@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>LaxHornet Overview</title>
+    <style>
+      :root {
+        --black: #090909;
+        --charcoal: #171717;
+        --red: #e81010;
+        --paper: #ffffff;
+        --soft: #f3f4f6;
+        --line: #d8dadd;
+        --text: #111317;
+        --muted: #555d67;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background:
+          radial-gradient(circle at 18% 0%, rgba(232, 16, 16, 0.16), transparent 28rem),
+          linear-gradient(180deg, #1b1b1b, #090909);
+        color: var(--paper);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      main {
+        width: min(980px, 100%);
+        margin: 0 auto;
+        padding: 34px 22px;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 190px;
+        gap: 24px;
+        align-items: center;
+        min-height: 360px;
+      }
+
+      .logo {
+        display: block;
+        width: min(380px, 100%);
+        height: auto;
+        margin-bottom: 24px;
+      }
+
+      h1,
+      h2,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        max-width: 680px;
+        font-size: clamp(42px, 8vw, 72px);
+        line-height: 0.95;
+      }
+
+      .subtitle {
+        max-width: 660px;
+        margin-top: 18px;
+        color: #d8dadd;
+        font-size: 19px;
+        line-height: 1.45;
+      }
+
+      .cta {
+        display: inline-block;
+        margin-top: 24px;
+        padding: 14px 20px;
+        border-radius: 8px;
+        background: var(--red);
+        color: #ffffff;
+        font-weight: 900;
+        text-decoration: none;
+      }
+
+      .qr-card {
+        padding: 14px;
+        border-radius: 8px;
+        background: #ffffff;
+        color: var(--text);
+        text-align: center;
+      }
+
+      .qr-card img {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+
+      .qr-card strong {
+        display: block;
+        margin-top: 8px;
+      }
+
+      .features {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 28px;
+      }
+
+      .feature {
+        min-height: 150px;
+        padding: 18px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.08);
+      }
+
+      .feature h2 {
+        margin-bottom: 8px;
+        font-size: 18px;
+      }
+
+      .feature p {
+        color: #d8dadd;
+        font-size: 14px;
+        line-height: 1.4;
+      }
+
+      .link {
+        margin-top: 24px;
+        padding: 14px 16px;
+        border-left: 6px solid var(--red);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.1);
+        overflow-wrap: anywhere;
+        font-weight: 850;
+      }
+
+      @media print {
+        body {
+          background: #111111;
+        }
+      }
+
+      @media (max-width: 760px) {
+        .hero,
+        .features {
+          grid-template-columns: 1fr;
+        }
+
+        .qr-card {
+          width: 190px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="hero">
+        <div>
+          <img class="logo" src="../assets/laxhornet-logo.png" alt="LaxHornet" />
+          <h1>Fast stats for a fast game.</h1>
+          <p class="subtitle">
+            A mobile-first youth lacrosse stat tracker for parent trackers, verified players, live sharing, and clean season totals.
+          </p>
+          <a class="cta" href="https://degrasse-mastermind.github.io/LaxHornet/">Open LaxHornet</a>
+          <div class="link">https://degrasse-mastermind.github.io/LaxHornet/</div>
+        </div>
+        <div class="qr-card">
+          <img src="laxhornet-qr.png" alt="QR code for LaxHornet" />
+          <strong>Scan to open</strong>
+        </div>
+      </section>
+
+      <section class="features">
+        <article class="feature">
+          <h2>Parent Access</h2>
+          <p>Parents request team access with a team code and verify a child by jersey number.</p>
+        </article>
+        <article class="feature">
+          <h2>Game Day Tracking</h2>
+          <p>Big mobile stat buttons keep tracking fast enough for one-handed sideline use.</p>
+        </article>
+        <article class="feature">
+          <h2>Season Totals</h2>
+          <p>Track scoring, possession, defense, goalie, faceoff, impact, and effort metrics.</p>
+        </article>
+        <article class="feature">
+          <h2>Live Share</h2>
+          <p>Copy a live link so family can follow from another phone, tablet, or computer.</p>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>

@@ -4,22 +4,38 @@ Public app link:
 
 https://degrasse-mastermind.github.io/LaxHornet/
 
-## Files
+## Core Files
 
 - `laxhornet-qr.png`: QR code for the public app link.
-- `parent-handout.html`: Printable one-page parent handout.
+- `parent-handout.html`: Printable one-page parent quick start.
+- `LaxHornet-parent-handout.pdf`: PDF version of the parent quick start.
 - `parent-email.html`: HTML email template with clickable links.
 - `parent-email.eml`: Ready-to-open email draft with clickable links.
-- `invite-message.txt`: Email or team-app message.
+- `invite-message.txt`: Longer email or team-app announcement.
 - `short-text-message.txt`: Short SMS/iMessage version.
 
-## How To Use
+## New Marketing And Sharing Files
 
-1. Open `parent-handout.html` in a browser.
-2. Print it, or use the browser's Print command and choose Save as PDF.
-3. Share the QR code image in team chats, emails, or printed material.
-4. Send `invite-message.txt` to parents and coaches.
-5. Open `parent-email.html` in a browser and copy the page into an email composer, or open `parent-email.eml` as a draft.
+- `team-chat-posts.txt`: Copy/paste posts for GroupMe, SportsEngine, TeamSnap, iMessage, or parent chats.
+- `social-captions.txt`: Captions for a team website, Facebook group, Instagram post, or parent newsletter.
+- `admin-launch-checklist.html`: Printable checklist for team admins before inviting parents.
+- `laxhornet-overview.html`: Polished overview/share page with QR code and feature highlights.
+
+## Recommended Launch Flow
+
+1. Admin creates the team in LaxHornet.
+2. Admin preloads the roster with names, jersey numbers, and positions.
+3. Admin shares the team code using `parent-email.html`, `invite-message.txt`, or `team-chat-posts.txt`.
+4. Parents create accounts, enter the team code, and enter their child's jersey number.
+5. Admin approves matching requests.
+6. Parents sign back in, choose their verified player/team tile, and track games.
+
+## iPhone Install Instructions
+
+1. Open the app link in Safari.
+2. Tap the Share button.
+3. Tap Add to Home Screen.
+4. Open LaxHornet from the new icon.
 
 ## Important Launch Settings
 
@@ -32,4 +48,4 @@ Redirect URLs should include:
 https://degrasse-mastermind.github.io/LaxHornet/
 https://degrasse-mastermind.github.io/LaxHornet/?auth=verified
 
-Run the latest `supabase-schema.sql` before inviting a lot of users so multi-player cloud sync includes the `player_id` field.
+Run the latest `supabase-schema.sql` before inviting a lot of users so multi-player cloud sync, team rosters, and player claims are current.

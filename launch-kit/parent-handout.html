@@ -6,11 +6,11 @@
     <title>LaxHornet Parent Quick Start</title>
     <style>
       :root {
-        --black: #0b0b0b;
+        --black: #090909;
         --charcoal: #171717;
         --red: #e81010;
         --paper: #ffffff;
-        --soft: #f1f2f4;
+        --soft: #f3f4f6;
         --line: #d8dadd;
         --text: #111317;
         --muted: #555d67;
@@ -37,12 +37,12 @@
 
       .hero {
         display: grid;
-        grid-template-columns: 1fr auto;
+        grid-template-columns: minmax(0, 1fr) auto;
         gap: 22px;
         align-items: center;
-        padding: 34px 36px 28px;
+        padding: 32px 36px 26px;
         background:
-          linear-gradient(90deg, rgba(232, 16, 16, 0.16), transparent 44%),
+          linear-gradient(90deg, rgba(232, 16, 16, 0.16), transparent 46%),
           linear-gradient(180deg, #1a1a1a, #090909);
         color: #ffffff;
       }
@@ -65,11 +65,10 @@
         max-width: 560px;
         font-size: 34px;
         line-height: 1.02;
-        letter-spacing: 0;
       }
 
       .subtitle {
-        max-width: 560px;
+        max-width: 580px;
         margin-top: 12px;
         color: #d8dadd;
         font-size: 16px;
@@ -99,8 +98,8 @@
 
       .content {
         display: grid;
-        gap: 22px;
-        padding: 28px 36px 34px;
+        gap: 20px;
+        padding: 26px 36px 32px;
       }
 
       .url-box {
@@ -119,8 +118,8 @@
       }
 
       .card {
-        min-height: 150px;
-        padding: 18px;
+        min-height: 148px;
+        padding: 17px;
         border: 1px solid var(--line);
         border-radius: 8px;
         background: #ffffff;
@@ -144,6 +143,17 @@
         color: #30343a;
         font-size: 14px;
         line-height: 1.35;
+      }
+
+      .code-line {
+        margin-top: 10px;
+        padding: 10px 12px;
+        border: 1px dashed #b7bcc3;
+        border-radius: 8px;
+        background: #fafafa;
+        color: #30343a;
+        font-size: 14px;
+        font-weight: 850;
       }
 
       .callout {
@@ -205,9 +215,9 @@
       <section class="hero">
         <div>
           <img class="logo" src="../assets/laxhornet-logo.png" alt="LaxHornet" />
-          <h1>Fast lacrosse stats for parents, coaches, and families.</h1>
+          <h1>Fast stats for a fast game.</h1>
           <p class="subtitle">
-            Track multiple players, save games, review season totals, and share live game updates from another phone, tablet, or computer.
+            LaxHornet helps parents track youth lacrosse stats by verified player, review season totals, and share live game updates from any phone, tablet, or computer.
           </p>
         </div>
         <div class="qr-card">
@@ -231,39 +241,39 @@
           </article>
 
           <article class="card">
-            <h2>Start Tracking</h2>
+            <h2>Get Access</h2>
             <ol>
-              <li>Create a User Profile or sign in.</li>
-              <li>Add one or more players in Player & Team.</li>
-              <li>Tap the player you want active.</li>
-              <li>Start a game and use the big stat buttons.</li>
+              <li>Create an account with email and password.</li>
+              <li>Enter your name, team code, and child jersey number.</li>
+              <li>Wait for admin approval.</li>
+              <li>Sign back in and track only your verified player.</li>
             </ol>
+            <div class="code-line">Team code: ____________________</div>
+          </article>
+
+          <article class="card">
+            <h2>Game Day Flow</h2>
+            <ul>
+              <li>Choose the correct player/team tile before tracking.</li>
+              <li>Tap Track New Game and enter the opponent.</li>
+              <li>Use the big one-handed stat buttons during the game.</li>
+              <li>Review/edit saved games and event tags afterward.</li>
+            </ul>
           </article>
 
           <article class="card">
             <h2>What It Tracks</h2>
             <ul>
-              <li>Goals, assists, shots, saves, faceoffs, ground balls, clears, turnovers, penalties, and notes.</li>
-              <li>Game Impact Score and per-player season dashboard.</li>
-              <li>Post-game event edits, tags, and corrections.</li>
-            </ul>
-          </article>
-
-          <article class="card">
-            <h2>Share Live</h2>
-            <ul>
-              <li>During a game, tap Live Share beside the game date.</li>
-              <li>The link copies automatically.</li>
-              <li>Paste it into a text or email so family can watch live.</li>
+              <li>Goals, assists, shots, saves, faceoffs, ground balls, clears, turnovers, penalties, hustle plays, and notes.</li>
+              <li>Game Impact Score, Effort Score, shooting %, save %, faceoff %, and season totals.</li>
             </ul>
           </article>
         </div>
 
         <div class="callout">
-          <h2>Built For Game Day</h2>
+          <h2>Share Live With Family</h2>
           <p>
-            LaxHornet is mobile-first, works offline, and keeps each user's players and games separate when signed in.
-            It is designed for quick one-handed tracking from the sideline.
+            During a game, tap Live Share beside the game date. The link copies automatically, so you can paste it into a text or email. Family can watch from another iPhone, phone, tablet, or computer.
           </p>
         </div>
 
