@@ -21,7 +21,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v127";
+const APP_VERSION = "v128";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -741,6 +741,12 @@ function playerTitle(player = state.player) {
 function playerSubline(player = state.player) {
   const normalized = normalizePlayer(player);
   return [normalized.team, normalized.position].filter(Boolean).join(" - ") || "Add player details before the next game.";
+}
+
+function playerContextLine(player = state.player) {
+  const normalized = normalizePlayer(player);
+  const context = [normalized.team, normalized.position].filter(Boolean).join(" - ");
+  return [playerTitle(normalized), context].filter(Boolean).join(" - ");
 }
 
 function gamePlayerId(game = {}) {
@@ -4718,7 +4724,7 @@ function renderPastGames() {
   return renderShell(`
     <section class="screen-title">
       <h2>Past Games</h2>
-      <p>Showing saved games for ${escapeHTML(playerTitle(state.player))}.</p>
+      <p>Showing saved games for ${escapeHTML(playerContextLine(state.player))}.</p>
     </section>
 
     <section class="stack">
@@ -4771,7 +4777,7 @@ function renderGameListRow(game) {
       <button class="brand" type="button" data-review="${game.id}" style="color: var(--text); text-align: left;">
         <span>
           <h3>${escapeHTML(game.opponent)}</h3>
-          <p>${escapeHTML(playerTitle(player))} - ${formatDate(game.date)} - Impact ${totals.impact} - ${totals.goals}G ${totals.assists}A</p>
+          <p>${escapeHTML(playerContextLine(player))} - ${formatDate(game.date)} - Impact ${totals.impact} - ${totals.goals}G ${totals.assists}A</p>
         </span>
       </button>
       <div class="row-actions">
@@ -4847,7 +4853,7 @@ function renderDashboard() {
   return renderShell(`
     <section class="screen-title">
       <h2>Season Dashboard</h2>
-      <p>Totals for ${escapeHTML(playerTitle(state.player))}.</p>
+      <p>Totals for ${escapeHTML(playerContextLine(state.player))}.</p>
     </section>
 
     <section class="stack">
