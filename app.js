@@ -21,7 +21,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v131";
+const APP_VERSION = "v132";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -3198,7 +3198,7 @@ function renderBottomNav() {
     { screen: trackTarget, label: state.activeGame ? "Live" : "Track", icon: "track", active: ["start", "live"].includes(state.screen) },
     { screen: "past", label: "Games", icon: "games", active: ["past", "review"].includes(state.screen) },
     { screen: "dashboard", label: "Season", icon: "season", active: state.screen === "dashboard" },
-    { screen: "more", label: "Manage", icon: "manage", active: ["more", "player", "settings", "team", "teamAccess", "profileSetup", "tutorial", "help"].includes(state.screen) },
+    { screen: "more", label: "Manage", icon: "manage", active: ["more", "player", "settings", "team", "teamAccess", "profileSetup", "tutorial", "help", "launchKit"].includes(state.screen) },
   ];
   return `
     <nav class="bottom-nav" aria-label="Primary">
@@ -3900,6 +3900,23 @@ function renderMore() {
         <button class="mini-btn ${!isPlatformReviewer() ? "" : "light"}" type="button" data-admin-view-mode="tracker" aria-pressed="${!isPlatformReviewer()}">Tracker Mode</button>
       </div>`
     : "";
+  const adminTools = isPlatformReviewer()
+    ? `
+      <section class="card pad more-card admin-tools-card">
+        <div>
+          <h3>Admin Tools</h3>
+          <p class="muted small">Launch materials, team setup files, and sharing templates.</p>
+        </div>
+        <div class="more-action-list">
+          <button class="more-action" type="button" data-nav="launchKit">
+            <span>${renderNavIcon("games")}</span>
+            <strong>Launch Kit</strong>
+            <small>Open PDFs, invite messages, QR code, and the full zip bundle.</small>
+          </button>
+        </div>
+      </section>
+    `
+    : "";
 
   return renderShell(`
     <section class="screen-title">
@@ -3943,6 +3960,8 @@ function renderMore() {
           </button>
         </div>
       </section>
+
+      ${adminTools}
 
       <section class="card pad more-card account-tools-card">
         <div>
@@ -5039,6 +5058,114 @@ function renderHelp() {
   `);
 }
 
+const LAUNCH_KIT_GROUPS = [
+  {
+    title: "Complete Package",
+    description: "Everything in one download.",
+    files: [
+      { label: "Download Full Launch Kit", meta: "ZIP bundle", href: "LaxHornet-launch-kit.zip", type: "download" },
+    ],
+  },
+  {
+    title: "Printable PDFs",
+    description: "Ready for handouts, meetings, or team-manager prep.",
+    files: [
+      { label: "Parent Quick Start", meta: "PDF", href: "launch-kit/LaxHornet-parent-handout.pdf", type: "pdf" },
+      { label: "Admin Launch Checklist", meta: "PDF", href: "launch-kit/LaxHornet-admin-launch-checklist.pdf", type: "pdf" },
+      { label: "Marketing Overview", meta: "PDF", href: "launch-kit/LaxHornet-overview.pdf", type: "pdf" },
+    ],
+  },
+  {
+    title: "Share Pages",
+    description: "Open, preview, print, or copy from the browser.",
+    files: [
+      { label: "Parent Handout Page", meta: "HTML", href: "launch-kit/parent-handout.html", type: "html" },
+      { label: "LaxHornet Overview Page", meta: "HTML", href: "launch-kit/laxhornet-overview.html", type: "html" },
+      { label: "Admin Checklist Page", meta: "HTML", href: "launch-kit/admin-launch-checklist.html", type: "html" },
+      { label: "Parent Email Template", meta: "HTML", href: "launch-kit/parent-email.html", type: "html" },
+    ],
+  },
+  {
+    title: "Copy / Paste Messages",
+    description: "Fast text for email, team apps, social posts, and parent chats.",
+    files: [
+      { label: "Parent Email Draft", meta: "EML", href: "launch-kit/parent-email.eml", type: "email" },
+      { label: "Invite Message", meta: "TXT", href: "launch-kit/invite-message.txt", type: "text" },
+      { label: "Short Text Message", meta: "TXT", href: "launch-kit/short-text-message.txt", type: "text" },
+      { label: "Team Chat Posts", meta: "TXT", href: "launch-kit/team-chat-posts.txt", type: "text" },
+      { label: "Social Captions", meta: "TXT", href: "launch-kit/social-captions.txt", type: "text" },
+    ],
+  },
+  {
+    title: "QR And Instructions",
+    description: "Use these when sharing or rebuilding the kit.",
+    files: [
+      { label: "QR Code", meta: "PNG", href: "launch-kit/laxhornet-qr.png", type: "image" },
+      { label: "Launch Kit README", meta: "MD", href: "launch-kit/launch-kit-readme.md", type: "text" },
+    ],
+  },
+];
+
+function renderLaunchKitFile(file) {
+  const downloadAttr = file.type === "download" ? " download" : "";
+  return `
+    <a class="launch-file-card" href="${escapeHTML(file.href)}" target="_blank" rel="noopener"${downloadAttr}>
+      <span>${renderNavIcon(file.type === "download" ? "manage" : file.type === "image" ? "team" : "games")}</span>
+      <strong>${escapeHTML(file.label)}</strong>
+      <small>${escapeHTML(file.meta)}</small>
+    </a>
+  `;
+}
+
+function renderLaunchKitPage() {
+  if (!isPlatformReviewer()) {
+    return renderShell(`
+      <section class="screen-title">
+        <h2>Launch Kit</h2>
+        <p>Admin access is required to view launch materials.</p>
+      </section>
+      <section class="stack">
+        <section class="card pad">
+          <h3>Admin Only</h3>
+          <p class="muted small">Switch to Admin Mode or sign in with the approved admin account.</p>
+          <button class="btn secondary" type="button" data-nav="more">Back to Manage</button>
+        </section>
+      </section>
+    `);
+  }
+
+  return renderShell(`
+    <section class="screen-title">
+      <h2>Launch Kit</h2>
+      <p>Open, download, and share LaxHornet parent launch materials.</p>
+    </section>
+
+    <section class="stack">
+      <section class="card pad launch-kit-hero-card">
+        <div>
+          <h3>Team Launch Files</h3>
+          <p class="muted small">Use these for parent emails, team chats, printed handouts, QR sharing, and admin setup.</p>
+        </div>
+        <a class="mini-btn" href="LaxHornet-launch-kit.zip" download>Download ZIP</a>
+      </section>
+
+      ${LAUNCH_KIT_GROUPS.map(
+        (group) => `
+          <section class="card pad launch-kit-group">
+            <div>
+              <h3>${escapeHTML(group.title)}</h3>
+              <p class="muted small">${escapeHTML(group.description)}</p>
+            </div>
+            <div class="launch-file-grid">
+              ${group.files.map(renderLaunchKitFile).join("")}
+            </div>
+          </section>
+        `,
+      ).join("")}
+    </section>
+  `);
+}
+
 function renderAuthSuccess() {
   const signedIn = Boolean(state.authUser);
   return renderShell(`
@@ -5174,6 +5301,7 @@ function render() {
     player: renderPlayerPage,
     team: renderTeamPage,
     teamAccess: renderTeamAccess,
+    launchKit: renderLaunchKitPage,
     tutorial: renderTutorial,
     settings: renderSettings,
     start: renderStartGame,
