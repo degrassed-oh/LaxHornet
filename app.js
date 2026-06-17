@@ -20,7 +20,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v99";
+const APP_VERSION = "v101";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -285,6 +285,7 @@ const state = {
   deletedEventIds: initialStoredState.deletedEventIds,
   watchShareExpanded: false,
   teamRosterExpanded: true,
+  teamAccessExpanded: false,
   exportToolsExpanded: false,
   signupDraft: null,
   accessRequestSummary: null,
@@ -521,6 +522,19 @@ function canTrackPlayer(player = state.player) {
   return canTrackRosterPlayer(normalized.teamId, normalized.rosterPlayerId || normalized.id);
 }
 
+function visibleRosterPlayers(roster = state.rosterPlayers) {
+  return roster.filter((player) => {
+    const normalized = normalizeRosterPlayer(player);
+    return normalized.active !== false && canTrackRosterPlayer(normalized.teamId, normalized.id);
+  });
+}
+
+function visiblePlayers() {
+  const localPlayers = state.players.filter((player) => !player.teamId);
+  const rosterPlayers = visibleRosterPlayers().map(rosterPlayerToPlayer);
+  return dedupePlayers([...localPlayers, ...rosterPlayers], state.activePlayerId).players;
+}
+
 function canEditGame(game = {}) {
   const teamId = gameTeamId(game);
   if (!teamId) return true;
@@ -548,7 +562,7 @@ function rosterPlayerToPlayer(rosterPlayer = {}) {
 
 function mergeRosterPlayersIntoPlayers() {
   const localPlayers = state.players.filter((player) => !player.teamId);
-  const rosterPlayers = state.rosterPlayers.filter((player) => player.active !== false).map(rosterPlayerToPlayer);
+  const rosterPlayers = visibleRosterPlayers().map(rosterPlayerToPlayer);
   state.players = dedupePlayers([...localPlayers, ...rosterPlayers], state.activePlayerId).players;
   if (state.activeTeamId && !state.teams.some((team) => team.id === state.activeTeamId)) {
     state.activeTeamId = state.teams[0]?.id || "";
@@ -565,7 +579,7 @@ function ensureActiveTeamRosterPlayer() {
 function activeTeamRoster() {
   const team = activeTeam();
   if (!team) return [];
-  return state.rosterPlayers.filter((player) => player.teamId === team.id && player.active !== false);
+  return visibleRosterPlayers(state.rosterPlayers.filter((player) => player.teamId === team.id));
 }
 
 function teamIds() {
@@ -1948,6 +1962,19 @@ async function loadCloudTeams(options = {}) {
 
   const cloudTeams = normalizeTeams((memberRows || []).map(teamFromSupabaseRows));
   state.teams = cloudTeams;
+
+  await loadTeamAccessRequests({ silent: true });
+  const approvedRequestTeams = state.teamAccessRequests
+    .filter((request) => request.status === "approved" && request.teamId)
+    .map((request) => ({
+      id: request.teamId,
+      name: request.teamName || "Approved Team",
+      role: request.requestedRole || "tracker",
+    }));
+  if (approvedRequestTeams.length) {
+    state.teams = normalizeTeams([...state.teams, ...approvedRequestTeams]);
+  }
+
   if (!state.activeTeamId || !state.teams.some((team) => team.id === state.activeTeamId)) {
     state.activeTeamId = state.teams[0]?.id || "";
   }
@@ -1970,10 +1997,10 @@ async function loadCloudTeams(options = {}) {
       ...(rosterRows || []).map(rosterPlayerFromSupabaseRow),
     ]);
     await loadEditableTeamAccessCodes();
-    await loadPlayerClaims({ silent: true });
-    await loadClaimedRosterPlayers({ silent: true });
   }
-  await loadTeamAccessRequests({ silent: true });
+
+  await loadPlayerClaims({ silent: true });
+  await loadClaimedRosterPlayers({ silent: true });
 
   mergeRosterPlayersIntoPlayers();
   ensureActiveTeamRosterPlayer();
@@ -3282,6 +3309,7 @@ function renderTeamRosterCard(options = {}) {
             <div class="team-card-body">
               <div class="team-actions">
                 <button class="mini-btn light" type="button" data-action="sync-team-roster">Sync Teams</button>
+                <button class="mini-btn light" type="button" data-action="toggle-team-access">Request Access</button>
               </div>
               ${
                 teams
@@ -3623,21 +3651,29 @@ function renderProfileSetup() {
 function renderTeamAccessTools() {
   const team = activeTeam();
   const requestList = renderMyTeamAccessRequests();
+  const expanded = state.teamAccessExpanded;
   return `
-      <section class="card pad">
-        <div class="section-head compact-head">
+      <section class="card pad ${expanded ? "" : "collapsed"}">
+        <div class="collapsible-card-head">
           <div>
             <h3>Request Access</h3>
-            <p class="muted small">${escapeHTML(team ? `Current team: ${team.name}` : "Use the code shared by your team admin.")}</p>
+            <p class="muted small">${escapeHTML(team ? "Use this only if you need access to another team." : "Use the code shared by your team admin.")}</p>
           </div>
+          <button class="collapse-icon" type="button" data-action="toggle-team-access" aria-expanded="${expanded}" aria-label="${expanded ? "Minimize Request Access" : "Expand Request Access"}">
+            <span aria-hidden="true">${expanded ? "v" : ">"}</span>
+          </button>
         </div>
-        <form class="inline-mini-form" data-form="join-team">
-          <label for="inviteCode">Team access code</label>
-          <div class="inline-input-action">
-            <input id="inviteCode" name="inviteCode" placeholder="ABC123" autocapitalize="characters" autocomplete="off" />
-            <button class="mini-btn" type="submit">Request</button>
-          </div>
-        </form>
+        ${
+          expanded
+            ? `<form class="inline-mini-form" data-form="join-team">
+                <label for="inviteCode">Team access code</label>
+                <div class="inline-input-action">
+                  <input id="inviteCode" name="inviteCode" placeholder="ABC123" autocapitalize="characters" autocomplete="off" />
+                  <button class="mini-btn" type="submit">Request</button>
+                </div>
+              </form>`
+            : ""
+        }
       </section>
 
       ${
@@ -4783,6 +4819,10 @@ function handleClick(event) {
     }
     if (action.dataset.action === "toggle-team-roster") {
       state.teamRosterExpanded = !state.teamRosterExpanded;
+      render();
+    }
+    if (action.dataset.action === "toggle-team-access") {
+      state.teamAccessExpanded = !state.teamAccessExpanded;
       render();
     }
     if (action.dataset.action === "toggle-export-tools") {
