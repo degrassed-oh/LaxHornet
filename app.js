@@ -20,7 +20,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v69";
+const APP_VERSION = "v70";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -1892,8 +1892,8 @@ async function loadCloudTeams(options = {}) {
     state.rosterPlayers = normalizeRosterPlayers([...state.rosterPlayers, ...(rosterRows || []).map(rosterPlayerFromSupabaseRow)]);
     await loadEditableTeamAccessCodes();
     await loadPlayerClaims({ silent: true });
-    await loadTeamAccessRequests({ silent: true });
   }
+  await loadTeamAccessRequests({ silent: true });
 
   mergeRosterPlayersIntoPlayers();
   syncActivePlayer();
@@ -1922,17 +1922,25 @@ async function loadEditableTeamAccessCodes() {
 
 async function loadTeamAccessRequests(options = {}) {
   if (!supabaseClient || !currentUserId()) return [];
+  const requestRows = [];
+  const { data: myRequests, error: myRequestsError } = await supabaseClient.rpc("laxhornet_my_team_access_requests");
+  if (myRequestsError) {
+    if (!options.silent) reportTeamSetupError(myRequestsError);
+  } else {
+    requestRows.push(...(Array.isArray(myRequests) ? myRequests : []));
+  }
+
   const editableTeamIds = state.teams.filter((team) => canManageRoster(team.id)).map((team) => team.id);
-  if (!editableTeamIds.length) {
-    state.teamAccessRequests = [];
-    return [];
+  if (editableTeamIds.length) {
+    const { data, error } = await supabaseClient.rpc("laxhornet_pending_team_access_requests");
+    if (error) {
+      if (!options.silent) reportTeamSetupError(error);
+    } else {
+      requestRows.push(...(Array.isArray(data) ? data : []));
+    }
   }
-  const { data, error } = await supabaseClient.rpc("laxhornet_pending_team_access_requests");
-  if (error) {
-    if (!options.silent) reportTeamSetupError(error);
-    return [];
-  }
-  state.teamAccessRequests = normalizeTeamAccessRequests((Array.isArray(data) ? data : []).map(teamAccessRequestFromSupabaseRow));
+
+  state.teamAccessRequests = normalizeTeamAccessRequests(requestRows.map(teamAccessRequestFromSupabaseRow));
   if (!options.silent) render();
   return state.teamAccessRequests;
 }
@@ -2808,6 +2816,35 @@ function renderTeamAccessRequests() {
   `;
 }
 
+function renderMyTeamAccessRequests() {
+  const ownRequests = state.teamAccessRequests.filter((request) => request.userId === currentUserId());
+  if (!ownRequests.length) return "";
+  return `
+    <div class="team-roster-block">
+      <div class="section-head compact-head">
+        <div>
+          <h4>My Team Requests</h4>
+          <p class="muted small">Approved requests appear here before the roster loads.</p>
+        </div>
+      </div>
+      <div class="admin-request-list">
+        ${ownRequests
+          .map(
+            (request) => `
+              <div class="admin-request-row">
+                <span>
+                  <strong>${escapeHTML(request.teamName || "Team")}</strong>
+                  <small>${teamRoleLabel(request.requestedRole)} access - ${escapeHTML(request.status)}</small>
+                </span>
+              </div>
+            `,
+          )
+          .join("")}
+      </div>
+    </div>
+  `;
+}
+
 function renderTeamRosterCard(options = {}) {
   const compact = Boolean(options.compact);
   const expanded = compact ? state.teamRosterExpanded : true;
@@ -2890,6 +2927,7 @@ function renderTeamRosterCard(options = {}) {
                   ? `<div class="team-chip-row">${teams}</div>`
                   : `<p class="muted small">No teams yet. Create one for your roster or request access with a code from another parent.</p>`
               }
+              ${renderMyTeamAccessRequests()}
 
               <div class="team-form-grid">
                 <form class="inline-mini-form" data-form="create-team">

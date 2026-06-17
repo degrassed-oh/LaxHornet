@@ -593,6 +593,36 @@ as $$
   order by requests.created_at asc;
 $$;
 
+create or replace function public.laxhornet_my_team_access_requests()
+returns table(
+  id text,
+  team_id text,
+  team_name text,
+  user_id uuid,
+  email text,
+  requested_role text,
+  status text,
+  created_at timestamptz
+)
+language sql
+security definer
+set search_path = public
+as $$
+  select
+    requests.id,
+    requests.team_id,
+    teams.name as team_name,
+    requests.user_id,
+    requests.email,
+    requests.requested_role,
+    requests.status,
+    requests.created_at
+  from public.team_access_requests requests
+  join public.teams teams on teams.id = requests.team_id
+  where requests.user_id = (select auth.uid())
+  order by requests.created_at desc;
+$$;
+
 create or replace function public.laxhornet_review_team_access_request(request_id text, approve boolean)
 returns void
 language plpgsql
@@ -934,6 +964,7 @@ grant execute on function public.laxhornet_can_edit_team(text) to authenticated;
 grant execute on function public.laxhornet_join_team_by_code(text) to authenticated;
 grant execute on function public.laxhornet_request_team_access(text) to authenticated;
 grant execute on function public.laxhornet_pending_team_access_requests() to authenticated;
+grant execute on function public.laxhornet_my_team_access_requests() to authenticated;
 grant execute on function public.laxhornet_review_team_access_request(text, boolean) to authenticated;
 grant execute on function public.laxhornet_create_team(text, text, text, text, text) to authenticated;
 grant execute on function public.laxhornet_create_roster_player(text, text, text, text, text) to authenticated;
