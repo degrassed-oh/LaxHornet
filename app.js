@@ -20,7 +20,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v87";
+const APP_VERSION = "v88";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -3113,6 +3113,7 @@ function renderAdminReviewCard() {
 function renderPlayerSwitcher(options = {}) {
   const title = options.title || "Tracking Player";
   const helper = options.helper || "Choose who these stats belong to.";
+  const helperLines = Array.isArray(options.helperLines) ? options.helperLines.filter(Boolean) : null;
   const showManage = options.showManage !== false;
   const shellClass = options.inline ? "player-switch-card inline" : "card pad player-switch-card";
   const defaultPlayers = activeTeamRoster().length ? activeTeamRoster().map(rosterPlayerToPlayer) : state.players;
@@ -3134,7 +3135,11 @@ function renderPlayerSwitcher(options = {}) {
       <div class="section-head">
         <div>
           <h3>${escapeHTML(title)}</h3>
-          <p class="muted small">${escapeHTML(helper)}</p>
+          ${
+            helperLines
+              ? `<p class="muted small helper-lines">${helperLines.map((line) => `<span>${escapeHTML(line)}</span>`).join("")}</p>`
+              : `<p class="muted small">${escapeHTML(helper)}</p>`
+          }
         </div>
         ${showManage ? `<button class="mini-btn light" type="button" data-nav="settings">Manage</button>` : ""}
       </div>
@@ -3450,7 +3455,7 @@ function renderHome() {
 
     <section class="stack">
       ${renderPlayerSwitcher({
-        helper: `${playerSubline(state.player)} Season totals below are for this player.`,
+        helperLines: [playerSubline(state.player), "Season totals below are for this player."],
       })}
 
       <div class="metric-grid">

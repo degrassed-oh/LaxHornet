@@ -404,6 +404,15 @@ button:disabled {
   margin: 0;
 }
 
+.helper-lines {
+  display: grid;
+  gap: 1px;
+}
+
+.helper-lines span {
+  display: block;
+}
+
 .player-switch-card {
   display: grid;
   gap: 12px;
