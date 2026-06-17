@@ -477,9 +477,7 @@ returns table(
 language plpgsql
 security definer
 set search_path = public
-as $$
-declare
-  created_team public.teams%rowtype;
+as $laxhornet_create_team$
 begin
   if (select auth.uid()) is null then
     raise exception 'Sign in required';
@@ -489,32 +487,44 @@ begin
     raise exception 'Admin approval required';
   end if;
 
-  insert into public.teams (id, name, invite_code, tracker_code, created_by)
-  values (
-    team_id,
-    nullif(trim(team_name), ''),
-    upper(invite_code),
-    upper(tracker_code),
-    (select auth.uid())
-  )
-  returning * into created_team;
-
-  insert into public.team_members (id, team_id, user_id, role)
-  values (member_id, created_team.id, (select auth.uid()), 'admin')
-  on conflict (team_id, user_id) do update
-  set role = 'admin';
-
   return query
+  with inserted_team as (
+    insert into public.teams (id, name, invite_code, tracker_code, created_by)
+    values (
+      team_id,
+      nullif(trim(team_name), ''),
+      upper(invite_code),
+      upper(tracker_code),
+      (select auth.uid())
+    )
+    returning
+      teams.id,
+      teams.name,
+      teams.invite_code,
+      teams.tracker_code,
+      teams.created_by,
+      teams.created_at
+  ),
+  inserted_member as (
+    insert into public.team_members (id, team_id, user_id, role)
+    select member_id, inserted_team.id, (select auth.uid()), 'admin'
+    from inserted_team
+    on conflict (team_id, user_id) do update
+    set role = 'admin'
+    returning 1
+  )
   select
-    created_team.id,
-    created_team.name,
-    created_team.invite_code,
-    created_team.tracker_code,
+    inserted_team.id,
+    inserted_team.name,
+    inserted_team.invite_code,
+    inserted_team.tracker_code,
     'admin'::text,
-    created_team.created_by,
-    created_team.created_at;
+    inserted_team.created_by,
+    inserted_team.created_at
+  from inserted_team
+  cross join inserted_member;
 end;
-$$;
+$laxhornet_create_team$;
 
 create or replace function public.laxhornet_team_access_codes(check_team_id text)
 returns table(invite_code text, tracker_code text)
