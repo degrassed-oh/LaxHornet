@@ -20,7 +20,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v110";
+const APP_VERSION = "v111";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -2950,7 +2950,7 @@ function renderBottomNav() {
     { screen: trackTarget, label: state.activeGame ? "Live" : "Track", icon: "track", active: ["start", "live"].includes(state.screen) },
     { screen: "past", label: "Games", icon: "games", active: ["past", "review"].includes(state.screen) },
     { screen: "dashboard", label: "Season", icon: "season", active: state.screen === "dashboard" },
-    { screen: "more", label: "More", icon: "more", active: ["more", "player", "settings", "team", "teamAccess", "profileSetup", "tutorial", "help"].includes(state.screen) },
+    { screen: "more", label: "Manage", icon: "manage", active: ["more", "player", "settings", "team", "teamAccess", "profileSetup", "tutorial", "help"].includes(state.screen) },
   ];
   return `
     <nav class="bottom-nav" aria-label="Primary">
@@ -2976,6 +2976,7 @@ function renderNavIcon(icon) {
     season: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19h14v1.7H5V19Zm1.3-7.2h3v5.6h-3v-5.6Zm4.2-6.6h3v12.2h-3V5.2Zm4.2 3.9h3v8.3h-3V9.1Z"/></svg>`,
     player: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.8 5.8a2.6 2.6 0 1 1 5.2 0 2.6 2.6 0 0 1-5.2 0ZM9.4 3.2l1.2-1.1 5.1 5.7-1.2 1.1-1.6-1.8-1.5 1.3 2.2 2.4c.4.5.5 1.2.1 1.7l-1.6 2.6 3.3 1.3c.4.2.7.5.8.9l.8 3.7-2 .4-.6-2.9-4.3-1.7a1.3 1.3 0 0 1-.6-1.9l1.4-2.3-2.1-2.4-2.3 2.1 2.2 2.5-1.5 1.3-5.4-6.1 1.5-1.3 1.9 2.2 6.1-5.5-1.9-2.2Zm-2.3 15.9 4.6.2-.1 2.1-7.5-.3 2.9-4.7 1.8 1.1-1.7 1.6Z"/></svg>`,
     team: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11.2 2.7h1.6v3.2h-1.6V2.7Zm-5 1.6 1.3-.9 1.6 2.6-1.3.9-1.6-2.6Zm10.3 1.7 1.6-2.6 1.3.9-1.6 2.6-1.3-.9ZM8.1 9.2l2.4 2.2c.7.7 1.9.7 2.6 0l2.3-2.2c.5-.5 1.4-.5 1.9 0l.7.7-4.8 4.6c-.7.7-1.8.7-2.5 0L6 9.9l.7-.7c.4-.5 1.2-.5 1.4 0Zm-3.9 2.2 6 5.9c1.2 1.2 3.1 1.2 4.3 0l5.9-5.9 1.7 1.7-6 5.9c-2.1 2-5.4 2-7.5 0l-6-5.9 1.6-1.7ZM2.6 14.8 7.9 20l-1.6 1.6-5.3-5.2 1.6-1.6Zm18.8 0 1.6 1.6-5.3 5.2-1.6-1.6 5.3-5.2Z"/></svg>`,
+    manage: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6.2h8.2a2.6 2.6 0 0 1 5 0H20v1.9h-2.8a2.6 2.6 0 0 1-5 0H4V6.2Zm10.7-1a1 1 0 1 0 0 2.1 1 1 0 0 0 0-2.1ZM4 11.1h2.8a2.6 2.6 0 0 1 5 0H20V13h-8.2a2.6 2.6 0 0 1-5 0H4v-1.9Zm5.3-1a1 1 0 1 0 0 2.1 1 1 0 0 0 0-2.1ZM4 16h8.2a2.6 2.6 0 0 1 5 0H20v1.9h-2.8a2.6 2.6 0 0 1-5 0H4V16Zm10.7-1a1 1 0 1 0 0 2.1 1 1 0 0 0 0-2.1Z"/></svg>`,
     more: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.4 13.9a1.9 1.9 0 1 1 0-3.8 1.9 1.9 0 0 1 0 3.8Zm5.6 0a1.9 1.9 0 1 1 0-3.8 1.9 1.9 0 0 1 0 3.8Zm5.6 0a1.9 1.9 0 1 1 0-3.8 1.9 1.9 0 0 1 0 3.8Z"/></svg>`,
   };
   return icons[icon] || icons.more;
