@@ -20,7 +20,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v72";
+const APP_VERSION = "v73";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -2201,8 +2201,10 @@ async function reviewTeamAccessRequest(requestId, approved) {
 }
 
 async function claimRosterPlayer(formData) {
-  const team = activeTeam();
-  if (!team) {
+  const formTeamId = formData.get("teamId")?.trim();
+  const team = (formTeamId && teamById(formTeamId)) || activeTeam() || state.teams.find((item) => item.id === formTeamId);
+  const teamId = formTeamId || team?.id || "";
+  if (!teamId) {
     showToast("Sync your approved team first");
     return;
   }
@@ -2212,7 +2214,7 @@ async function claimRosterPlayer(formData) {
     return;
   }
   const { data, error } = await supabaseClient.rpc("laxhornet_claim_roster_player", {
-    p_team_id: team.id,
+    p_team_id: teamId,
     p_jersey_number: jerseyNumber,
   });
   if (error) {
@@ -2828,6 +2830,21 @@ function renderTeamAccessRequests() {
   `;
 }
 
+function renderClaimByNumberForm(teamId, options = {}) {
+  const suffix = options.suffix || teamId || "active";
+  return `
+    <form class="inline-mini-form" data-form="claim-roster-player">
+      <input type="hidden" name="teamId" value="${escapeHTML(teamId || "")}" />
+      <label for="claimJerseyNumber-${escapeHTML(suffix)}">Confirm your player</label>
+      <div class="inline-input-action">
+        <input id="claimJerseyNumber-${escapeHTML(suffix)}" name="claimJerseyNumber" inputmode="numeric" placeholder="Jersey #" required />
+        <button class="mini-btn" type="submit">Verify</button>
+      </div>
+      <p class="muted small">Enter your child's jersey number. After verification, only that player will appear for this account.</p>
+    </form>
+  `;
+}
+
 function renderMyTeamAccessRequests() {
   const ownRequests = state.teamAccessRequests.filter((request) => request.userId === currentUserId());
   if (!ownRequests.length) return "";
@@ -2842,14 +2859,21 @@ function renderMyTeamAccessRequests() {
       <div class="admin-request-list">
         ${ownRequests
           .map(
-            (request) => `
-              <div class="admin-request-row">
-                <span>
-                  <strong>${escapeHTML(request.teamName || "Team")}</strong>
-                  <small>${teamRoleLabel(request.requestedRole)} access - ${escapeHTML(request.status)}</small>
-                </span>
-              </div>
-            `,
+            (request) => {
+              const needsClaim =
+                request.status === "approved" &&
+                request.requestedRole === "tracker" &&
+                !state.playerClaims.some((claim) => claim.teamId === request.teamId);
+              return `
+                <div class="admin-request-row">
+                  <span>
+                    <strong>${escapeHTML(request.teamName || "Team")}</strong>
+                    <small>${teamRoleLabel(request.requestedRole)} access - ${escapeHTML(request.status)}</small>
+                  </span>
+                </div>
+                ${needsClaim ? renderClaimByNumberForm(request.teamId, { suffix: request.id || request.teamId }) : ""}
+              `;
+            },
           )
           .join("")}
       </div>
@@ -2910,16 +2934,7 @@ function renderTeamRosterCard(options = {}) {
       : "No verified player is available for this account yet.";
   const rosterContent = roster.length ? rosterChips : `<p class="muted small">${emptyRosterCopy}</p>`;
   const claimByNumberForm = showClaimByNumber
-    ? `
-      <form class="inline-mini-form" data-form="claim-roster-player">
-        <label for="claimJerseyNumber">Confirm your player</label>
-        <div class="inline-input-action">
-          <input id="claimJerseyNumber" name="claimJerseyNumber" inputmode="numeric" placeholder="Jersey #" required />
-          <button class="mini-btn" type="submit">Verify</button>
-        </div>
-        <p class="muted small">Enter your child's jersey number. After verification, only that player will appear for this account.</p>
-      </form>
-    `
+    ? renderClaimByNumberForm(team.id, { suffix: "active-team" })
     : "";
 
   return `
