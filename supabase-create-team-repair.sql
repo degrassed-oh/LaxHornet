@@ -152,7 +152,7 @@ returns table(
   team_id text,
   name text,
   number text,
-  position text,
+  "position" text,
   active boolean,
   created_at timestamptz
 )
