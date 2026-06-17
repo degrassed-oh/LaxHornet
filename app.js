@@ -20,7 +20,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v94";
+const APP_VERSION = "v95";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -1133,6 +1133,8 @@ function showToast(message) {
 }
 
 function navigate(screen) {
+  if (screen === "settings") screen = "player";
+  if (screen === "teamAccess") screen = "team";
   state.screen = screen;
   persistAll();
   render();
@@ -2909,7 +2911,7 @@ function renderBottomNav() {
     { screen: trackTarget, label: state.activeGame ? "Live" : "Track", icon: "track", active: ["start", "live"].includes(state.screen) },
     { screen: "past", label: "Games", icon: "games", active: ["past", "review"].includes(state.screen) },
     { screen: "dashboard", label: "Season", icon: "season", active: state.screen === "dashboard" },
-    { screen: "more", label: "More", icon: "more", active: ["more", "settings", "teamAccess", "profileSetup", "tutorial", "help"].includes(state.screen) },
+    { screen: "more", label: "More", icon: "more", active: ["more", "player", "settings", "team", "teamAccess", "profileSetup", "tutorial", "help"].includes(state.screen) },
   ];
   return `
     <nav class="bottom-nav" aria-label="Primary">
@@ -3092,7 +3094,7 @@ function renderPlayerSwitcher(options = {}) {
                 : ""
           }
         </div>
-        ${showManage ? `<button class="mini-btn light" type="button" data-nav="settings">Manage</button>` : ""}
+        ${showManage ? `<button class="mini-btn light" type="button" data-nav="player">Manage</button>` : ""}
       </div>
       <div class="player-chip-row">${chips || `<p class="muted small">No players available.</p>`}</div>
     </section>
@@ -3261,7 +3263,7 @@ function renderTeamRosterCard(options = {}) {
     <section class="card pad team-card ${compact && !expanded ? "collapsed" : ""}">
       <div class="collapsible-card-head">
         <div>
-          <h3>Team</h3>
+          <h3>Connected Team</h3>
           ${teamHeaderCopy ? `<p class="muted small">${escapeHTML(teamHeaderCopy)}</p>` : ""}
         </div>
         ${
@@ -3279,7 +3281,6 @@ function renderTeamRosterCard(options = {}) {
             <div class="team-card-body">
               <div class="team-actions">
                 <button class="mini-btn light" type="button" data-action="sync-team-roster">Sync Teams</button>
-                <button class="mini-btn light" type="button" data-nav="teamAccess">Request Access</button>
               </div>
               ${
                 teams
@@ -3394,7 +3395,7 @@ function renderMore() {
   return renderShell(`
     <section class="screen-title">
       <h2>More</h2>
-      <p>Quick access to setup, account, team access, watching, and help.</p>
+      <p>Quick access to tracking, player details, team tools, account, watching, and help.</p>
     </section>
 
     <section class="stack">
@@ -3419,10 +3420,10 @@ function renderMore() {
             <strong>${active ? "Resume Live Game" : "Track New Game"}</strong>
             <small>${active ? `Continue tracking ${escapeHTML(playerTitle(activePlayer))}.` : "Open the game setup screen."}</small>
           </button>
-          <button class="more-action" type="button" data-nav="settings">
+          <button class="more-action" type="button" data-nav="player">
             <span>${renderNavIcon("games")}</span>
-            <strong>Player & Team</strong>
-            <small>Change player, review team access, and manage team details.</small>
+            <strong>Player Details</strong>
+            <small>View the selected player and edit roster details when allowed.</small>
           </button>
         </div>
       </section>
@@ -3465,7 +3466,7 @@ function renderMore() {
       <section class="card pad more-card">
         <div class="section-head">
           <div>
-            <h3>Team Access</h3>
+            <h3>Team</h3>
             <p class="muted small">${escapeHTML(team?.name || latestRequest?.teamName || "Request access from your team admin.")}</p>
           </div>
         </div>
@@ -3480,15 +3481,10 @@ function renderMore() {
           </div>
         </div>
         <div class="more-action-list">
-          <button class="more-action" type="button" data-nav="settings">
+          <button class="more-action" type="button" data-nav="team">
             <span>${renderNavIcon("track")}</span>
-            <strong>Open Player & Team</strong>
-            <small>View team stats and player setup.</small>
-          </button>
-          <button class="more-action" type="button" data-nav="teamAccess">
-            <span>${renderNavIcon("games")}</span>
-            <strong>Request Team Access</strong>
-            <small>Enter a team code or review your requests.</small>
+            <strong>Open Team</strong>
+            <small>Sync teams, request access, and manage roster tools.</small>
           </button>
         </div>
       </section>
@@ -3623,16 +3619,10 @@ function renderProfileSetup() {
   `, { hideNav: !state.authUser });
 }
 
-function renderTeamAccess() {
+function renderTeamAccessTools() {
   const team = activeTeam();
   const requestList = renderMyTeamAccessRequests();
-  return renderShell(`
-    <section class="screen-title">
-      <h2>Team Access</h2>
-      <p>Enter a team code from your team admin, then verify your child by jersey number once access is approved.</p>
-    </section>
-
-    <section class="stack">
+  return `
       <section class="card pad">
         <div class="section-head compact-head">
           <div>
@@ -3681,13 +3671,28 @@ function renderTeamAccess() {
           <p class="muted small">No team access requests yet.</p>`
         }
       </section>
+  `;
+}
 
-      <button class="btn secondary" type="button" data-nav="settings">Back to Player & Team</button>
+function renderTeamPage() {
+  return renderShell(`
+    <section class="screen-title">
+      <h2>Team</h2>
+      <p>Sync team data, request access with a team code, and manage roster tools in one place.</p>
+    </section>
+
+    <section class="stack">
+      ${renderTeamRosterCard()}
+      ${renderTeamAccessTools()}
     </section>
   `);
 }
 
-function renderSettings() {
+function renderTeamAccess() {
+  return renderTeamPage();
+}
+
+function renderPlayerPage() {
   const team = activeTeam();
   const selectedRosterPlayer = isTeamPlayer(state.player) ? normalizePlayer(state.player) : null;
   const canEditSelectedRosterPlayer = selectedRosterPlayer ? canManageRoster(selectedRosterPlayer.teamId) : false;
@@ -3725,20 +3730,30 @@ function renderSettings() {
     : "";
   return renderShell(`
     <section class="screen-title">
-      <h2>Player & Team</h2>
-      <p>Review your connected team, synced stats, and player setup. Parent Trackers see only their verified player.</p>
+      <h2>Player</h2>
+      <p>Review the selected player used for tracking, season totals, and saved games.</p>
     </section>
 
     <section class="stack">
-      ${renderTeamRosterCard()}
+      ${renderPlayerSwitcher({
+        title: "Selected Player",
+        helper: isTeamPlayer(state.player)
+          ? "This player is connected to the roster selected on the Team page."
+          : "This player is stored locally on this device.",
+        showManage: false,
+      })}
       ${team ? "" : `<section class="card pad">
         <h3>No Team Connected</h3>
-        <p class="muted small">Request access with a team code, then sync after your request is approved.</p>
-        <button class="mini-btn" type="button" data-nav="teamAccess">Request Team Access</button>
+        <p class="muted small">Use Team to request access with a team code, then sync after approval.</p>
+        <button class="mini-btn" type="button" data-nav="team">Open Team</button>
       </section>`}
       ${rosterEditCard}
     </section>
   `);
+}
+
+function renderSettings() {
+  return renderPlayerPage();
 }
 
 function renderStartGame() {
@@ -3759,7 +3774,7 @@ function renderStartGame() {
       })}
       ${
         viewOnlyTeamPlayer
-          ? `<div class="notice-card">Select your child in Player & Team before starting a shared team game.</div>`
+          ? `<div class="notice-card">Select your child in Player before starting a shared team game.</div>`
           : ""
       }
       <div class="field">
@@ -4419,7 +4434,7 @@ function renderTutorial() {
     <section class="stack tutorial-list">
       <div class="card pad">
         <h3>1. Set Up The Player</h3>
-        <p class="muted small">Open Player & Team to pick from the preloaded team player list. Parent Trackers verify their player before tracking shared team stats.</p>
+        <p class="muted small">Open Player to review the selected player. Use Team to sync team data, request access, and verify roster access by jersey number.</p>
       </div>
 
       <div class="card pad">
@@ -4488,6 +4503,8 @@ function render() {
     requestSubmitted: renderRequestSubmitted,
     profileSetup: renderProfileSetup,
     more: renderMore,
+    player: renderPlayerPage,
+    team: renderTeamPage,
     teamAccess: renderTeamAccess,
     tutorial: renderTutorial,
     settings: renderSettings,
