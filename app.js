@@ -21,7 +21,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v124";
+const APP_VERSION = "v125";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -3419,6 +3419,37 @@ function renderMyPlayersList() {
   `;
 }
 
+function renderRosterPlayerEditForm(selectedRosterPlayer, options = {}) {
+  const player = normalizePlayer(selectedRosterPlayer);
+  if (!isTeamPlayer(player) || !canManageRoster(player.teamId)) return "";
+  const prefix = options.idPrefix || "editRoster";
+  return `
+    <form class="card pad form-grid roster-edit-card" data-form="roster-player-edit">
+      <div class="section-head compact-head">
+        <div>
+          <h3>Edit ${escapeHTML(player.name)}</h3>
+          <p class="muted small">Changes update the shared roster for every parent on this team.</p>
+        </div>
+      </div>
+      <div class="field">
+        <label for="${escapeHTML(prefix)}Name">Player name</label>
+        <input id="${escapeHTML(prefix)}Name" name="name" value="${escapeHTML(player.name)}" required />
+      </div>
+      <div class="form-grid two">
+        <div class="field">
+          <label for="${escapeHTML(prefix)}Number">Jersey #</label>
+          <input id="${escapeHTML(prefix)}Number" name="number" value="${escapeHTML(player.number)}" inputmode="numeric" />
+        </div>
+        ${renderPositionPicker({ name: "position", selected: player.position, label: "Positions" })}
+      </div>
+      <div class="inline-input-action">
+        <button class="mini-btn danger" type="button" data-action="remove-roster-player">Delete Player</button>
+        <button class="mini-btn" type="submit">Save Player</button>
+      </div>
+    </form>
+  `;
+}
+
 function renderTeamAccessRequests() {
   const team = activeTeam();
   if (!team || !canManageRoster(team.id)) return "";
@@ -3655,6 +3686,9 @@ function renderTeamRosterCard(options = {}) {
     team &&
     teamRole(team.id) === "tracker" &&
     !state.playerClaims.some((claim) => claim.teamId === team.id);
+  const selectedTeamRosterPlayer = manageRoster && isTeamPlayer(state.player) && state.player.teamId === team.id
+    ? normalizePlayer(state.player)
+    : null;
   const emptyRosterCopy = showClaimByNumber
     ? "Enter your child's jersey number below to unlock that player."
     : editable
@@ -3719,6 +3753,7 @@ function renderTeamRosterCard(options = {}) {
                               </div>
                             </div>
                             <div class="player-chip-row">${rosterContent}</div>
+                            ${selectedTeamRosterPlayer ? renderRosterPlayerEditForm(selectedTeamRosterPlayer, { idPrefix: "teamRosterEdit" }) : ""}
                             ${renderUnclaimedRosterPlayers(fullTeamRoster)}
                             ${claimByNumberForm}
                           </div>
@@ -4136,31 +4171,7 @@ function renderPlayerPage() {
     : false;
   const rosterEditCard = selectedRosterPlayer
     ? canEditSelectedRosterPlayer
-      ? `
-        <form class="card pad form-grid" data-form="roster-player-edit">
-          <div class="section-head compact-head">
-            <div>
-              <h3>Edit ${escapeHTML(selectedRosterPlayer.name)}</h3>
-              <p class="muted small">Changes update the shared roster for every parent on this team.</p>
-            </div>
-          </div>
-          <div class="field">
-            <label for="editRosterName">Player name</label>
-            <input id="editRosterName" name="name" value="${escapeHTML(selectedRosterPlayer.name)}" required />
-          </div>
-          <div class="form-grid two">
-            <div class="field">
-              <label for="editRosterNumber">Jersey #</label>
-              <input id="editRosterNumber" name="number" value="${escapeHTML(selectedRosterPlayer.number)}" inputmode="numeric" />
-            </div>
-            ${renderPositionPicker({ name: "position", selected: selectedRosterPlayer.position, label: "Positions" })}
-          </div>
-          <div class="inline-input-action">
-            <button class="mini-btn danger" type="button" data-action="remove-roster-player">Delete Player</button>
-            <button class="mini-btn" type="submit">Save Player</button>
-          </div>
-        </form>
-      `
+      ? renderRosterPlayerEditForm(selectedRosterPlayer)
       : ""
     : "";
   const playerDeleteCard = selectedRosterPlayer
