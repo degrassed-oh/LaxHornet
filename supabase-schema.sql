@@ -1348,6 +1348,37 @@ as $$
   where claims.user_id = (select auth.uid());
 $$;
 
+create or replace function public.laxhornet_my_roster_players()
+returns table(
+  id text,
+  team_id text,
+  name text,
+  number text,
+  "position" text,
+  active boolean,
+  created_at timestamptz
+)
+language sql
+security definer
+set search_path = public
+as $$
+  select
+    roster_players.id,
+    roster_players.team_id,
+    roster_players.name,
+    roster_players.number,
+    roster_players.position,
+    roster_players.active,
+    roster_players.created_at
+  from public.roster_players roster_players
+  join public.player_claims claims
+    on claims.team_id = roster_players.team_id
+   and claims.roster_player_id = roster_players.id
+  where claims.user_id = (select auth.uid())
+    and roster_players.active = true
+  order by roster_players.created_at asc;
+$$;
+
 create or replace function public.laxhornet_team_access_codes(check_team_id text)
 returns table(invite_code text, tracker_code text)
 language sql
@@ -1383,6 +1414,7 @@ grant execute on function public.laxhornet_update_roster_player(text, text, text
 grant execute on function public.laxhornet_remove_roster_player(text, text) to authenticated;
 grant execute on function public.laxhornet_claim_roster_player(text, text) to authenticated;
 grant execute on function public.laxhornet_my_player_claims() to authenticated;
+grant execute on function public.laxhornet_my_roster_players() to authenticated;
 grant execute on function public.laxhornet_team_access_codes(text) to authenticated;
 
 drop policy if exists "laxhornet public read games" on public.games;

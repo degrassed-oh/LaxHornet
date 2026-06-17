@@ -20,7 +20,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v79";
+const APP_VERSION = "v80";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -1968,6 +1968,7 @@ async function loadCloudTeams(options = {}) {
     ]);
     await loadEditableTeamAccessCodes();
     await loadPlayerClaims({ silent: true });
+    await loadClaimedRosterPlayers({ silent: true });
   }
   await loadTeamAccessRequests({ silent: true });
 
@@ -2032,6 +2033,26 @@ async function loadPlayerClaims(options = {}) {
   state.playerClaims = normalizePlayerClaims((Array.isArray(data) ? data : []).map(playerClaimFromSupabaseRow));
   if (!options.silent) render();
   return state.playerClaims;
+}
+
+async function loadClaimedRosterPlayers(options = {}) {
+  if (!supabaseClient || !currentUserId()) return [];
+  const { data, error } = await supabaseClient.rpc("laxhornet_my_roster_players");
+  if (error) {
+    if (!options.silent) reportTeamSetupError(error);
+    return [];
+  }
+  const claimedRosterPlayers = normalizeRosterPlayers((Array.isArray(data) ? data : []).map(rosterPlayerFromSupabaseRow));
+  if (claimedRosterPlayers.length) {
+    state.rosterPlayers = normalizeRosterPlayers([
+      ...state.rosterPlayers,
+      ...claimedRosterPlayers,
+    ]);
+    state.activeTeamId = state.activeTeamId || claimedRosterPlayers[0].teamId || "";
+    state.activePlayerId = claimedRosterPlayers[0].id;
+  }
+  if (!options.silent) render();
+  return claimedRosterPlayers;
 }
 
 async function loadCloudGames(options = {}) {
