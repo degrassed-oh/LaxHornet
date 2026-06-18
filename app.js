@@ -21,7 +21,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v142";
+const APP_VERSION = "v143";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -516,7 +516,20 @@ function locallyManagedAdminTeams() {
       createdBy: currentUserId(),
     });
   }).filter(Boolean);
-  return normalizeTeams([...existingTeams, ...playerTeams]);
+  const gameTeams = [state.activeGame, ...state.games].map((game) => {
+    if (!game) return null;
+    const snapshot = gamePlayerSnapshot(game);
+    const teamId = gameTeamId(game) || snapshot.teamId;
+    const teamName = snapshot.team || "";
+    if (!teamId) return null;
+    return normalizeTeam({
+      id: teamId,
+      name: teamName || "Team",
+      role: "admin",
+      createdBy: currentUserId(),
+    });
+  }).filter(Boolean);
+  return normalizeTeams([...existingTeams, ...playerTeams, ...gameTeams]);
 }
 
 function recoverAdminTeamContext() {
@@ -1192,6 +1205,7 @@ function normalizeGame(game = {}, fallbackPlayer = null) {
 }
 
 function persistAll() {
+  recoverAdminTeamContext();
   mergeRosterPlayersIntoPlayers();
   if (!state.activePlayerId) ensureActiveTeamRosterPlayer();
   syncActivePlayer();
