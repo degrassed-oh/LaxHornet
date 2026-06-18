@@ -21,7 +21,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v148";
+const APP_VERSION = "v149";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -3848,31 +3848,33 @@ function renderPlayerVerificationBlock(teamId, options = {}) {
 function renderUnclaimedRosterPlayers(roster = []) {
   if (!roster.length) return "";
   const unclaimed = roster.filter((player) => !hasPlayerClaim(player.teamId, player.id));
+  const claimedCount = roster.length - unclaimed.length;
+  const preview = unclaimed.slice(0, 4);
+  const extraCount = Math.max(0, unclaimed.length - preview.length);
   return `
-    <div class="team-roster-block">
-      <div class="section-head compact-head">
+    <div class="team-roster-block unclaimed-summary-block">
+      <div class="unclaimed-summary-head">
         <div>
           <h4>Unclaimed Players</h4>
-          <p class="muted small">Roster players not yet verified by a parent account.</p>
+          <p class="muted small">${unclaimed.length ? "Parents need team access and jersey verification before tracking these players." : "Every roster player has been verified by a parent account."}</p>
         </div>
+        <strong>${unclaimed.length}/${roster.length}</strong>
       </div>
       ${
         unclaimed.length
-          ? `<div class="admin-request-list">
-              ${unclaimed
+          ? `<div class="unclaimed-pill-row">
+              ${preview
                 .map(
                   (player) => `
-                    <div class="admin-request-row">
-                      <span>
-                        <strong>${escapeHTML(player.name)}</strong>
-                        <small>${player.number ? `#${escapeHTML(player.number)}` : "No jersey"}${player.position ? ` - ${escapeHTML(player.position)}` : ""}</small>
-                      </span>
-                    </div>
+                    <span class="unclaimed-pill">
+                      ${player.number ? `#${escapeHTML(player.number)} ` : ""}${escapeHTML(player.name)}
+                    </span>
                   `,
                 )
                 .join("")}
+              ${extraCount ? `<span class="unclaimed-pill muted-pill">+${extraCount} more</span>` : ""}
             </div>`
-          : `<p class="muted small">Every roster player on this team has been claimed.</p>`
+          : `<p class="muted small unclaimed-meta">${claimedCount} verified player${claimedCount === 1 ? "" : "s"} on this roster.</p>`
       }
     </div>
   `;
@@ -4002,8 +4004,8 @@ function renderTeamRosterCard(options = {}) {
       </div>
 
       ${
-        expanded
-          ? `
+                expanded
+                  ? `
             <div class="team-card-body">
               <div class="team-actions">
                 <button class="mini-btn light" type="button" data-action="sync-team-roster">Sync</button>
@@ -4019,6 +4021,7 @@ function renderTeamRosterCard(options = {}) {
                         : "No approved teams yet. Request access with a code from your team admin."
                     }</p>`
               }
+              ${manageRoster ? renderUnclaimedRosterPlayers(fullTeamRoster) : ""}
 
               ${
                 team
@@ -4034,7 +4037,6 @@ function renderTeamRosterCard(options = {}) {
                             </div>
                             <div class="player-chip-row">${rosterContent}</div>
                             ${selectedTeamRosterPlayer ? renderRosterPlayerEditForm(selectedTeamRosterPlayer, { idPrefix: "teamRosterEdit", inline: true }) : ""}
-                            ${renderUnclaimedRosterPlayers(fullTeamRoster)}
                             ${claimByNumberForm}
                           </div>
                           ${renderAddRosterPlayerBlock()}`

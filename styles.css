@@ -764,6 +764,69 @@ button:disabled {
   border-top: 1px solid var(--line);
 }
 
+.unclaimed-summary-block {
+  margin-top: 4px;
+  padding: 10px 12px;
+  border: 1px solid #dfe2e6;
+  border-radius: var(--radius);
+  background: #f7f8fa;
+}
+
+.unclaimed-summary-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+}
+
+.unclaimed-summary-head h4,
+.unclaimed-summary-head p {
+  margin: 0;
+}
+
+.unclaimed-summary-head h4 {
+  font-size: 0.96rem;
+}
+
+.unclaimed-summary-head strong {
+  min-width: 44px;
+  padding: 5px 8px;
+  border-radius: 999px;
+  color: var(--hornet-red);
+  background: var(--hornet-red-soft);
+  font-size: 0.82rem;
+  font-weight: 950;
+  text-align: center;
+}
+
+.unclaimed-pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.unclaimed-pill {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  padding: 5px 8px;
+  border: 1px solid #d8dadd;
+  border-radius: 999px;
+  color: var(--text);
+  background: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
+.unclaimed-pill.muted-pill {
+  color: var(--muted);
+  background: #eef0f2;
+}
+
+.unclaimed-meta {
+  margin: 0;
+}
+
 .team-requests-card {
   padding-top: 10px;
 }
