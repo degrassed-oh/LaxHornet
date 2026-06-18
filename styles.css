@@ -702,9 +702,34 @@ button:disabled {
 .roster-edit-card.inline {
   margin: 6px 0 16px;
   padding: 12px;
-  border: 1px solid #dfe2e6;
-  background: #f7f8fa;
+  border: 1px solid rgba(232, 16, 16, 0.22);
+  background:
+    linear-gradient(90deg, rgba(232, 16, 16, 0.08), transparent 42%),
+    #fff7f7;
   box-shadow: none;
+}
+
+.roster-action-block {
+  padding: 10px 12px;
+  border: 1px solid rgba(232, 16, 16, 0.26);
+  border-radius: var(--radius);
+  background:
+    linear-gradient(90deg, rgba(232, 16, 16, 0.1), transparent 48%),
+    #fff8f8;
+}
+
+.roster-action-block .collapsible-card-head {
+  min-height: 48px;
+}
+
+.roster-action-block .collapsible-card-head h4 {
+  margin: 0 0 2px;
+}
+
+.roster-action-block .collapse-icon {
+  border-color: rgba(232, 16, 16, 0.28);
+  color: var(--hornet-red);
+  background: #ffffff;
 }
 
 .add-player-block {
@@ -715,15 +740,11 @@ button:disabled {
   padding-bottom: 2px;
 }
 
-.add-player-block .collapsible-card-head {
-  min-height: 48px;
-}
-
-.add-player-block .collapsible-card-head h4 {
-  margin: 0 0 2px;
-}
-
 .add-player-block .team-add-player-form.roster-edit-card.inline {
+  margin: 0;
+}
+
+.edit-player-block .roster-edit-card.inline {
   margin: 0;
 }
 
@@ -825,6 +846,49 @@ button:disabled {
 
 .unclaimed-meta {
   margin: 0;
+}
+
+.access-summary-block {
+  margin-top: 8px;
+}
+
+.access-summary-block .unclaimed-summary-head strong {
+  min-width: 36px;
+}
+
+.access-request-list {
+  display: grid;
+  gap: 8px;
+}
+
+.access-request-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px;
+  border: 1px solid #dfe2e6;
+  border-radius: var(--radius);
+  background: #ffffff;
+}
+
+.access-request-row strong,
+.access-request-row small {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.access-request-row strong {
+  font-size: 0.88rem;
+}
+
+.access-request-row small {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
 }
 
 .team-requests-card {

@@ -21,7 +21,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v149";
+const APP_VERSION = "v150";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -290,6 +290,7 @@ const state = {
   deletedEventIds: initialStoredState.deletedEventIds,
   watchShareExpanded: false,
   teamRosterExpanded: true,
+  teamEditPlayerExpanded: false,
   teamAddPlayerExpanded: false,
   teamAccessExpanded: false,
   exportToolsExpanded: false,
@@ -3693,10 +3694,31 @@ function renderRosterPlayerEditForm(selectedRosterPlayer, options = {}) {
   `;
 }
 
+function renderEditRosterPlayerBlock(selectedRosterPlayer) {
+  const player = normalizePlayer(selectedRosterPlayer);
+  if (!isTeamPlayer(player) || !canManageRoster(player.teamId)) return "";
+  const expanded = state.teamEditPlayerExpanded;
+  const playerSummary = `${playerTitle(player)}${player.position ? ` - ${player.position}` : ""}`;
+  return `
+    <div class="team-roster-block roster-action-block edit-player-block ${expanded ? "expanded" : "collapsed"}">
+      <div class="collapsible-card-head compact-head">
+        <div>
+          <h4>Edit Player</h4>
+          <p class="muted small">${escapeHTML(expanded ? `Editing ${playerTitle(player)}.` : playerSummary)}</p>
+        </div>
+        <button class="collapse-icon" type="button" data-action="toggle-edit-player" aria-expanded="${expanded}" aria-label="${expanded ? "Minimize Edit Player" : "Expand Edit Player"}">
+          <span aria-hidden="true">${expanded ? "v" : ">"}</span>
+        </button>
+      </div>
+      ${expanded ? renderRosterPlayerEditForm(player, { idPrefix: "teamRosterEdit", inline: true }) : ""}
+    </div>
+  `;
+}
+
 function renderAddRosterPlayerBlock() {
   const expanded = state.teamAddPlayerExpanded;
   return `
-    <div class="team-roster-block add-player-block ${expanded ? "expanded" : "collapsed"}">
+    <div class="team-roster-block roster-action-block add-player-block ${expanded ? "expanded" : "collapsed"}">
       <div class="collapsible-card-head compact-head">
         <div>
           <h4>Add Player</h4>
@@ -3735,25 +3757,26 @@ function renderTeamAccessRequests() {
   if (!team || !canManageRoster(team.id)) return "";
   const requests = state.teamAccessRequests.filter((request) => request.teamId === team.id && request.status === "pending");
   return `
-    <div class="team-roster-block">
-      <div class="section-head compact-head">
+    <div class="team-roster-block unclaimed-summary-block access-summary-block">
+      <div class="unclaimed-summary-head">
         <div>
           <h4>Team Access Requests</h4>
-          <p class="muted small">Approve parents before they can see this roster or track a player.</p>
+          <p class="muted small">${requests.length ? "Pending parents need approval before they can see the roster or track a verified player." : "No parents are waiting for access to this team."}</p>
         </div>
+        <strong>${requests.length}</strong>
       </div>
       ${
         requests.length
-          ? `<div class="admin-request-list">
+          ? `<div class="access-request-list">
               ${requests
                 .map(
                   (request) => {
                     const parentName = [request.firstName, request.lastName].filter(Boolean).join(" ");
                     return `
-                    <div class="admin-request-row detailed">
+                    <div class="access-request-row">
                       <span>
                         <strong>${escapeHTML(parentName || request.email || "Unknown parent")}</strong>
-                          <small>${escapeHTML(request.email || "No email")} - ${teamRoleLabel(request.requestedRole)} - Jersey #${escapeHTML(request.childJerseyNumber || "not provided")}${request.phone ? ` - ${escapeHTML(request.phone)}` : ""}</small>
+                        <small>Jersey #${escapeHTML(request.childJerseyNumber || "not provided")} - ${escapeHTML(request.email || "No email")}</small>
                       </span>
                       <span class="event-actions">
                         <button class="mini-btn" type="button" data-review-team-access="${request.id}" data-approved="true">Approve</button>
@@ -3765,7 +3788,7 @@ function renderTeamAccessRequests() {
                 )
                 .join("")}
             </div>`
-          : `<p class="muted small">No pending team access requests.</p>`
+          : `<p class="muted small unclaimed-meta">Share the team code when a parent needs access.</p>`
       }
     </div>
   `;
@@ -4022,6 +4045,7 @@ function renderTeamRosterCard(options = {}) {
                     }</p>`
               }
               ${manageRoster ? renderUnclaimedRosterPlayers(fullTeamRoster) : ""}
+              ${manageRoster ? renderTeamAccessRequests() : ""}
 
               ${
                 team
@@ -4036,16 +4060,11 @@ function renderTeamRosterCard(options = {}) {
                               </div>
                             </div>
                             <div class="player-chip-row">${rosterContent}</div>
-                            ${selectedTeamRosterPlayer ? renderRosterPlayerEditForm(selectedTeamRosterPlayer, { idPrefix: "teamRosterEdit", inline: true }) : ""}
                             ${claimByNumberForm}
                           </div>
+                          ${selectedTeamRosterPlayer ? renderEditRosterPlayerBlock(selectedTeamRosterPlayer) : ""}
                           ${renderAddRosterPlayerBlock()}`
                         : `${claimByNumberForm}`
-                    }
-                    ${
-                      manageRoster
-                        ? renderTeamAccessRequests()
-                        : ""
                     }
                   `
                   : ""
@@ -5974,6 +5993,10 @@ function handleClick(event) {
     }
     if (action.dataset.action === "toggle-team-roster") {
       state.teamRosterExpanded = !state.teamRosterExpanded;
+      render();
+    }
+    if (action.dataset.action === "toggle-edit-player") {
+      state.teamEditPlayerExpanded = !state.teamEditPlayerExpanded;
       render();
     }
     if (action.dataset.action === "toggle-add-player") {
