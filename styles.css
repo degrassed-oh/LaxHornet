@@ -1121,6 +1121,12 @@ button:disabled {
   line-height: 1.35;
 }
 
+.review-tool-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
 .season-groups {
   display: grid;
   gap: 12px;

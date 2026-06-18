@@ -21,7 +21,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v154";
+const APP_VERSION = "v155";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -311,6 +311,7 @@ const state = {
   sharedCode: startupShareCode,
   syncStatus: supabaseClient ? "Live Share ready" : "Live Share unavailable",
   cloudError: "",
+  addingReviewEvent: false,
   editingEventId: null,
   editingGameDetails: false,
   tagEditingEventId: null,
@@ -1214,20 +1215,65 @@ function impactTakeaway(events = [], breakdown = []) {
   if (!events.length || !activeBreakdowns.length) return "Log game events to build a Game Impact profile.";
   const biggest = activeBreakdowns.reduce((best, item) => (item.score > best.score ? item : best), activeBreakdowns[0]);
   const count = (key) => events.filter((event) => event.statType === key).length;
+  const goals = count("goal");
+  const assists = count("assist");
+  const shotsOnGoal = count("shotOnGoal");
+  const missedShots = count("shot");
+  const saves = count("goalieSave");
+  const goalsAllowed = count("goalAllowed");
+  const faceoffWins = count("faceoffWin");
+  const faceoffLosses = count("faceoffLoss");
+  const defensiveWins = count("causedTurnover") + count("defensiveStop");
+  const clears = count("successfulClear");
+  const failedClears = count("failedClear");
+  const hustle = count("hustlePlay") + count("backedUpShot") + count("smartPlay");
   const extraPossessions =
     count("groundBall") +
-    count("faceoffWin") +
+    faceoffWins +
     count("causedTurnover") +
     count("backedUpShot") +
-    count("successfulClear");
-  const mistakes = count("turnover") + count("failedClear") + count("penalty") + count("goalAllowed");
-  const extraCopy = extraPossessions
-    ? `created ${extraPossessions} possession ${extraPossessions === 1 ? "play" : "plays"}`
-    : "limited possession-changing plays";
-  const mistakeCopy = mistakes
-    ? `with ${mistakes} mistake ${mistakes === 1 ? "event" : "events"} logged`
-    : "with no major negative events logged";
-  return `Biggest impact came from ${biggest.label.toLowerCase()}. The player ${extraCopy}, ${mistakeCopy}.`;
+    clears;
+  const mistakes = count("turnover") + failedClears + count("penalty") + goalsAllowed;
+  const scoringChances = goals + shotsOnGoal + assists;
+  const shotAttempts = goals + shotsOnGoal + missedShots;
+  const efficiency = shotAttempts ? goals / shotAttempts : 0;
+  const faceoffAttempts = faceoffWins + faceoffLosses;
+  const saveLooksStrong = saves >= 5 && saves >= goalsAllowed;
+  const lines = [];
+
+  if (biggest.key === "scoring" && scoringChances) {
+    lines.push(
+      efficiency >= 0.4
+        ? `Scoring drove the impact: ${goals} goal${goals === 1 ? "" : "s"}, ${assists} assist${assists === 1 ? "" : "s"}, and efficient shot selection.`
+        : `Scoring volume was the main driver, but ${missedShots} missed shot${missedShots === 1 ? "" : "s"} kept the score from climbing higher.`,
+    );
+  } else if (biggest.key === "possession") {
+    lines.push(`Possession work led the profile: ${extraPossessions} extra-possession play${extraPossessions === 1 ? "" : "s"} helped keep the ball with the team.`);
+  } else if (biggest.key === "defense") {
+    lines.push(`Defensive pressure stood out: ${defensiveWins} stop or caused-turnover event${defensiveWins === 1 ? "" : "s"} reduced opponent chances.`);
+  } else if (biggest.key === "goalie") {
+    lines.push(
+      saveLooksStrong
+        ? `Goalie impact was strong: ${saves} save${saves === 1 ? "" : "s"} stabilized the game without over-penalizing goals allowed.`
+        : `Goalie impact was mixed, with ${saves} save${saves === 1 ? "" : "s"} and ${goalsAllowed} goal${goalsAllowed === 1 ? "" : "s"} allowed.`,
+    );
+  } else {
+    lines.push(`Effort and IQ showed up most: ${hustle} hustle, backed-up-shot, or smart-play event${hustle === 1 ? "" : "s"} added value beyond the box score.`);
+  }
+
+  if (faceoffAttempts) {
+    lines.push(`At the stripe, the player went ${faceoffWins}-${faceoffAttempts}, which ${faceoffWins > faceoffLosses ? "created possession leverage" : "limited possession impact"}.`);
+  } else if (extraPossessions) {
+    lines.push(`The player created ${extraPossessions} possession swing${extraPossessions === 1 ? "" : "s"} through ground balls, clears, backed-up shots, or defensive pressure.`);
+  }
+
+  if (mistakes) {
+    lines.push(`${mistakes} negative event${mistakes === 1 ? "" : "s"} pulled the score down, so cleaner possessions would raise impact quickly.`);
+  } else {
+    lines.push("No major negative events were logged, which protected the overall impact score.");
+  }
+
+  return lines.join(" ");
 }
 
 function periodFormatForGame(game = {}) {
@@ -1763,6 +1809,7 @@ function deleteGame(id) {
   (game.events || []).forEach((event) => rememberDeletedEvent(event.id));
   state.games = state.games.filter((item) => item.id !== id);
   if (state.activeGame?.id === id) state.activeGame = null;
+  state.addingReviewEvent = false;
   state.editingGameDetails = false;
   state.editingEventId = null;
   state.tagEditingEventId = null;
@@ -1789,6 +1836,7 @@ function deleteEvent(gameId, eventId) {
     events: game.events.filter((item) => item.id !== eventId),
   };
   rememberDeletedEvent(eventId);
+  state.addingReviewEvent = false;
   if (state.editingEventId === eventId) state.editingEventId = null;
   if (state.tagEditingEventId === eventId) state.tagEditingEventId = null;
   deleteSupabaseEvent(eventId);
@@ -4942,6 +4990,42 @@ function renderEventEditForm(game, event) {
   `;
 }
 
+function renderEventAddForm(game) {
+  const statOptions = STAT_DEFS.map(
+    (stat) => `<option value="${stat.key}">${stat.label} (${pointText(stat.points)})</option>`,
+  ).join("");
+  const periods = periodsForGame(game);
+  const defaultPeriod = game.currentQuarter && periods.includes(game.currentQuarter) ? game.currentQuarter : periods[0];
+  const periodOptions = periods.map(
+    (period) => `<option value="${period}" ${period === defaultPeriod ? "selected" : ""}>${period}</option>`,
+  ).join("");
+
+  return `
+    <form class="card pad form-grid edit-event-form" data-form="event-add" data-game-id="${game.id}">
+      <h3>Add Missed Event</h3>
+      <p class="muted small">Use this to correct the timeline after the game. The new event is added now; existing event timestamps are unchanged.</p>
+      <div class="form-grid two">
+        <div class="field">
+          <label for="addStat">Stat type</label>
+          <select id="addStat" name="statType">${statOptions}</select>
+        </div>
+        <div class="field">
+          <label for="addQuarter">Period</label>
+          <select id="addQuarter" name="quarter">${periodOptions}</select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="addNote">Note</label>
+        <textarea id="addNote" name="note" placeholder="Optional correction note"></textarea>
+      </div>
+      <div class="edit-actions">
+        <button class="btn positive" type="submit">Add Event</button>
+        <button class="btn secondary" type="button" data-action="cancel-add-event">Cancel</button>
+      </div>
+    </form>
+  `;
+}
+
 function renderGameEditForm(game) {
   const currentPlayerId = gamePlayerId(game) || state.activePlayerId;
   const playerOptions = state.players
@@ -5054,13 +5138,15 @@ function renderReview() {
   const player = gamePlayerSnapshot(game);
   const totals = calculateTotals(game.events, player);
   const canEditCurrentGame = canEditGame(game);
-  const canShowGameEdit = canEditCurrentGame && !state.editingGameDetails;
   const editingEvent = state.editingEventId
     ? game.events.find((event) => event.id === state.editingEventId)
     : null;
   const tagEditingEvent = state.tagEditingEventId
     ? game.events.find((event) => event.id === state.tagEditingEventId)
     : null;
+  const correctionPanelOpen = state.addingReviewEvent || state.editingGameDetails || editingEvent || tagEditingEvent;
+  const canShowGameEdit = canEditCurrentGame && !correctionPanelOpen;
+  const canShowAddEvent = canEditCurrentGame && !correctionPanelOpen;
   return renderShell(`
     <section class="screen-title">
       <h2>Game Review</h2>
@@ -5075,7 +5161,13 @@ function renderReview() {
         <div class="metric"><strong>${totals.assists}</strong><span>Assists</span></div>
       </div>
       ${renderImpactBreakdown(totals)}
-      ${canShowGameEdit ? `<button class="btn neutral" type="button" data-action="edit-game-details">Edit Game Details</button>` : ""}
+      ${canEditCurrentGame ? `
+        <div class="review-tool-actions">
+          ${canShowAddEvent ? `<button class="btn neutral" type="button" data-action="add-review-event">Add Event</button>` : ""}
+          ${canShowGameEdit ? `<button class="btn secondary" type="button" data-action="edit-game-details">Edit Game Details</button>` : ""}
+        </div>
+      ` : ""}
+      ${state.addingReviewEvent && canEditCurrentGame ? renderEventAddForm(game) : ""}
       ${state.editingGameDetails && canEditCurrentGame ? renderGameEditForm(game) : ""}
       ${renderTotalsTable(totals)}
       ${editingEvent && canEditCurrentGame ? renderEventEditForm(game, editingEvent) : ""}
@@ -5997,6 +6089,42 @@ function handleSubmit(event) {
     showToast("Live game started");
   }
 
+  if (form.dataset.form === "event-add") {
+    const game = state.games.find((item) => item.id === form.dataset.gameId);
+    if (!game) return;
+    if (!canEditGame(game)) {
+      showToast("View-only team access");
+      return;
+    }
+
+    const stat = STAT_BY_KEY[formData.get("statType")];
+    if (!stat) return;
+
+    const newEvent = {
+      id: uid("event"),
+      gameId: game.id,
+      userId: game.userId || currentUserId() || "",
+      teamId: gameTeamId(game),
+      rosterPlayerId: gameRosterPlayerId(game),
+      timestamp: new Date().toISOString(),
+      quarter: formData.get("quarter") || periodsForGame(game)[0],
+      statType: stat.key,
+      statLabel: stat.label,
+      category: stat.category,
+      pointValue: stat.points,
+      tags: [],
+      note: formData.get("note")?.trim() || "",
+      fieldZone: "",
+      correctedAt: new Date().toISOString(),
+    };
+
+    state.addingReviewEvent = false;
+    state.editingEventId = null;
+    state.tagEditingEventId = null;
+    saveReviewedGame({ ...game, events: [...game.events, newEvent] }, "Event added");
+    render();
+  }
+
   if (form.dataset.form === "event-edit") {
     const game = state.games.find((item) => item.id === form.dataset.gameId);
     if (!game) return;
@@ -6140,6 +6268,24 @@ function handleClick(event) {
       state.editingEventId = null;
       render();
     }
+    if (action.dataset.action === "add-review-event") {
+      const game = currentReviewGame();
+      if (game && !canEditGame(game)) {
+        showToast("View-only team access");
+        return;
+      }
+      state.addingReviewEvent = true;
+      state.editingEventId = null;
+      state.tagEditingEventId = null;
+      state.tagDraftTags = [];
+      state.editingGameDetails = false;
+      render();
+      document.querySelector(".edit-event-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    if (action.dataset.action === "cancel-add-event") {
+      state.addingReviewEvent = false;
+      render();
+    }
     if (action.dataset.action === "edit-game-details") {
       const game = currentReviewGame();
       if (game && !canEditGame(game)) {
@@ -6147,6 +6293,7 @@ function handleClick(event) {
         return;
       }
       state.editingGameDetails = true;
+      state.addingReviewEvent = false;
       state.editingEventId = null;
       state.tagEditingEventId = null;
       render();
@@ -6249,6 +6396,8 @@ function handleClick(event) {
       return;
     }
     state.editingEventId = editEvent.dataset.editEvent;
+    state.addingReviewEvent = false;
+    state.editingGameDetails = false;
     state.tagEditingEventId = null;
     state.tagDraftTags = [];
     render();
@@ -6263,6 +6412,8 @@ function handleClick(event) {
       showToast("View-only team access");
       return;
     }
+    state.addingReviewEvent = false;
+    state.editingGameDetails = false;
     state.editingEventId = null;
     beginTagEdit(editTags.dataset.editTags);
     return;
