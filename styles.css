@@ -436,7 +436,7 @@ button:disabled {
 .player-chip {
   display: inline-flex;
   min-width: 132px;
-  min-height: 56px;
+  min-height: 68px;
   flex: 1 1 calc(50% - 4px);
   flex-direction: column;
   align-items: flex-start;
@@ -470,6 +470,17 @@ button:disabled {
   color: var(--muted);
   font-size: 0.78rem;
   font-weight: 850;
+}
+
+.player-chip .player-chip-status {
+  color: #52606c;
+  font-size: 0.68rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.player-chip .player-chip-status.unverified {
+  color: var(--hornet-red);
 }
 
 .player-chip.active {
