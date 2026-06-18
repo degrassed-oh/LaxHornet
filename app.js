@@ -21,7 +21,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v136";
+const APP_VERSION = "v137";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -2095,7 +2095,7 @@ async function loadCloudTeams(options = {}) {
   if (!supabaseClient || !currentUserId()) return;
   const { data: memberRows, error: memberError } = await supabaseClient
     .from("team_members")
-    .select("team_id, role, teams(id,name,invite_code,created_by,created_at)")
+    .select("team_id, role, teams(id,name,invite_code,tracker_code,created_by,created_at)")
     .eq("user_id", currentUserId());
 
   if (memberError) {
@@ -2723,6 +2723,11 @@ async function createTeam(formData) {
 
   const createdTeam = teamFromSupabaseRows((Array.isArray(teamRows) ? teamRows[0] : teamRows) || team);
   state.teams = normalizeTeams([...state.teams, createdTeam]);
+  state.activeTeamId = createdTeam.id;
+  await loadCloudTeams({ silent: true });
+  if (!state.teams.some((item) => item.id === createdTeam.id)) {
+    state.teams = normalizeTeams([...state.teams, createdTeam]);
+  }
   state.activeTeamId = createdTeam.id;
   persistAll();
   render();
