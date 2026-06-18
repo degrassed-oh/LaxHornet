@@ -21,7 +21,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v158";
+const APP_VERSION = "v159";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -5326,8 +5326,8 @@ function renderReview() {
       <div class="metric-grid">
         <div class="metric"><strong>${totals.impact}</strong><span>Game Impact</span></div>
         <div class="metric"><strong>${totals.points}</strong><span>Points</span></div>
-        <div class="metric"><strong>${signedMetric(totals.possessionValue)}</strong><span>Possession Value</span></div>
         <div class="metric"><strong>${totals.goals}</strong><span>Goals</span></div>
+        <div class="metric"><strong>${totals.assists}</strong><span>Assists</span></div>
       </div>
       ${renderImpactBreakdown(totals)}
       ${renderPossessionImpact(totals)}
@@ -5407,6 +5407,9 @@ function renderSharedGame() {
 
 function renderTotalsTable(totals) {
   const rows = [
+    ["Goals", totals.goals],
+    ["Assists", totals.assists],
+    ["Points", totals.points],
     ["Shots", totals.shots],
     ["Shots on goal", totals.shotsOnGoal],
     ["Shooting %", pct(totals.shootingPct)],
