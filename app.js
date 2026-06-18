@@ -21,7 +21,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v150";
+const APP_VERSION = "v151";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -3904,6 +3904,7 @@ function renderUnclaimedRosterPlayers(roster = []) {
 }
 
 function renderMyTeamAccessRequests() {
+  if (canCreateTeams()) return "";
   const ownRequests = state.teamAccessRequests.filter((request) => request.userId === currentUserId());
   if (!ownRequests.length) return "";
   return `
@@ -4032,7 +4033,7 @@ function renderTeamRosterCard(options = {}) {
             <div class="team-card-body">
               <div class="team-actions">
                 <button class="mini-btn light" type="button" data-action="sync-team-roster">Sync</button>
-                <button class="mini-btn light" type="button" data-action="toggle-team-access">Request Access</button>
+                ${canCreateTeams() ? "" : `<button class="mini-btn light" type="button" data-action="toggle-team-access">Request Access</button>`}
                 ${manageRoster ? `<button class="mini-btn danger" type="button" data-action="delete-team">Delete Team</button>` : ""}
               </div>
               ${
@@ -4381,6 +4382,7 @@ function renderProfileSetup() {
 }
 
 function renderTeamAccessTools() {
+  if (canCreateTeams()) return "";
   const team = activeTeam();
   const requestList = renderMyTeamAccessRequests();
   const expanded = state.teamAccessExpanded;
