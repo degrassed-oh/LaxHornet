@@ -1,0 +1,866 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LaxHornet Team Stat Keeper Mockup</title>
+    <style>
+      :root {
+        --red: #e81010;
+        --black: #090909;
+        --ink: #111317;
+        --carbon: #171717;
+        --carbon-2: #222222;
+        --card: #f5f6f7;
+        --white: #ffffff;
+        --muted: #626a74;
+        --line: #d8dadd;
+        --green: #0d6f3d;
+        --teal: #1f6f6a;
+        --orange: #a84624;
+        --bluegray: #344250;
+        --radius: 10px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+        margin: 0;
+        background: var(--black);
+        color: var(--white);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+      }
+
+      button {
+        border: 0;
+        font: inherit;
+        cursor: pointer;
+      }
+
+      .mockup-shell {
+        min-width: 1024px;
+        max-width: 1366px;
+        height: 100vh;
+        margin: 0 auto;
+        overflow: hidden;
+        padding: 14px;
+        background:
+          radial-gradient(circle at 86% 6%, rgba(232, 16, 16, 0.16), transparent 22rem),
+          linear-gradient(180deg, #1a1a1a 0%, #111 45%, #090909 100%);
+      }
+
+      .topbar {
+        display: grid;
+        grid-template-columns: 270px minmax(0, 1fr) 260px;
+        gap: 14px;
+        align-items: center;
+        min-height: 66px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+      }
+
+      .logo {
+        width: 220px;
+        height: auto;
+      }
+
+      .game-title {
+        display: grid;
+        gap: 4px;
+      }
+
+      .game-title h1 {
+        margin: 0;
+        font-size: 1.72rem;
+        line-height: 1;
+      }
+
+      .game-title p {
+        margin: 0;
+        color: #c9ced4;
+        font-size: 0.9rem;
+        font-weight: 750;
+      }
+
+      .game-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+
+      .pill-button {
+        min-height: 40px;
+        border-radius: 999px;
+        color: var(--ink);
+        background: var(--white);
+        font-weight: 950;
+      }
+
+      .pill-button.red {
+        color: var(--white);
+        background: var(--red);
+      }
+
+      .game-strip {
+        display: grid;
+        grid-template-columns: 1.1fr 0.75fr 0.9fr 1fr;
+        gap: 10px;
+        margin-top: 10px;
+      }
+
+      .status-card {
+        display: grid;
+        gap: 4px;
+        min-height: 64px;
+        padding: 10px 12px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: var(--radius);
+        background: rgba(255, 255, 255, 0.94);
+        color: var(--ink);
+      }
+
+      .status-card span {
+        color: var(--muted);
+        font-size: 0.72rem;
+        font-weight: 950;
+        text-transform: uppercase;
+      }
+
+      .status-card strong {
+        font-size: 1.18rem;
+        line-height: 1;
+      }
+
+      .period-controls {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 6px;
+        margin-top: 4px;
+      }
+
+      .period-controls button {
+        min-height: 26px;
+        border-radius: 7px;
+        color: #9da4ac;
+        background: #e8eaed;
+        font-size: 0.74rem;
+        font-weight: 950;
+      }
+
+      .period-controls .active {
+        color: var(--white);
+        background: var(--red);
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 368px;
+        gap: 14px;
+        height: calc(100vh - 188px);
+        margin-top: 10px;
+        min-height: 0;
+      }
+
+      .layout > div,
+      aside {
+        display: grid;
+        gap: 10px;
+        min-height: 0;
+      }
+
+      .layout > div {
+        grid-template-rows: minmax(0, 1fr) 102px;
+      }
+
+      aside {
+        grid-template-rows: minmax(0, 1fr) 172px;
+      }
+
+      .field-panel,
+      .stat-panel,
+      .bench-panel,
+      .timeline-panel {
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 14px;
+        background: rgba(245, 246, 247, 0.98);
+        color: var(--ink);
+        box-shadow: 0 18px 34px rgba(0, 0, 0, 0.22);
+      }
+
+      .field-panel {
+        display: grid;
+        grid-template-rows: auto auto minmax(0, 1fr) auto;
+        min-height: 0;
+        overflow: hidden;
+      }
+
+      .panel-head {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 11px 14px 6px;
+      }
+
+      .panel-head h2,
+      .panel-head h3 {
+        margin: 0;
+        font-size: 1rem;
+        line-height: 1;
+      }
+
+      .panel-head p {
+        margin: 4px 0 0;
+        color: var(--muted);
+        font-size: 0.76rem;
+        font-weight: 700;
+      }
+
+      .count-pill {
+        padding: 7px 10px;
+        border-radius: 999px;
+        color: var(--white);
+        background: var(--carbon);
+        font-size: 0.82rem;
+        font-weight: 950;
+      }
+
+      .selected-readout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 8px;
+        align-items: center;
+        margin: 0 14px 9px;
+        padding: 8px 9px;
+        border-left: 6px solid var(--red);
+        border-radius: var(--radius);
+        background: #fff;
+      }
+
+      .selected-readout span {
+        color: var(--muted);
+        font-size: 0.78rem;
+        font-weight: 850;
+      }
+
+      .selected-readout strong {
+        display: block;
+        font-size: 1.04rem;
+      }
+
+      .field-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-auto-rows: minmax(0, 1fr);
+        gap: 8px;
+        min-height: 0;
+        padding: 0 14px 10px;
+      }
+
+      .player-tile {
+        position: relative;
+        display: grid;
+        min-height: 0;
+        gap: 4px;
+        padding: 9px;
+        border: 2px solid transparent;
+        border-radius: var(--radius);
+        color: var(--ink);
+        background:
+          linear-gradient(90deg, var(--tile-color, var(--red)) 0 6px, transparent 6px),
+          #ffffff;
+        text-align: left;
+      }
+
+      .player-tile.selected {
+        border-color: var(--red);
+        box-shadow: 0 0 0 4px rgba(232, 16, 16, 0.18);
+      }
+
+      .player-tile .number {
+        font-size: 1.7rem;
+        font-weight: 1000;
+        line-height: 0.9;
+      }
+
+      .player-tile .name {
+        font-size: 0.82rem;
+        font-weight: 950;
+        line-height: 1.05;
+      }
+
+      .player-tile .meta {
+        color: var(--muted);
+        font-size: 0.66rem;
+        font-weight: 900;
+        text-transform: uppercase;
+      }
+
+      .player-tile .time {
+        align-self: end;
+        color: var(--red);
+        font-size: 0.72rem;
+        font-weight: 950;
+      }
+
+      .field-footer {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 12px;
+        align-items: center;
+        padding: 9px 14px;
+        border-top: 1px solid var(--line);
+        background: #fff;
+      }
+
+      .field-footer p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.74rem;
+        font-weight: 750;
+      }
+
+      .small-actions {
+        display: flex;
+        gap: 8px;
+      }
+
+      .mini {
+        min-height: 34px;
+        padding: 8px 11px;
+        border-radius: 8px;
+        color: var(--white);
+        background: var(--bluegray);
+        font-size: 0.82rem;
+        font-weight: 950;
+      }
+
+      .mini.light {
+        color: var(--ink);
+        background: #edf0f3;
+        border: 1px solid var(--line);
+      }
+
+      .stat-panel {
+        display: grid;
+        align-content: start;
+        gap: 9px;
+        min-height: 0;
+        overflow: hidden;
+        padding: 12px;
+      }
+
+      .stat-panel h2 {
+        margin: 0;
+        font-size: 1.04rem;
+      }
+
+      .stat-help {
+        margin: -6px 0 0;
+        color: var(--muted);
+        font-size: 0.74rem;
+        font-weight: 740;
+      }
+
+      .stat-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 7px;
+      }
+
+      .stat-button {
+        display: grid;
+        align-content: space-between;
+        min-height: 68px;
+        padding: 10px;
+        border-radius: var(--radius);
+        color: var(--white);
+        background:
+          linear-gradient(90deg, var(--accent) 0 6px, transparent 6px),
+          linear-gradient(180deg, #242424, #141414);
+        text-align: left;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+      }
+
+      .stat-button strong {
+        font-size: 0.88rem;
+        line-height: 1.05;
+      }
+
+      .stat-button span {
+        color: rgba(255, 255, 255, 0.78);
+        font-size: 0.65rem;
+        font-weight: 850;
+      }
+
+      .stat-button.disabled {
+        opacity: 0.55;
+      }
+
+      .special-card {
+        display: grid;
+        gap: 7px;
+        padding: 9px;
+        border-radius: var(--radius);
+        background: #ffffff;
+      }
+
+      .special-card h3 {
+        margin: 0;
+        font-size: 0.82rem;
+      }
+
+      .special-card p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.66rem;
+        font-weight: 750;
+      }
+
+      .quick-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 7px;
+      }
+
+      .bench-panel {
+        margin-top: 0;
+        overflow: hidden;
+        padding: 10px 12px;
+      }
+
+      .bench-grid {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 7px;
+      }
+
+      .bench-player {
+        min-height: 44px;
+        padding: 7px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        color: var(--ink);
+        background: #fff;
+        text-align: left;
+      }
+
+      .bench-player strong {
+        display: block;
+        font-size: 0.84rem;
+      }
+
+      .bench-player span {
+        color: var(--muted);
+        font-size: 0.58rem;
+        font-weight: 850;
+      }
+
+      .timeline-panel {
+        margin-top: 0;
+        min-height: 0;
+        overflow: hidden;
+        padding: 11px 12px;
+      }
+
+      .event-list {
+        display: grid;
+        gap: 7px;
+        max-height: 96px;
+        overflow: hidden;
+      }
+
+      .event-row {
+        display: grid;
+        grid-template-columns: 56px minmax(0, 1fr) auto;
+        gap: 10px;
+        align-items: center;
+        min-height: 40px;
+        padding: 7px;
+        border-left: 5px solid var(--red);
+        border-radius: 8px;
+        background: #fff;
+      }
+
+      .event-row .jersey {
+        font-size: 1.12rem;
+        font-weight: 1000;
+      }
+
+      .event-row strong {
+        display: block;
+        font-size: 0.88rem;
+      }
+
+      .event-row span {
+        color: var(--muted);
+        font-size: 0.72rem;
+        font-weight: 850;
+      }
+
+      .event-row .period {
+        color: var(--red);
+        font-weight: 1000;
+      }
+
+      .toast {
+        position: fixed;
+        right: 22px;
+        bottom: 22px;
+        padding: 12px 16px;
+        border-radius: var(--radius);
+        color: var(--white);
+        background: rgba(9, 9, 9, 0.94);
+        font-weight: 900;
+        box-shadow: 0 16px 28px rgba(0, 0, 0, 0.34);
+      }
+
+      @media (max-width: 1100px) {
+        .mockup-shell {
+          min-width: 980px;
+        }
+
+        .layout {
+          grid-template-columns: minmax(0, 1fr) 340px;
+        }
+
+        .field-grid {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="mockup-shell">
+      <header class="topbar">
+        <img class="logo" src="assets/laxhornet-logo.png" alt="LaxHornet" />
+        <div class="game-title">
+          <h1>Team Stat Keeper Mode</h1>
+          <p>iPad landscape concept: on-field tracking, player attribution, and time on field.</p>
+        </div>
+        <div class="game-actions">
+          <button class="pill-button">Undo</button>
+          <button class="pill-button red">End Game</button>
+        </div>
+      </header>
+
+      <section class="game-strip" aria-label="Game status">
+        <div class="status-card">
+          <span>Matchup</span>
+          <strong>CT Blazers vs Rival</strong>
+        </div>
+        <div class="status-card">
+          <span>Period</span>
+          <strong>Q2</strong>
+          <div class="period-controls">
+            <button>Q1</button>
+            <button class="active">Q2</button>
+            <button>Q3</button>
+            <button>Q4</button>
+          </div>
+        </div>
+        <div class="status-card">
+          <span>Game Clock</span>
+          <strong id="gameClock">08:00</strong>
+        </div>
+        <div class="status-card">
+          <span>Selected</span>
+          <strong id="selectedMini">Tap a player</strong>
+        </div>
+      </section>
+
+      <section class="layout">
+        <div>
+          <section class="field-panel" aria-label="On-field player grid">
+            <div class="panel-head">
+              <div>
+                <h2>On Field</h2>
+                <p>Only these players can receive stats. Their shift clocks run while they are on field.</p>
+              </div>
+              <span class="count-pill">12 / 12 on field</span>
+            </div>
+            <div class="selected-readout">
+              <div>
+                <span>Current target</span>
+                <strong id="selectedReadout">Select a player, then tap a stat</strong>
+              </div>
+              <button class="mini light" id="clearSelection">Clear</button>
+            </div>
+            <div class="field-grid" id="fieldGrid"></div>
+            <div class="field-footer">
+              <p><strong>Sub workflow:</strong> tap an on-field player, then tap a bench player to swap. The outgoing player's shift time pauses.</p>
+              <div class="small-actions">
+                <button class="mini light">Line Change</button>
+                <button class="mini">Save Shift</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="bench-panel">
+            <div class="panel-head" style="padding: 0 0 10px;">
+              <div>
+                <h3>Bench / Available</h3>
+                <p>Tap a bench player after selecting someone on field to make a substitution.</p>
+              </div>
+            </div>
+            <div class="bench-grid" id="benchGrid"></div>
+          </section>
+        </div>
+
+        <aside>
+          <section class="stat-panel" aria-label="Team stat buttons">
+            <div>
+              <h2>Stat Pad</h2>
+              <p class="stat-help">Fast path: player first, stat second. Faceoff won/lost automatically counts a faceoff taken.</p>
+            </div>
+
+            <div class="stat-grid" id="statGrid"></div>
+
+            <section class="special-card">
+              <h3>Faceoff</h3>
+              <p>Select the faceoff player, then choose result.</p>
+              <div class="quick-row">
+                <button class="stat-button" style="--accent: var(--green)" data-stat="Faceoff Won" data-auto="Faceoff Taken">
+                  <strong>FO Won</strong>
+                  <span>taken + won</span>
+                </button>
+                <button class="stat-button" style="--accent: var(--orange)" data-stat="Faceoff Lost" data-auto="Faceoff Taken">
+                  <strong>FO Lost</strong>
+                  <span>taken only</span>
+                </button>
+              </div>
+            </section>
+
+            <section class="special-card">
+              <h3>Goalie Quick Target</h3>
+              <p>Save and Goal Allowed can auto-log to the active goalie.</p>
+              <div class="quick-row">
+                <button class="stat-button" style="--accent: var(--teal)" data-goalie-stat="Save">
+                  <strong>Save</strong>
+                  <span>to active goalie</span>
+                </button>
+                <button class="stat-button" style="--accent: var(--orange)" data-goalie-stat="Goal Allowed">
+                  <strong>Goal Allowed</strong>
+                  <span>to active goalie</span>
+                </button>
+              </div>
+            </section>
+          </section>
+
+          <section class="timeline-panel">
+            <div class="panel-head" style="padding: 0 0 10px;">
+              <div>
+                <h3>Recent Events</h3>
+                <p>Tap-to-edit would live here in the real build.</p>
+              </div>
+            </div>
+            <div class="event-list" id="eventList"></div>
+          </section>
+        </aside>
+      </section>
+    </main>
+
+    <script>
+      const onField = [
+        { id: "p1", number: 5, name: "Sam Vila", pos: "Mid", color: "#8f1b1b", seconds: 382 },
+        { id: "p2", number: 11, name: "Wells", pos: "Attack", color: "#0d6f3d", seconds: 418 },
+        { id: "p3", number: 14, name: "Reed", pos: "Attack", color: "#0d6f3d", seconds: 404 },
+        { id: "p4", number: 22, name: "Carver", pos: "Attack", color: "#0d6f3d", seconds: 376 },
+        { id: "p5", number: 3, name: "Mason", pos: "Mid", color: "#8f1b1b", seconds: 336 },
+        { id: "p6", number: 8, name: "Cole", pos: "Mid", color: "#8f1b1b", seconds: 355 },
+        { id: "p7", number: 18, name: "Nolan", pos: "Defense", color: "#1f6f6a", seconds: 480 },
+        { id: "p8", number: 24, name: "Brady", pos: "Defense", color: "#1f6f6a", seconds: 471 },
+        { id: "p9", number: 31, name: "Hayes", pos: "Defense", color: "#1f6f6a", seconds: 466 },
+        { id: "p10", number: 42, name: "Drew", pos: "LSM", color: "#344250", seconds: 244 },
+        { id: "p11", number: 2, name: "Finn", pos: "FO", color: "#5e5140", seconds: 218 },
+        { id: "p12", number: 80, name: "Jones", pos: "Goalie", color: "#5d4d6a", seconds: 960 },
+      ];
+
+      const bench = [
+        { id: "b1", number: 7, name: "Ryan", pos: "Mid", color: "#8f1b1b", seconds: 190 },
+        { id: "b2", number: 16, name: "Blake", pos: "Attack", color: "#0d6f3d", seconds: 122 },
+        { id: "b3", number: 19, name: "Owen", pos: "Defense", color: "#1f6f6a", seconds: 248 },
+        { id: "b4", number: 27, name: "Luke", pos: "Mid", color: "#8f1b1b", seconds: 166 },
+        { id: "b5", number: 33, name: "Miles", pos: "Defense", color: "#1f6f6a", seconds: 142 },
+        { id: "b6", number: 70, name: "Lisa", pos: "Attack", color: "#0d6f3d", seconds: 312 },
+      ];
+
+      const statDefs = [
+        ["Goal", "scoring", "#0d6f3d"],
+        ["Assist", "scoring", "#0d6f3d"],
+        ["Ground Ball", "possession", "#8f1b1b"],
+        ["Turnover", "mistake", "#a84624"],
+        ["Caused Turnover", "defense", "#1f6f6a"],
+      ];
+
+      const events = [
+        { number: 11, name: "Wells", stat: "Goal", period: "Q2" },
+        { number: 5, name: "Sam Vila", stat: "Ground Ball", period: "Q2" },
+        { number: 80, name: "Jones", stat: "Save", period: "Q2" },
+      ];
+
+      let selectedId = null;
+      let gameSeconds = 480;
+
+      const fieldGrid = document.querySelector("#fieldGrid");
+      const benchGrid = document.querySelector("#benchGrid");
+      const statGrid = document.querySelector("#statGrid");
+      const eventList = document.querySelector("#eventList");
+      const selectedReadout = document.querySelector("#selectedReadout");
+      const selectedMini = document.querySelector("#selectedMini");
+      const gameClock = document.querySelector("#gameClock");
+
+      function mmss(value) {
+        const minutes = Math.floor(value / 60).toString().padStart(2, "0");
+        const seconds = Math.floor(value % 60).toString().padStart(2, "0");
+        return `${minutes}:${seconds}`;
+      }
+
+      function selectedPlayer() {
+        return onField.find((player) => player.id === selectedId);
+      }
+
+      function activeGoalie() {
+        return onField.find((player) => player.pos.toLowerCase().includes("goalie"));
+      }
+
+      function renderPlayers() {
+        fieldGrid.innerHTML = onField
+          .map(
+            (player) => `
+              <button class="player-tile ${player.id === selectedId ? "selected" : ""}" style="--tile-color: ${player.color}" data-player="${player.id}">
+                <span class="number">#${player.number}</span>
+                <span class="name">${player.name}</span>
+                <span class="meta">${player.pos}</span>
+                <span class="time">TOF ${mmss(player.seconds)}</span>
+              </button>
+            `,
+          )
+          .join("");
+
+        benchGrid.innerHTML = bench
+          .map(
+            (player) => `
+              <button class="bench-player" data-bench="${player.id}">
+                <strong>#${player.number} ${player.name}</strong>
+                <span>${player.pos} - TOF ${mmss(player.seconds)}</span>
+              </button>
+            `,
+          )
+          .join("");
+
+        const selected = selectedPlayer();
+        selectedReadout.textContent = selected ? `#${selected.number} ${selected.name} - ${selected.pos}` : "Select a player, then tap a stat";
+        selectedMini.textContent = selected ? `#${selected.number}` : "Tap a player";
+      }
+
+      function renderStats() {
+        statGrid.innerHTML = statDefs
+          .map(
+            ([label, hint, color]) => `
+              <button class="stat-button" style="--accent: ${color}" data-stat="${label}">
+                <strong>${label}</strong>
+                <span>${hint}</span>
+              </button>
+            `,
+          )
+          .join("");
+      }
+
+      function renderEvents() {
+        eventList.innerHTML = events
+          .slice(0, 7)
+          .map(
+            (event) => `
+              <div class="event-row">
+                <div class="jersey">#${event.number}</div>
+                <div>
+                  <strong>${event.name} - ${event.stat}</strong>
+                  <span>Logged from on-field grid</span>
+                </div>
+                <div class="period">${event.period}</div>
+              </div>
+            `,
+          )
+          .join("");
+      }
+
+      function toast(message) {
+        const existing = document.querySelector(".toast");
+        if (existing) existing.remove();
+        const node = document.createElement("div");
+        node.className = "toast";
+        node.textContent = message;
+        document.body.appendChild(node);
+        setTimeout(() => node.remove(), 1400);
+      }
+
+      function logStat(stat, player = selectedPlayer(), auto) {
+        if (!player) {
+          toast("Select an on-field player first");
+          return;
+        }
+        events.unshift({ number: player.number, name: player.name, stat, period: "Q2" });
+        if (auto) events.unshift({ number: player.number, name: player.name, stat: auto, period: "Q2" });
+        renderEvents();
+        toast(`#${player.number} ${player.name} - ${stat}`);
+      }
+
+      fieldGrid.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-player]");
+        if (!button) return;
+        selectedId = button.dataset.player;
+        renderPlayers();
+      });
+
+      benchGrid.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-bench]");
+        if (!button) return;
+        const selectedIndex = onField.findIndex((player) => player.id === selectedId);
+        const benchIndex = bench.findIndex((player) => player.id === button.dataset.bench);
+        if (selectedIndex < 0 || benchIndex < 0) {
+          toast("Select an on-field player to sub out first");
+          return;
+        }
+        const outgoing = onField[selectedIndex];
+        const incoming = bench[benchIndex];
+        onField[selectedIndex] = incoming;
+        bench[benchIndex] = outgoing;
+        selectedId = incoming.id;
+        renderPlayers();
+        toast(`Sub: #${incoming.number} in for #${outgoing.number}`);
+      });
+
+      document.addEventListener("click", (event) => {
+        const stat = event.target.closest("[data-stat]");
+        if (stat) logStat(stat.dataset.stat, selectedPlayer(), stat.dataset.auto);
+        const goalieStat = event.target.closest("[data-goalie-stat]");
+        if (goalieStat) logStat(goalieStat.dataset.goalieStat, activeGoalie());
+      });
+
+      document.querySelector("#clearSelection").addEventListener("click", () => {
+        selectedId = null;
+        renderPlayers();
+      });
+
+      setInterval(() => {
+        if (gameSeconds > 0) gameSeconds -= 1;
+        gameClock.textContent = mmss(gameSeconds);
+        onField.forEach((player) => {
+          player.seconds += 1;
+        });
+        renderPlayers();
+      }, 1000);
+
+      renderPlayers();
+      renderStats();
+      renderEvents();
+    </script>
+  </body>
+</html>
