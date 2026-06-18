@@ -100,6 +100,14 @@ Best practice: choose one official Parent Tracker for each player/game. Multiple
 
 Game Impact is a 0-100 score that estimates how much a player helped create possessions, convert possessions, protect possessions, and prevent opponent scoring chances. Game Review shows the Game Impact score for one game. Season Dashboard shows Average Impact across saved games.
 
+Game Impact is position-weighted:
+
+- Attack: higher scoring weight; medium possession and hustle; lower defense.
+- Midfield: higher possession and hustle; medium scoring and defense.
+- Defense / LSM: higher defense and hustle; medium possession; lower scoring.
+- Faceoff / Draw: very high possession; medium defense and hustle; lower scoring.
+- Goalie: very high goalie weight; medium possession and hustle; lower defense; scoring is not graded.
+
 The raw event values behind the score are:
 
 - Goal: +5

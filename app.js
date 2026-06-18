@@ -21,7 +21,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v155";
+const APP_VERSION = "v156";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -87,6 +87,49 @@ const IMPACT_RULES = {
   backedUpShot: { pillar: "effort", value: 2 },
   hustlePlay: { pillar: "effort", value: 1 },
   smartPlay: { pillar: "effort", value: 1 },
+};
+
+const IMPACT_POSITION_WEIGHTS = {
+  attack: {
+    label: "Attack",
+    scoring: 1.35,
+    possession: 1,
+    defense: 0.65,
+    goalie: 0,
+    effort: 1,
+  },
+  midfield: {
+    label: "Midfield",
+    scoring: 1,
+    possession: 1.3,
+    defense: 1,
+    goalie: 0,
+    effort: 1.3,
+  },
+  defense: {
+    label: "Defense / LSM",
+    scoring: 0.65,
+    possession: 1,
+    defense: 1.35,
+    goalie: 0,
+    effort: 1.3,
+  },
+  faceoff: {
+    label: "Faceoff / Draw",
+    scoring: 0.65,
+    possession: 1.65,
+    defense: 1,
+    goalie: 0,
+    effort: 1,
+  },
+  goalie: {
+    label: "Goalie",
+    scoring: 0,
+    possession: 1,
+    defense: 0.65,
+    goalie: 1.75,
+    effort: 1,
+  },
 };
 
 const LIVE_STAT_GROUPS = [
@@ -1129,16 +1172,15 @@ function impactPositionGroup(player = {}) {
   const position = String(player.position || "").toLowerCase();
   if (position.includes("goalie") || position.includes("goal")) return "goalie";
   if (position.includes("face") || position.includes("fogo")) return "faceoff";
+  if (position.includes("attack")) return "attack";
+  if (position.includes("mid")) return "midfield";
   if (position.includes("defense") || position.includes("lsm") || position.includes("ssdm")) return "defense";
-  return "field";
+  return "midfield";
 }
 
-function impactScaleForPlayer(player = {}) {
+function impactWeightProfileForPlayer(player = {}) {
   const group = impactPositionGroup(player);
-  if (group === "goalie") return 3.5;
-  if (group === "faceoff") return 3.8;
-  if (group === "defense") return 3.4;
-  return 3;
+  return IMPACT_POSITION_WEIGHTS[group] || IMPACT_POSITION_WEIGHTS.midfield;
 }
 
 function emptyImpactPillars() {
@@ -1157,23 +1199,34 @@ function impactPillarForEvent(event = {}) {
   return eventImpactRule(event)?.pillar || "";
 }
 
-function distributeImpactScore(score, pillars) {
+function weightedImpactPillars(pillars, weights) {
+  return Object.fromEntries(
+    IMPACT_PILLARS.map((pillar) => {
+      const weight = Number(weights[pillar.key] ?? 1);
+      return [pillar.key, Number(pillars[pillar.key] || 0) * weight];
+    }),
+  );
+}
+
+function distributeImpactScore(score, pillars, rawPillars = pillars, weights = {}) {
   const positiveEntries = IMPACT_PILLARS.map((pillar) => ({
     ...pillar,
-    raw: Math.max(0, Number(pillars[pillar.key] || 0)),
+    raw: Math.max(0, Number(rawPillars[pillar.key] || 0)),
+    weighted: Math.max(0, Number(pillars[pillar.key] || 0)),
+    weight: Number(weights[pillar.key] ?? 1),
   }));
-  const positiveTotal = positiveEntries.reduce((sum, item) => sum + item.raw, 0);
+  const positiveTotal = positiveEntries.reduce((sum, item) => sum + item.weighted, 0);
   if (!score || !positiveTotal) {
     return positiveEntries.map((item) => ({ ...item, score: 0 }));
   }
 
   const distributed = positiveEntries.map((item) => ({
     ...item,
-    score: Math.round((score * item.raw) / positiveTotal),
+    score: Math.round((score * item.weighted) / positiveTotal),
   }));
   const diff = score - distributed.reduce((sum, item) => sum + item.score, 0);
   if (diff) {
-    const strongest = distributed.reduce((bestIndex, item, index, items) => (item.raw > items[bestIndex].raw ? index : bestIndex), 0);
+    const strongest = distributed.reduce((bestIndex, item, index, items) => (item.weighted > items[bestIndex].weighted ? index : bestIndex), 0);
     distributed[strongest].score += diff;
   }
   return distributed;
@@ -1181,6 +1234,7 @@ function distributeImpactScore(score, pillars) {
 
 function calculateGameImpact(events = [], player = state.player) {
   const pillars = emptyImpactPillars();
+  const weights = impactWeightProfileForPlayer(player);
   let raw = 0;
   let scorableEvents = 0;
 
@@ -1193,27 +1247,34 @@ function calculateGameImpact(events = [], player = state.player) {
     scorableEvents += 1;
   });
 
-  const score = scorableEvents ? clampNumber(Math.round(50 + raw * impactScaleForPlayer(player)), 0, 100) : 0;
-  const breakdown = distributeImpactScore(score, pillars).map((item) => ({
+  const weightedPillars = weightedImpactPillars(pillars, weights);
+  const weightedRaw = Object.values(weightedPillars).reduce((sum, value) => sum + Number(value || 0), 0);
+  const score = scorableEvents ? clampNumber(Math.round(50 + weightedRaw * 3), 0, 100) : 0;
+  const breakdown = distributeImpactScore(score, weightedPillars, pillars, weights).map((item) => ({
     key: item.key,
     label: item.label,
     raw: Number(pillars[item.key] || 0),
+    weighted: Number(weightedPillars[item.key] || 0),
+    weight: item.weight,
     score: item.score,
   }));
 
   return {
     score,
     raw,
+    weightedRaw,
     pillars,
+    weightedPillars,
+    positionGroup: impactPositionGroup(player),
+    weightProfile: weights,
     breakdown,
-    takeaway: impactTakeaway(events, breakdown),
+    takeaway: impactTakeaway(events, breakdown, weights),
   };
 }
 
-function impactTakeaway(events = [], breakdown = []) {
+function impactTakeaway(events = [], breakdown = [], weightProfile = IMPACT_POSITION_WEIGHTS.midfield) {
   const activeBreakdowns = breakdown.filter((item) => item.score > 0);
-  if (!events.length || !activeBreakdowns.length) return "Log game events to build a Game Impact profile.";
-  const biggest = activeBreakdowns.reduce((best, item) => (item.score > best.score ? item : best), activeBreakdowns[0]);
+  if (!events.length) return "Log game events to build a Game Impact profile.";
   const count = (key) => events.filter((event) => event.statType === key).length;
   const goals = count("goal");
   const assists = count("assist");
@@ -1240,6 +1301,12 @@ function impactTakeaway(events = [], breakdown = []) {
   const faceoffAttempts = faceoffWins + faceoffLosses;
   const saveLooksStrong = saves >= 5 && saves >= goalsAllowed;
   const lines = [];
+
+  if (!activeBreakdowns.length) {
+    return `Impact was limited in the logged events. The profile shows ${mistakes} negative event${mistakes === 1 ? "" : "s"} and no positive pillar contribution yet, graded with the ${weightProfile.label || "player"} position profile.`;
+  }
+
+  const biggest = activeBreakdowns.reduce((best, item) => (item.score > best.score ? item : best), activeBreakdowns[0]);
 
   if (biggest.key === "scoring" && scoringChances) {
     lines.push(
@@ -1272,6 +1339,8 @@ function impactTakeaway(events = [], breakdown = []) {
   } else {
     lines.push("No major negative events were logged, which protected the overall impact score.");
   }
+
+  lines.push(`This was graded with the ${weightProfile.label || "player"} position profile, so ${biggest.label.toLowerCase()} events count in context for that role.`);
 
   return lines.join(" ");
 }
@@ -1675,6 +1744,15 @@ function formatImpactNumber(value) {
   return Number.isInteger(number) ? String(number) : number.toFixed(1);
 }
 
+function impactWeightLabel(weight) {
+  const value = Number(weight || 0);
+  if (value === 0) return "not graded";
+  if (value >= 1.6) return "very high";
+  if (value >= 1.2) return "high";
+  if (value <= 0.7) return "low";
+  return "medium";
+}
+
 function visibleGames() {
   return visibleGamesForPlayer(state.player);
 }
@@ -1982,10 +2060,11 @@ function exportJSON() {
     app: "LaxHornet",
     version: 3,
     impactModel: {
-      version: "game-impact-v1",
+      version: "game-impact-v2-position-weighted",
       scale: "0-100",
       pillars: IMPACT_PILLARS,
       rules: IMPACT_RULES,
+      positionWeights: IMPACT_POSITION_WEIGHTS,
     },
     exportedAt: new Date().toISOString(),
     player: state.player,
@@ -5275,12 +5354,13 @@ function renderTotalsTable(totals) {
 
 function renderImpactBreakdown(totals) {
   const impact = totals.gameImpact || calculateGameImpact([]);
+  const profile = impact.weightProfile || IMPACT_POSITION_WEIGHTS.midfield;
   return `
     <section class="card pad impact-card">
       <div class="section-head compact-head">
         <div>
           <h3>Game Impact Breakdown</h3>
-          <p class="muted small">0-100 view of how this player affected scoring, possession, defense, goalie play, and effort.</p>
+          <p class="muted small">0-100 view weighted for ${escapeHTML(profile.label || "this position")}.</p>
         </div>
         <span class="impact-score-badge">${impact.score}</span>
       </div>
@@ -5291,13 +5371,14 @@ function renderImpactBreakdown(totals) {
               <div class="impact-breakdown-row">
                 <span>${escapeHTML(item.label)}</span>
                 <strong>${item.score}</strong>
+                <small>${impactWeightLabel(item.weight)}</small>
               </div>
             `,
           )
           .join("")}
       </div>
       <p class="impact-takeaway">${escapeHTML(impact.takeaway)}</p>
-      <p class="muted small">Raw event value: ${formatImpactNumber(impact.raw)}. Average Impact on the Season page averages these 0-100 game scores.</p>
+      <p class="muted small">Raw event value: ${formatImpactNumber(impact.raw)}. Weighted event value: ${formatImpactNumber(impact.weightedRaw)}. Average Impact on the Season page averages these 0-100 game scores.</p>
     </section>
   `;
 }
@@ -5554,6 +5635,7 @@ function renderHelp() {
       <div class="card pad">
         <h3>Game Impact</h3>
         <p class="muted small">Game Impact is a 0-100 score estimating how much a player helped create possessions, convert possessions, protect possessions, and prevent opponent chances. It is built from five pillars: scoring, possession, defense, goalie play, and effort.</p>
+        <p class="muted small">The score is position-weighted. Attack gives more credit to scoring, midfield values possession and effort, defense/LSM values defense and effort, faceoff/draw heavily values possession, and goalie heavily values saves and goalie-specific plays.</p>
       </div>
 
       <div class="card pad">
