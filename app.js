@@ -21,7 +21,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v167";
+const APP_VERSION = "v168";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -593,8 +593,25 @@ function teamRole(teamId) {
   return !isPlatformReviewer() && role === "admin" ? "tracker" : role;
 }
 
+function cloudRosterModeEnabled() {
+  return Boolean(supabaseClient && state.authUser);
+}
+
+function pruneLocalOnlyCloudState() {
+  if (!cloudRosterModeEnabled()) return;
+  const cloudTeams = normalizeTeams(state.teams.filter((team) => normalizeTeam(team).cloudBacked));
+  const cloudTeamIds = new Set(cloudTeams.map((team) => team.id));
+  state.teams = cloudTeams;
+  state.rosterPlayers = normalizeRosterPlayers(
+    state.rosterPlayers.filter((player) => cloudTeamIds.has(normalizeRosterPlayer(player).teamId)),
+  );
+  if (state.activeTeamId && !cloudTeamIds.has(state.activeTeamId)) {
+    state.activeTeamId = state.teams[0]?.id || "";
+  }
+}
+
 function locallyManagedAdminTeams() {
-  if (!isPlatformReviewer()) return [];
+  if (!isPlatformReviewer() || cloudRosterModeEnabled()) return [];
   const existingTeams = state.teams.filter((team) => {
     const normalized = normalizeTeam(team);
     return normalized.id && (normalized.role === "admin" || normalized.createdBy === currentUserId());
@@ -700,8 +717,9 @@ function teamRosterPlayers(teamId) {
 }
 
 function visiblePlayers() {
-  const localPlayers = state.players.filter((player) => !player.teamId);
   const rosterPlayers = visibleRosterPlayers().map(rosterPlayerToPlayer);
+  if (cloudRosterModeEnabled()) return dedupePlayers(rosterPlayers, state.activePlayerId).players;
+  const localPlayers = state.players.filter((player) => !player.teamId);
   const filteredLocalPlayers = rosterPlayers.length
     ? localPlayers.filter((player) => !isDefaultPlaceholderPlayer(player))
     : localPlayers;
@@ -734,8 +752,18 @@ function rosterPlayerToPlayer(rosterPlayer = {}) {
 }
 
 function mergeRosterPlayersIntoPlayers() {
-  const localPlayers = state.players.filter((player) => !player.teamId);
   const rosterPlayers = visibleRosterPlayers().map(rosterPlayerToPlayer);
+  if (cloudRosterModeEnabled()) {
+    state.players = dedupePlayers(rosterPlayers, state.activePlayerId).players;
+    if (state.activePlayerId && !state.players.some((player) => player.id === state.activePlayerId)) {
+      state.activePlayerId = state.players[0]?.id || "";
+    }
+    if (state.activeTeamId && !state.teams.some((team) => team.id === state.activeTeamId)) {
+      state.activeTeamId = state.teams[0]?.id || "";
+    }
+    return;
+  }
+  const localPlayers = state.players.filter((player) => !player.teamId);
   const filteredLocalPlayers = rosterPlayers.length
     ? localPlayers.filter((player) => !isDefaultPlaceholderPlayer(player))
     : localPlayers;
@@ -877,7 +905,14 @@ function dedupePlayers(players = [], preferredId = "") {
 }
 
 function syncActivePlayer() {
-  if (!state.players.length) state.players = [normalizePlayer(DEFAULT_PLAYER, { createId: true })];
+  if (!state.players.length) {
+    if (cloudRosterModeEnabled()) {
+      state.activePlayerId = "";
+      state.player = normalizePlayer(DEFAULT_PLAYER, { createId: true });
+      return;
+    }
+    state.players = [normalizePlayer(DEFAULT_PLAYER, { createId: true })];
+  }
   if (!state.players.some((player) => player.id === state.activePlayerId)) {
     state.activePlayerId = state.players[0].id;
   }
@@ -1050,6 +1085,11 @@ function deleteActivePlayer() {
 }
 
 function mergePlayersFromGames(games = []) {
+  if (cloudRosterModeEnabled()) {
+    mergeRosterPlayersIntoPlayers();
+    syncActivePlayer();
+    return;
+  }
   const players = new Map(state.players.map((player) => [player.id, player]));
   games.forEach((game) => {
     const snapshot = normalizePlayer(game.playerSnapshot || game.player_snapshot || {});
@@ -1556,6 +1596,7 @@ function normalizeGame(game = {}, fallbackPlayer = null) {
 
 function persistAll() {
   recoverAdminTeamContext();
+  pruneLocalOnlyCloudState();
   mergeRosterPlayersIntoPlayers();
   if (!state.activePlayerId) ensureActiveTeamRosterPlayer();
   syncActivePlayer();
@@ -2999,6 +3040,7 @@ async function loadCloudTeams(options = {}) {
       id: request.teamId,
       name: request.teamName || "Approved Team",
       role: request.requestedRole || "tracker",
+      cloudBacked: true,
     }));
   if (approvedRequestTeams.length) {
     state.teams = normalizeTeams([...state.teams, ...approvedRequestTeams]);
