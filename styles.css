@@ -619,6 +619,21 @@ button:disabled {
   margin: 0;
 }
 
+.team-code-helper {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.25;
+}
+
+.team-code-helper code {
+  color: var(--brand-red);
+  font-family: inherit;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  user-select: all;
+}
+
 .team-card-body {
   display: grid;
   gap: 14px;

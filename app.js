@@ -21,7 +21,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v162";
+const APP_VERSION = "v163";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -4774,6 +4774,9 @@ function renderTeamRosterCard(options = {}) {
       ? "Create a team or request access with a team code."
       : "Request access with a team code from your team admin."
     : "";
+  const teamCodeHelper = team?.inviteCode
+    ? `<p class="team-code-helper">Team Code: <code>${escapeHTML(team.inviteCode)}</code></p>`
+    : "";
 
   return `
     <section class="card pad team-card ${compact && !expanded ? "collapsed" : ""}">
@@ -4781,6 +4784,7 @@ function renderTeamRosterCard(options = {}) {
         <div>
           <h3>${escapeHTML(teamCardTitle)}</h3>
           ${teamHeaderCopy ? `<p class="muted small">${escapeHTML(teamHeaderCopy)}</p>` : ""}
+          ${teamCodeHelper}
         </div>
         ${
           compact
