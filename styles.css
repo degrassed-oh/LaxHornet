@@ -1076,6 +1076,24 @@ button:disabled {
   line-height: 1.0;
 }
 
+.impact-grade {
+  display: block;
+}
+
+.impact-grade strong {
+  display: block;
+}
+
+.impact-grade small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 750;
+  line-height: 1.05;
+  text-transform: uppercase;
+}
+
 .metric span {
   display: block;
   margin-top: 7px;
@@ -1092,16 +1110,23 @@ button:disabled {
 
 .impact-score-badge {
   display: inline-flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-width: 44px;
-  height: 44px;
+  min-width: 58px;
+  min-height: 50px;
+  padding: 7px 9px;
   border: 1px solid rgba(232, 16, 16, 0.35);
   border-radius: 999px;
   color: var(--hornet-red);
   background: #fff4f4;
   font-size: 1.1rem;
   font-weight: 950;
+}
+
+.impact-score-badge .impact-grade small {
+  color: #7a2024;
+  font-size: 0.62rem;
 }
 
 .impact-breakdown-grid {
@@ -1531,6 +1556,10 @@ button:disabled {
   font-size: clamp(1.08rem, 6vw, 1.55rem);
   line-height: 1;
   font-weight: 900;
+}
+
+.live-pill .impact-grade small {
+  font-size: 0.58rem;
 }
 
 .live-pill span {

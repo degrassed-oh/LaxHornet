@@ -21,7 +21,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v169";
+const APP_VERSION = "v170";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -1884,6 +1884,34 @@ function pct(value) {
 function formatImpactNumber(value) {
   const number = Number(value || 0);
   return Number.isInteger(number) ? String(number) : number.toFixed(1);
+}
+
+function impactLetterGrade(value) {
+  const score = Number(value || 0);
+  if (score >= 97) return "A+";
+  if (score >= 93) return "A";
+  if (score >= 90) return "A-";
+  if (score >= 87) return "B+";
+  if (score >= 83) return "B";
+  if (score >= 80) return "B-";
+  if (score >= 77) return "C+";
+  if (score >= 73) return "C";
+  if (score >= 70) return "C-";
+  if (score >= 67) return "D+";
+  if (score >= 63) return "D";
+  if (score >= 60) return "D-";
+  return "F";
+}
+
+function renderImpactGrade(value, options = {}) {
+  const score = formatImpactNumber(value);
+  const label = options.label || "score";
+  return `
+    <span class="impact-grade">
+      <strong>${escapeHTML(impactLetterGrade(value))}</strong>
+      <small>${escapeHTML(score)} ${escapeHTML(label)}</small>
+    </span>
+  `;
 }
 
 function signedMetric(value) {
@@ -5496,7 +5524,7 @@ function renderLiveTracker() {
     </div>
 
     <section class="live-summary" aria-label="Live game summary">
-      <div class="live-pill"><strong>${totals.impact}</strong><span>Game Impact</span></div>
+      <div class="live-pill">${renderImpactGrade(totals.impact)}<span>Game Impact</span></div>
       <div class="live-pill"><strong>${totals.points}</strong><span>Points</span></div>
       <div class="live-pill"><strong>${game.events.length}</strong><span>Events</span></div>
     </section>
@@ -5769,7 +5797,7 @@ function renderReview() {
 
     <section class="stack">
       <div class="metric-grid">
-        <div class="metric"><strong>${totals.impact}</strong><span>Game Impact</span></div>
+        <div class="metric">${renderImpactGrade(totals.impact)}<span>Game Impact</span></div>
         <div class="metric"><strong>${totals.points}</strong><span>Points</span></div>
         <div class="metric"><strong>${totals.goals}</strong><span>Goals</span></div>
         <div class="metric"><strong>${totals.assists}</strong><span>Assists</span></div>
@@ -5833,7 +5861,7 @@ function renderSharedGame() {
 
     <section class="stack">
       <div class="metric-grid">
-        <div class="metric"><strong>${totals.impact}</strong><span>Game Impact</span></div>
+        <div class="metric">${renderImpactGrade(totals.impact)}<span>Game Impact</span></div>
         <div class="metric"><strong>${totals.points}</strong><span>Points</span></div>
         <div class="metric"><strong>${totals.goals}</strong><span>Goals</span></div>
         <div class="metric"><strong>${totals.assists}</strong><span>Assists</span></div>
@@ -5913,7 +5941,7 @@ function renderImpactBreakdown(totals) {
           <h3>Game Impact Breakdown</h3>
           <p class="muted small">0-100 view weighted for ${escapeHTML(profile.label || "this position")}.</p>
         </div>
-        <span class="impact-score-badge">${impact.score}</span>
+        <span class="impact-score-badge">${renderImpactGrade(impact.score)}</span>
       </div>
       <div class="impact-breakdown-grid">
         ${impact.breakdown
@@ -6094,12 +6122,13 @@ function renderGameListRow(game) {
   const player = gamePlayerSnapshot(game);
   const totals = calculateTotals(game.events, player);
   const editable = canEditGame(game);
+  const impactSummary = `${impactLetterGrade(totals.impact)} (${formatImpactNumber(totals.impact)})`;
   return `
     <div class="list-row">
       <button class="brand" type="button" data-review="${game.id}" style="color: var(--text); text-align: left;">
         <span>
           <h3>${escapeHTML(game.opponent)}</h3>
-          <p>${escapeHTML(playerContextLine(player))} - ${formatDate(game.date)} - Game Impact ${totals.impact} - Poss Value ${signedMetric(totals.possessionValue)}</p>
+          <p>${escapeHTML(playerContextLine(player))} - ${formatDate(game.date)} - Game Impact ${escapeHTML(impactSummary)} - Poss Value ${signedMetric(totals.possessionValue)}</p>
         </span>
       </button>
       <div class="row-actions">
@@ -6215,7 +6244,7 @@ function renderHelp() {
     <section class="stack">
       <div class="card pad">
         <h3>Game Impact</h3>
-        <p class="muted small">Game Impact is a 0-100 score estimating how much a player helped create possessions, convert possessions, protect possessions, and prevent opponent chances. It is built from five pillars: scoring, possession, defense, goalie play, and effort.</p>
+        <p class="muted small">Game Impact displays as a letter grade with the underlying 0-100 score shown beneath it. It estimates how much a player helped create possessions, convert possessions, protect possessions, and prevent opponent chances. It is built from five pillars: scoring, possession, defense, goalie play, and effort.</p>
         <p class="muted small">The score is position-weighted. Attack gives more credit to scoring, midfield values possession and effort, defense/LSM values defense and effort, faceoff/draw heavily values possession, and goalie heavily values saves and goalie-specific plays.</p>
       </div>
 
@@ -6452,7 +6481,7 @@ function renderPromoDemoPage() {
             <button class="period-tab" type="button">Q4</button>
           </div>
           <section class="live-summary" aria-label="Demo game summary">
-            <div class="live-pill"><strong>${impactTotal}</strong><span>Game Impact</span></div>
+            <div class="live-pill">${renderImpactGrade(impactTotal)}<span>Game Impact</span></div>
             <div class="live-pill"><strong>${lacrossePoints}</strong><span>Points</span></div>
             <div class="live-pill"><strong>${PROMO_DEMO_STEPS.length}</strong><span>Events</span></div>
           </section>
