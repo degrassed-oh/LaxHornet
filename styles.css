@@ -1029,6 +1029,45 @@ button:disabled {
   font-weight: 800;
 }
 
+.install-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid rgba(232, 16, 16, 0.18);
+  border-radius: var(--radius);
+  background: #f7f8f9;
+}
+
+.install-card strong {
+  display: block;
+  color: var(--text);
+  font-size: 0.98rem;
+}
+
+.install-card p {
+  margin: 4px 0 0;
+}
+
+.install-steps {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 6px;
+  padding-top: 2px;
+  color: #4f5661;
+  font-size: 0.82rem;
+  font-weight: 850;
+}
+
+.install-steps span {
+  display: block;
+}
+
+.compact-install {
+  margin-top: 2px;
+}
+
 .compact-notice {
   margin-top: 10px;
 }

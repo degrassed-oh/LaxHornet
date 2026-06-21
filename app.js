@@ -21,7 +21,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v172";
+const APP_VERSION = "v173";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -343,6 +343,7 @@ let activeStorageUserId = "";
 let waitingServiceWorker = null;
 let reloadingForUpdate = false;
 let serviceWorkerRegistration = null;
+let deferredInstallPrompt = null;
 const initialStoredState = readStoredAccountState();
 
 const state = {
@@ -387,6 +388,7 @@ const state = {
   updateAvailable: false,
   updateInstalling: false,
   authBusy: false,
+  installInstructionsVisible: false,
 };
 
 mergeRosterPlayersIntoPlayers();
@@ -1686,6 +1688,44 @@ function showToast(message) {
     state.toast = "";
     render();
   }, 1900);
+}
+
+function isStandaloneApp() {
+  return window.matchMedia?.("(display-mode: standalone)")?.matches || window.navigator.standalone === true;
+}
+
+function isIOSDevice() {
+  return /iphone|ipad|ipod/i.test(window.navigator.userAgent || "");
+}
+
+function installHelpText() {
+  if (isStandaloneApp()) return "LaxHornet is already saved to this device.";
+  if (isIOSDevice()) return "On iPhone, open this page in Safari, tap Share, then Add to Home Screen.";
+  if (deferredInstallPrompt) return "Install LaxHornet so it opens like an app from your home screen.";
+  return "Use your browser menu to install LaxHornet or add it to your home screen.";
+}
+
+function renderInstallCard(options = {}) {
+  const compact = options.compact === true;
+  const expanded = state.installInstructionsVisible || isStandaloneApp();
+  return `
+    <div class="install-card ${compact ? "compact-install" : ""}">
+      <div>
+        <strong>${isStandaloneApp() ? "Saved to Home Screen" : "Save to Home Screen"}</strong>
+        <p class="muted small">${escapeHTML(installHelpText())}</p>
+      </div>
+      <button class="mini-btn light" type="button" data-action="install-app">${isStandaloneApp() ? "Done" : "Save"}</button>
+      ${
+        expanded
+          ? `<div class="install-steps">
+              <span>1. Open in Safari on iPhone.</span>
+              <span>2. Tap the Share button.</span>
+              <span>3. Choose Add to Home Screen.</span>
+            </div>`
+          : ""
+      }
+    </div>
+  `;
 }
 
 function navigate(screen) {
@@ -4174,6 +4214,34 @@ async function copyShareLink() {
   }
 }
 
+async function installApp() {
+  if (isStandaloneApp()) {
+    state.installInstructionsVisible = true;
+    render();
+    showToast("LaxHornet is already saved");
+    return;
+  }
+
+  if (deferredInstallPrompt) {
+    const promptEvent = deferredInstallPrompt;
+    deferredInstallPrompt = null;
+    promptEvent.prompt();
+    try {
+      const choice = await promptEvent.userChoice;
+      showToast(choice?.outcome === "accepted" ? "Install started" : "Install dismissed");
+    } catch {
+      showToast("Install prompt opened");
+    }
+    state.installInstructionsVisible = true;
+    render();
+    return;
+  }
+
+  state.installInstructionsVisible = true;
+  render();
+  showToast(isIOSDevice() ? "Use Safari Share > Add to Home Screen" : "Use browser menu to install");
+}
+
 function setQuarter(quarter) {
   if (!state.activeGame) return;
   state.activeGame.currentQuarter = quarter;
@@ -4318,6 +4386,7 @@ function renderAccountCard() {
         <button class="btn positive" type="submit" name="authAction" value="sign-in" ${state.authBusy ? "disabled" : ""}>${state.authBusy ? "Working..." : "Sign In"}</button>
         <button class="btn secondary" type="submit" name="authAction" value="sign-up" ${state.authBusy ? "disabled" : ""}>${state.authBusy ? "Sending..." : "Create Account"}</button>
       </div>
+      ${renderInstallCard({ compact: true })}
     </form>
   `;
 }
@@ -5138,6 +5207,7 @@ function renderWelcome() {
       <div class="welcome-actions">
         <button class="btn positive" type="button" data-action="focus-auth">Sign In</button>
         <button class="btn secondary" type="button" data-action="focus-auth">Create Account</button>
+        <button class="btn neutral" type="button" data-action="install-app">Save to Home Screen</button>
       </div>
     </section>
 
@@ -7012,6 +7082,7 @@ function handleClick(event) {
     if (action.dataset.action === "export-csv") exportCSV();
     if (action.dataset.action === "export-json") exportJSON();
     if (action.dataset.action === "copy-share-link") copyShareLink();
+    if (action.dataset.action === "install-app") installApp();
     if (action.dataset.action === "focus-auth") {
       if (state.screen !== "home") {
         navigate("home");
@@ -7289,5 +7360,15 @@ async function initApp() {
 document.addEventListener("submit", handleSubmit);
 document.addEventListener("click", handleClick);
 document.addEventListener("change", handleChange);
+window.addEventListener("beforeinstallprompt", (event) => {
+  event.preventDefault();
+  deferredInstallPrompt = event;
+  if (!state.authUser) render();
+});
+window.addEventListener("appinstalled", () => {
+  deferredInstallPrompt = null;
+  state.installInstructionsVisible = false;
+  showToast("LaxHornet saved to home screen");
+});
 registerServiceWorker();
 initApp();
