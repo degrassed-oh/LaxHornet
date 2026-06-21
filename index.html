@@ -4,17 +4,144 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#0b0c0e" />
-    <meta name="description" content="LaxHornet youth lacrosse stat tracker" />
-    <title>LaxHornet</title>
-    <link rel="manifest" href="manifest.json?v=171" />
+    <meta
+      name="description"
+      content="LaxHornet is a mobile-first youth lacrosse stat tracker for parents, coaches, teams, and live game sharing."
+    />
+    <title>LaxHornet | Fast stats for a fast game</title>
+    <link rel="manifest" href="manifest.json?v=172" />
     <link rel="icon" href="assets/icon.svg?v=11" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="assets/icon.svg?v=11" />
-    <link rel="stylesheet" href="styles.css?v=171" />
+    <link rel="stylesheet" href="landing.css?v=172" />
   </head>
   <body>
-    <noscript>LaxHornet needs JavaScript enabled to track games.</noscript>
-    <div id="app" class="app-shell"></div>
-    <script src="assets/supabase.min.js?v=171" defer></script>
-    <script src="app.js?v=171" defer></script>
+    <header class="site-header" aria-label="LaxHornet landing navigation">
+      <a class="brand-link" href="/" aria-label="LaxHornet home">
+        <img src="assets/laxhornet-logo.png" alt="LaxHornet" />
+      </a>
+      <nav class="landing-nav" aria-label="Primary">
+        <a href="#how-it-works">How It Works</a>
+        <a href="#teams">Teams</a>
+        <a class="nav-cta" href="app.html">Open App</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="hero-copy">
+          <h1>Fast stats for a fast game.</h1>
+          <p>
+            Track youth lacrosse games from the sideline with big one-handed buttons,
+            verified player access, live sharing, and season insights that stay organized.
+          </p>
+          <div class="hero-actions">
+            <a class="btn primary" href="app.html">Open the App</a>
+            <a class="btn secondary" href="#how-it-works">See How It Works</a>
+          </div>
+          <div class="trust-row" aria-label="Key app benefits">
+            <span>iPhone-ready</span>
+            <span>Offline capable</span>
+            <span>Cloud sync</span>
+          </div>
+        </div>
+
+        <div class="phone-wrap" aria-label="LaxHornet app preview">
+          <div class="phone">
+            <div class="phone-bar"></div>
+            <div class="phone-screen">
+              <div class="preview-top">
+                <span>Live Game</span>
+                <strong>Q2</strong>
+              </div>
+              <div class="preview-player">
+                <strong>August Wells</strong>
+                <span>#11 - Attack</span>
+              </div>
+              <div class="preview-grid">
+                <button>Goal</button>
+                <button>Assist</button>
+                <button>Ground Ball</button>
+                <button>Caused TO</button>
+                <button>Save</button>
+                <button>Faceoff Win</button>
+              </div>
+              <div class="preview-impact">
+                <span>Game Impact</span>
+                <strong>A-</strong>
+                <small>91 score</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="how-it-works" class="section light">
+        <div class="section-heading">
+          <h2>Built for the sideline.</h2>
+          <p>Simple enough for a parent during a game, detailed enough to review after the final whistle.</p>
+        </div>
+        <div class="feature-list">
+          <article>
+            <span class="feature-number">01</span>
+            <h3>Tap the play</h3>
+            <p>Goals, assists, ground balls, saves, faceoffs, turnovers, clears, hustle plays, and notes are one tap away.</p>
+          </article>
+          <article>
+            <span class="feature-number">02</span>
+            <h3>Review the story</h3>
+            <p>Game Review turns events into totals, Game Impact, possession value, tags, notes, and editable timelines.</p>
+          </article>
+          <article>
+            <span class="feature-number">03</span>
+            <h3>Share live</h3>
+            <p>Send a live share link so family can follow the game from another iPhone, phone, tablet, or computer.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="teams" class="section dark-split">
+        <div>
+          <h2>Team rosters stay protected.</h2>
+          <p>
+            Admins preload teams and rostered players. Parent Trackers request access with a team code,
+            verify their player by jersey number, and only see the player they are approved to track.
+          </p>
+          <a class="text-link" href="app.html">Go to team access</a>
+        </div>
+        <div class="team-panel">
+          <div class="mini-card">
+            <span>Verified Player</span>
+            <strong>Zachary DeGrasse #23</strong>
+            <small>CT Blazers 2033 Carolina - Midfield</small>
+          </div>
+          <div class="mini-card">
+            <span>Team Code</span>
+            <strong>MSSL6X</strong>
+            <small>Use the code shared by your team admin.</small>
+          </div>
+          <div class="mini-card">
+            <span>Access</span>
+            <strong>Approved</strong>
+            <small>Stats sync to the correct team and player.</small>
+          </div>
+        </div>
+      </section>
+
+      <section class="section light install-section">
+        <div>
+          <h2>Use it like an app on iPhone.</h2>
+          <p>
+            Open LaxHornet in Safari, tap Share, choose Add to Home Screen, and track from the new icon.
+            The app still works offline during game-day conditions.
+          </p>
+        </div>
+        <a class="btn primary" href="app.html">Open LaxHornet</a>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <img src="assets/laxhornet-logo.png" alt="LaxHornet" />
+      <span>Youth lacrosse stat tracking for fast game-day decisions.</span>
+    </footer>
   </body>
 </html>

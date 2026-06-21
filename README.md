@@ -32,6 +32,12 @@ Then open:
 http://localhost:5173
 ```
 
+The root page is the public landing page. Open the working app directly at:
+
+```text
+http://localhost:5173/app.html
+```
+
 You can also use any static file server. Serving over `http://localhost` is recommended so the service worker can register during testing.
 
 ## GitHub Pages Deployment
@@ -43,11 +49,13 @@ You can also use any static file server. Serving over `http://localhost` is reco
 5. Select your branch, usually `main`, and the root folder `/`.
 6. Save. GitHub Pages will publish the static PWA.
 
-The app uses relative paths (`./`) so it can run from a GitHub Pages project URL such as:
+The site is configured for:
 
 ```text
-https://your-username.github.io/LaxHornet/
+https://mybranford.com/
 ```
+
+The public landing page lives at `/`. The PWA app lives at `/app.html`, and the manifest opens installed home-screen icons directly into the app.
 
 ## Launch Kit
 

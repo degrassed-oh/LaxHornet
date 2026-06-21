@@ -292,7 +292,7 @@ def draw_end_card(draw: ImageDraw.ImageDraw, img: Image.Image) -> None:
     draw_text(draw, (540, 881), "See the season.", F_HEAVY_58, TEXT, anchor="ma")
     draw_text(draw, (540, 1010), "Built for youth lacrosse parents.", F_BODY_34, MUTED, anchor="ma")
     draw_round(draw, (235, 1100, 845, 1180), 40, BLACK)
-    draw_text(draw, (540, 1124), "degrasse-mastermind.github.io/LaxHornet", F_HEAVY_24, WHITE, anchor="ma")
+    draw_text(draw, (540, 1124), "mybranford.com", F_HEAVY_24, WHITE, anchor="ma")
 
 
 def render_frame(i: int) -> Image.Image:

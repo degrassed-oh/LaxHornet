@@ -5,7 +5,7 @@ Hi everyone,
 We are using LaxHornet to help track youth lacrosse stats this season.
 
 Open the app here:
-https://degrasse-mastermind.github.io/LaxHornet/
+https://mybranford.com/
 
 Parent setup:
 1. Create an account with your email and password.

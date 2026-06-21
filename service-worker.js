@@ -1,12 +1,14 @@
-const CACHE_NAME = "laxhornet-v171";
+const CACHE_NAME = "laxhornet-v172";
 const APP_ASSETS = [
   "./",
   "./index.html",
+  "./app.html",
   "./logo-options.html",
-  "./styles.css?v=171",
-  "./assets/supabase.min.js?v=171",
-  "./app.js?v=171",
-  "./manifest.json?v=171",
+  "./landing.css?v=172",
+  "./styles.css?v=172",
+  "./assets/supabase.min.js?v=172",
+  "./app.js?v=172",
+  "./manifest.json?v=172",
   "./assets/icon.svg?v=11",
   "./assets/laxhornet-logo.png",
   "./assets/logo-concept-1-venom-wordmark.svg",
@@ -51,7 +53,12 @@ self.addEventListener("fetch", (event) => {
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
           return response;
         })
-        .catch(() => caches.match(event.request).then((cached) => cached || caches.match("./index.html"))),
+        .catch(() => {
+          const fallback = requestUrl.pathname.endsWith("/app.html") || requestUrl.searchParams.has("share")
+            ? "./app.html"
+            : "./index.html";
+          return caches.match(event.request).then((cached) => cached || caches.match(fallback));
+        }),
     );
     return;
   }
@@ -66,7 +73,7 @@ self.addEventListener("fetch", (event) => {
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
           return response;
         })
-        .catch(() => caches.match("./index.html"));
+        .catch(() => caches.match("./app.html"));
     }),
   );
 });

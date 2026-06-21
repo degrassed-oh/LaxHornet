@@ -2,7 +2,7 @@
 
 Public app link:
 
-https://degrasse-mastermind.github.io/LaxHornet/
+https://mybranford.com/
 
 ## Core Files
 
@@ -43,11 +43,11 @@ https://degrasse-mastermind.github.io/LaxHornet/
 
 In Supabase, the app's Site URL should be:
 
-https://degrasse-mastermind.github.io/LaxHornet/
+https://mybranford.com/
 
 Redirect URLs should include:
 
-https://degrasse-mastermind.github.io/LaxHornet/
-https://degrasse-mastermind.github.io/LaxHornet/?auth=verified
+https://mybranford.com/
+https://mybranford.com/app.html?auth=verified
 
 Run the latest `supabase-schema.sql` before inviting a lot of users so multi-player cloud sync, team rosters, and player claims are current.

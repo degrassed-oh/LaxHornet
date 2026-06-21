@@ -9,7 +9,7 @@ SHORT ANNOUNCEMENT
 We are using LaxHornet to track lacrosse stats this season.
 
 Open here:
-https://degrasse-mastermind.github.io/LaxHornet/
+https://mybranford.com/
 
 Create an account, enter team code __________, and enter your child's jersey number. Once approved, you will only see your verified player.
 
@@ -20,7 +20,7 @@ IPHONE INSTALL REMINDER
 Quick LaxHornet reminder:
 
 1. Open the link in Safari:
-   https://degrasse-mastermind.github.io/LaxHornet/
+   https://mybranford.com/
 2. Tap Share.
 3. Tap Add to Home Screen.
 4. Open LaxHornet from the new icon.
@@ -33,7 +33,7 @@ GAME DAY TRACKER REQUEST
 
 We need parent trackers for upcoming games. If you can help, please set up LaxHornet before game day:
 
-https://degrasse-mastermind.github.io/LaxHornet/
+https://mybranford.com/
 
 Use team code __________ and your child's jersey number. After approval, you can track only your verified player.
 

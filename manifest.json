@@ -2,7 +2,7 @@
   "name": "LaxHornet",
   "short_name": "LaxHornet",
   "description": "Offline youth lacrosse stat tracker for game-day use.",
-  "start_url": "./",
+  "start_url": "./app.html",
   "scope": "./",
   "display": "standalone",
   "background_color": "#050505",
