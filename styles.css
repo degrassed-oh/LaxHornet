@@ -38,6 +38,12 @@
   --hornet-red-soft: #ffe4e4;
   --hornet-yellow: var(--hornet-red);
   --hornet-yellow-soft: var(--hornet-red-soft);
+  --brand-dark-button:
+    linear-gradient(90deg, var(--hornet-red) 0 6px, transparent 6px),
+    linear-gradient(180deg, #2a3038, #13161a);
+  --brand-light-button:
+    linear-gradient(90deg, var(--hornet-red) 0 6px, transparent 6px),
+    #ffffff;
   --shadow: 0 16px 36px rgba(0, 0, 0, 0.32);
   --radius: 8px;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -82,6 +88,20 @@ button {
 button:disabled {
   cursor: not-allowed;
   opacity: 0.55;
+}
+
+button:focus-visible,
+.btn:focus-visible,
+.mini-btn:focus-visible,
+.more-action:focus-visible,
+.player-chip:focus-visible,
+.team-chip:focus-visible,
+.nav-tab:focus-visible,
+.period-tab:focus-visible,
+.quarter-tab:focus-visible,
+.icon-btn:focus-visible {
+  outline: 3px solid rgba(232, 16, 16, 0.42);
+  outline-offset: 3px;
 }
 
 .app-shell {
@@ -199,13 +219,16 @@ button:disabled {
   width: 44px;
   height: 44px;
   place-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.22);
+  border: 1px solid rgba(232, 16, 16, 0.42);
   border-radius: 999px;
   color: #ffffff;
-  background: rgba(255, 255, 255, 0.1);
+  background:
+    radial-gradient(circle at 50% 46%, rgba(232, 16, 16, 0.2), transparent 62%),
+    rgba(255, 255, 255, 0.1);
   font-size: 1.02rem;
   font-weight: 950;
   line-height: 1;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
 .tutorial-chip {
@@ -348,13 +371,13 @@ button:disabled {
   min-height: 0;
   padding: 0;
   border: 0;
-  color: #d7dde4;
+  color: #f1f2f4;
   background: transparent;
   font-size: 0.74rem;
   font-weight: 850;
   line-height: 1.25;
   text-decoration: underline;
-  text-decoration-color: rgba(232, 16, 16, 0.62);
+  text-decoration-color: var(--hornet-red);
   text-underline-offset: 3px;
   box-shadow: none;
 }
@@ -507,7 +530,7 @@ button:disabled {
   background:
     linear-gradient(90deg, var(--hornet-red) 0 5px, transparent 5px),
     #f7f8f9;
-  box-shadow: inset 0 0 0 1px rgba(232, 16, 16, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(232, 16, 16, 0.14), 0 8px 18px rgba(17, 19, 23, 0.08);
 }
 
 .compact-player-card {
@@ -681,11 +704,12 @@ button:disabled {
   justify-content: center;
   gap: 3px;
   padding: 9px 11px;
-  border: 1px solid var(--line);
+  border: 1px solid rgba(17, 19, 23, 0.14);
   border-radius: var(--radius);
   color: var(--text);
   background: #ffffff;
   text-align: left;
+  box-shadow: inset 0 0 0 1px rgba(17, 19, 23, 0.02);
 }
 
 .team-chip strong,
@@ -714,6 +738,7 @@ button:disabled {
   background:
     linear-gradient(90deg, var(--hornet-red) 0 5px, transparent 5px),
     #f7f8f9;
+  box-shadow: inset 0 0 0 1px rgba(232, 16, 16, 0.12), 0 8px 18px rgba(17, 19, 23, 0.08);
 }
 
 .team-form-grid {
@@ -1449,7 +1474,8 @@ button:disabled {
   padding: 12px 14px;
   border-radius: var(--radius);
   color: #ffffff;
-  background: var(--neutral);
+  border: 1px solid rgba(232, 16, 16, 0.5);
+  background: var(--brand-dark-button);
   font-size: 1rem;
   font-weight: 850;
   line-height: 1.1;
@@ -1462,17 +1488,16 @@ button:disabled {
 }
 
 .btn.secondary {
-  border: 1px solid var(--line);
+  border: 1px solid rgba(232, 16, 16, 0.44);
   color: var(--text);
-  background: #ffffff;
+  background: var(--brand-light-button);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18), inset 0 0 0 1px rgba(17, 19, 23, 0.04);
 }
 
 .btn.secondary.auth-create {
   border: 1px solid rgba(232, 16, 16, 0.72);
   color: #111317;
-  background:
-    linear-gradient(90deg, var(--hornet-red) 0 6px, transparent 6px),
-    #ffffff;
+  background: var(--brand-light-button);
   box-shadow: 0 10px 22px rgba(0, 0, 0, 0.2), inset 0 0 0 1px rgba(17, 19, 23, 0.04);
 }
 
@@ -1485,14 +1510,14 @@ button:disabled {
 .btn.brand,
 .btn.positive {
   border: 1px solid rgba(232, 16, 16, 0.72);
-  background:
-    linear-gradient(90deg, var(--hornet-red) 0 6px, transparent 6px),
-    linear-gradient(180deg, #2a3038, #13161a);
+  background: var(--brand-dark-button);
   box-shadow: 0 10px 22px rgba(0, 0, 0, 0.28), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
 .btn.neutral {
-  background: linear-gradient(180deg, var(--neutral), var(--neutral-dark));
+  border: 1px solid rgba(232, 16, 16, 0.5);
+  background: var(--brand-dark-button);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.26), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
 .faq-card .action-grid.compact .btn.neutral,
@@ -1501,22 +1526,8 @@ button:disabled {
   box-shadow: 0 10px 22px rgba(0, 0, 0, 0.2), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
-.faq-card .action-grid.compact .btn.neutral {
-  background:
-    linear-gradient(90deg, var(--hornet-red) 0 6px, transparent 6px),
-    linear-gradient(180deg, #2a3038, #13161a);
-}
-
-.faq-card .action-grid.compact .btn.secondary {
-  background:
-    linear-gradient(90deg, var(--hornet-red) 0 6px, transparent 6px),
-    #ffffff;
-}
-
 .btn.brand.neutral {
-  background:
-    linear-gradient(90deg, var(--hornet-red) 0 6px, transparent 6px),
-    linear-gradient(180deg, #2a3038, #13161a);
+  background: var(--brand-dark-button);
 }
 
 .btn.negative {
@@ -1528,7 +1539,10 @@ button:disabled {
 }
 
 .btn.warning {
-  background: linear-gradient(180deg, var(--warning), var(--negative-dark));
+  border: 1px solid rgba(236, 139, 34, 0.72);
+  background:
+    linear-gradient(90deg, var(--hornet-red) 0 6px, transparent 6px),
+    linear-gradient(180deg, #6e3a18, #351b0d);
 }
 
 .form-grid {
@@ -1590,21 +1604,22 @@ button:disabled {
 .quarter-tab,
 .period-tab {
   min-height: 36px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 7px;
   color: #b8bec5;
-  background: rgba(255, 255, 255, 0.045);
+  background: rgba(255, 255, 255, 0.035);
   font-size: 0.78rem;
   font-weight: 800;
-  box-shadow: none;
+  box-shadow: inset 0 0 0 1px rgba(17, 19, 23, 0.02);
 }
 
 .quarter-tab.active,
 .period-tab.active {
-  border-color: rgba(255, 255, 255, 0.28);
+  border-color: rgba(232, 16, 16, 0.62);
   color: #ffffff;
-  background: rgba(255, 255, 255, 0.12);
-  box-shadow: inset 0 -2px 0 rgba(232, 16, 16, 0.62);
+  background:
+    linear-gradient(180deg, rgba(232, 16, 16, 0.18), rgba(255, 255, 255, 0.07));
+  box-shadow: inset 0 -2px 0 var(--hornet-red);
 }
 
 .live-summary {
@@ -1886,27 +1901,33 @@ button:disabled {
   padding: 10px 13px;
   border-radius: var(--radius);
   color: #ffffff;
-  background: var(--neutral);
+  border: 1px solid rgba(232, 16, 16, 0.5);
+  background: var(--brand-dark-button);
   font-size: 0.84rem;
   font-weight: 900;
   line-height: 1.1;
   text-align: center;
   text-decoration: none;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18), inset 0 0 0 1px rgba(255, 255, 255, 0.04);
 }
 
 .mini-btn.light {
-  border: 1px solid var(--line);
+  border: 1px solid rgba(232, 16, 16, 0.36);
   color: var(--text);
-  background: #ffffff;
+  background: var(--brand-light-button);
+  box-shadow: inset 0 0 0 1px rgba(17, 19, 23, 0.04);
 }
 
 .mini-btn.danger {
-  background: var(--danger);
+  border-color: rgba(207, 47, 51, 0.72);
+  background:
+    linear-gradient(90deg, #ffffff 0 5px, transparent 5px),
+    linear-gradient(180deg, var(--danger), #9e2025);
 }
 
 .mini-btn.tag {
   color: #ffffff;
-  background: var(--hornet-yellow);
+  background: var(--brand-dark-button);
 }
 
 .mode-toggle {
@@ -1955,7 +1976,7 @@ button:disabled {
   place-items: center;
   border-radius: 999px;
   color: #ffffff;
-  background: #111317;
+  background: var(--hornet-red);
   font-size: 0.82rem;
   font-weight: 900;
   line-height: 1;
@@ -1988,10 +2009,10 @@ button:disabled {
 .tag-suggestion {
   min-height: 40px;
   padding: 9px 12px;
-  border: 1px solid rgba(17, 19, 23, 0.14);
+  border: 1px solid rgba(232, 16, 16, 0.26);
   border-radius: 999px;
   color: #111317;
-  background: #ffffff;
+  background: #fffafa;
   font-size: 0.88rem;
   font-weight: 900;
 }
@@ -2045,14 +2066,14 @@ button:disabled {
   width: 44px;
   height: 44px;
   place-items: center;
-  border: 1px solid rgba(17, 19, 23, 0.16);
+  border: 1px solid rgba(232, 16, 16, 0.34);
   border-radius: 999px;
-  color: var(--muted);
-  background: transparent;
+  color: var(--hornet-red);
+  background: #ffffff;
   font-size: 1.2rem;
   font-weight: 900;
   line-height: 1;
-  box-shadow: none;
+  box-shadow: inset 0 0 0 1px rgba(17, 19, 23, 0.03);
 }
 
 .collapse-icon span {
@@ -2154,11 +2175,14 @@ button:disabled {
   min-height: 62px;
   align-items: center;
   padding: 10px;
-  border: 1px solid rgba(17, 19, 23, 0.1);
+  border: 1px solid rgba(232, 16, 16, 0.18);
   border-radius: var(--radius);
   color: var(--text);
-  background: #f6f7f8;
+  background:
+    linear-gradient(90deg, rgba(232, 16, 16, 0.94) 0 5px, transparent 5px),
+    #f6f7f8;
   text-align: left;
+  box-shadow: inset 0 0 0 1px rgba(17, 19, 23, 0.02);
 }
 
 .more-action > span {
@@ -2168,9 +2192,9 @@ button:disabled {
   height: 38px;
   place-items: center;
   border-radius: 999px;
-  color: var(--hornet-red);
-  background: #ffffff;
-  box-shadow: inset 0 0 0 1px rgba(232, 16, 16, 0.16);
+  color: #ffffff;
+  background: var(--hornet-red);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
 }
 
 .more-action svg {
@@ -2752,9 +2776,11 @@ button:disabled {
   place-items: center;
   border-radius: var(--radius);
   color: #ffffff;
-  background: var(--neutral);
+  border: 1px solid rgba(232, 16, 16, 0.5);
+  background: var(--brand-dark-button);
   font-size: 1rem;
   font-weight: 900;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18), inset 0 0 0 1px rgba(255, 255, 255, 0.04);
 }
 
 .icon-btn.wide {
@@ -2765,7 +2791,10 @@ button:disabled {
 }
 
 .icon-btn.delete {
-  background: var(--danger);
+  border-color: rgba(207, 47, 51, 0.72);
+  background:
+    linear-gradient(90deg, #ffffff 0 5px, transparent 5px),
+    linear-gradient(180deg, var(--danger), #9e2025);
 }
 
 .table-card {
@@ -2955,9 +2984,9 @@ button:disabled {
   place-items: center;
   width: 34px;
   height: 34px;
-  border: 1px solid var(--line);
+  border: 1px solid rgba(232, 16, 16, 0.34);
   border-radius: 50%;
-  color: var(--muted);
+  color: var(--hornet-red);
   background: #ffffff;
   font-size: 0.92rem;
   font-weight: 950;
