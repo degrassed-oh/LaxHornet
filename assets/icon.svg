@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">LaxHornet LH App Icon</title>
+  <desc id="desc">A red, white, and black athletic LH app icon with a subtle hornet stinger motif.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#171717"/>
+      <stop offset="0.52" stop-color="#050505"/>
+      <stop offset="1" stop-color="#202020"/>
+    </linearGradient>
+    <linearGradient id="whiteBevel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.55" stop-color="#f1f1f1"/>
+      <stop offset="1" stop-color="#cfcfcf"/>
+    </linearGradient>
+    <linearGradient id="redBevel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ff1818"/>
+      <stop offset="0.48" stop-color="#e50909"/>
+      <stop offset="1" stop-color="#9f0000"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="16" stdDeviation="18" flood-color="#000000" flood-opacity="0.55"/>
+    </filter>
+    <filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <pattern id="honeycomb" width="60" height="52" patternUnits="userSpaceOnUse">
+      <path d="M15 1 L45 1 L60 26 L45 51 L15 51 L0 26 Z" fill="none" stroke="#ffffff" stroke-width="3" opacity="0.045"/>
+    </pattern>
+    <clipPath id="roundIcon">
+      <rect x="24" y="24" width="976" height="976" rx="205"/>
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#roundIcon)">
+    <rect width="1024" height="1024" fill="url(#bg)"/>
+    <rect x="70" y="92" width="410" height="360" fill="url(#honeycomb)" opacity="0.8"/>
+    <rect x="648" y="610" width="300" height="250" fill="url(#honeycomb)" opacity="0.7"/>
+    <path d="M78 318 C106 169 210 72 359 43" fill="none" stroke="#e50909" stroke-width="10" stroke-linecap="round" opacity="0.9"/>
+    <path d="M690 955 C820 913 919 812 966 673" fill="none" stroke="#e50909" stroke-width="10" stroke-linecap="round" opacity="0.9"/>
+
+    <g filter="url(#shadow)">
+      <!-- white L outline -->
+      <path d="M207 238 L416 238 L375 340 L333 608 L489 608 L455 744 L101 744 L136 608 L182 608 L222 343 Z" fill="#ffffff"/>
+      <!-- white L face -->
+      <path d="M229 264 L381 264 L347 354 L308 632 L466 632 L446 713 L131 713 L153 632 L199 632 L239 354 Z" fill="url(#whiteBevel)"/>
+
+      <!-- red H outline -->
+      <path d="M526 260 L733 260 L697 427 L790 427 L825 260 L979 260 L886 773 L731 773 L771 565 L677 565 L637 773 L484 773 L581 260 Z" fill="#ffffff"/>
+      <!-- red H face -->
+      <path d="M551 286 L703 286 L668 457 L812 457 L847 286 L946 286 L864 742 L763 742 L803 536 L654 536 L614 742 L516 742 L601 286 Z" fill="url(#redBevel)"/>
+
+      <!-- negative notch between marks -->
+      <path d="M458 566 C496 540 523 521 556 489 C535 546 522 596 512 642 C496 609 479 585 458 566 Z" fill="#050505" opacity="0.92"/>
+
+      <!-- stinger body outline -->
+      <path d="M452 606 C511 620 552 671 561 731 C519 704 483 705 440 736 C453 688 456 648 452 606 Z" fill="#ffffff"/>
+      <path d="M464 625 C508 638 535 675 543 710 C510 696 482 697 455 717 C465 681 469 652 464 625 Z" fill="#050505"/>
+      <path d="M482 642 C512 654 529 680 535 700 C512 692 492 693 471 706 C480 680 484 660 482 642 Z" fill="url(#redBevel)"/>
+      <path d="M437 709 C398 777 364 835 300 893 C357 794 403 714 462 648 C465 669 456 691 437 709 Z" fill="#ffffff"/>
+      <path d="M454 706 C416 774 377 828 322 875 C367 794 412 717 461 664 C462 680 460 694 454 706 Z" fill="url(#redBevel)"/>
+      <path d="M368 797 C395 746 429 696 461 664" fill="none" stroke="#ffffff" stroke-width="16" stroke-linecap="round" opacity="0.95"/>
+      <path d="M386 805 C411 755 437 716 462 685" fill="none" stroke="#050505" stroke-width="12" stroke-linecap="round" opacity="0.9"/>
+    </g>
+
+    <!-- subtle highlights -->
+    <path d="M226 260 L376 260 L365 286 L223 286 Z" fill="#ffffff" opacity="0.38"/>
+    <path d="M553 286 L702 286 L696 313 L550 313 Z" fill="#ffffff" opacity="0.22"/>
+    <rect x="24" y="24" width="976" height="976" rx="205" fill="none" stroke="#ffffff" stroke-width="2" opacity="0.04"/>
+  </g>
+</svg>
