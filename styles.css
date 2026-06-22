@@ -1467,6 +1467,15 @@ button:disabled {
   background: #ffffff;
 }
 
+.btn.secondary.auth-create {
+  border: 1px solid rgba(232, 16, 16, 0.72);
+  color: #111317;
+  background:
+    linear-gradient(90deg, var(--hornet-red) 0 6px, transparent 6px),
+    #ffffff;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.2), inset 0 0 0 1px rgba(17, 19, 23, 0.04);
+}
+
 .btn.ghost {
   border: 1px solid rgba(255, 255, 255, 0.24);
   color: #ffffff;

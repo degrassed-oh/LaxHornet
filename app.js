@@ -21,7 +21,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v181";
+const APP_VERSION = "v182";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -4382,7 +4382,7 @@ function renderAccountCard() {
       </div>
       <div class="account-actions">
         <button class="btn positive" type="submit" name="authAction" value="sign-in" ${state.authBusy ? "disabled" : ""}>${state.authBusy ? "Working..." : "Sign In"}</button>
-        <button class="btn secondary" type="submit" name="authAction" value="sign-up" ${state.authBusy ? "disabled" : ""}>${state.authBusy ? "Sending..." : "Create Account"}</button>
+        <button class="btn secondary auth-create" type="submit" name="authAction" value="sign-up" ${state.authBusy ? "disabled" : ""}>${state.authBusy ? "Sending..." : "Create Account"}</button>
       </div>
       ${renderInstallCard({ compact: true })}
     </form>
