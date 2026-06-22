@@ -98,7 +98,10 @@ button:disabled {
   z-index: 20;
   margin: -18px -14px 14px;
   padding: calc(14px + env(safe-area-inset-top, 0px)) 14px 12px;
-  background: rgba(13, 13, 13, 0.96);
+  background:
+    linear-gradient(90deg, rgba(5, 5, 5, 0.56), rgba(5, 5, 5, 0.7)),
+    url("assets/honeycombblack.png?v=1") center / cover no-repeat,
+    #0b0b0b;
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   backdrop-filter: blur(14px);
 }
