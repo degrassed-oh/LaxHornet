@@ -21,7 +21,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v185";
+const APP_VERSION = "v186";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -5085,44 +5085,6 @@ function renderMore() {
     </section>
 
     <section class="stack">
-      <section class="card pad more-card primary-manage-card">
-        <div>
-          <h3>Game Day Manager</h3>
-          <p class="muted small">${escapeHTML(gameDaySummary)}</p>
-        </div>
-        <div class="more-status-grid">
-          <div class="more-status-cell">
-            <span>Active player</span>
-            <strong>${escapeHTML(playerTitle(state.player))}</strong>
-            ${activePlayerTeamName ? `<small>${escapeHTML(activePlayerTeamName)}</small>` : ""}
-          </div>
-          <div class="more-status-cell">
-            <span>Managing team</span>
-            <strong>${escapeHTML(activeTeamName || state.player.team || "Not connected")}</strong>
-          </div>
-        </div>
-        ${teamMismatch ? `<div class="notice-card compact-notice"><strong>Different team selected.</strong><p class="muted small">Use Manage Teams to add roster players for ${escapeHTML(activeTeamName)}, or use Players to switch who you are tracking.</p></div>` : ""}
-        <div class="more-action-list">
-          <button class="more-action" type="button" data-nav="${active ? "live" : "start"}">
-            <span>${renderNavIcon("track")}</span>
-            <strong>${active ? "Resume Live Game" : "Track New Game"}</strong>
-            <small>${active ? `Continue tracking ${escapeHTML(playerTitle(activePlayer))}.` : "Open the game setup screen."}</small>
-          </button>
-          <button class="more-action" type="button" data-nav="player">
-            <span>${renderNavIcon("player")}</span>
-            <strong>Manage Players</strong>
-            <small>Choose who to track and review each player/team context.</small>
-          </button>
-          <button class="more-action" type="button" data-nav="team">
-            <span>${renderNavIcon("team")}</span>
-            <strong>Manage Teams</strong>
-            <small>Sync approvals, request access, and verify players.</small>
-          </button>
-        </div>
-      </section>
-
-      ${adminTools}
-
       <section class="card pad more-card account-tools-card">
         <div>
           <h3>Account & App</h3>
@@ -5163,6 +5125,44 @@ function renderMore() {
           </button>
         </div>
       </section>
+
+      <section class="card pad more-card primary-manage-card">
+        <div>
+          <h3>Game Day Manager</h3>
+          <p class="muted small">${escapeHTML(gameDaySummary)}</p>
+        </div>
+        <div class="more-status-grid">
+          <div class="more-status-cell">
+            <span>Active player</span>
+            <strong>${escapeHTML(playerTitle(state.player))}</strong>
+            ${activePlayerTeamName ? `<small>${escapeHTML(activePlayerTeamName)}</small>` : ""}
+          </div>
+          <div class="more-status-cell">
+            <span>Managing team</span>
+            <strong>${escapeHTML(activeTeamName || state.player.team || "Not connected")}</strong>
+          </div>
+        </div>
+        ${teamMismatch ? `<div class="notice-card compact-notice"><strong>Different team selected.</strong><p class="muted small">Use Manage Teams to add roster players for ${escapeHTML(activeTeamName)}, or use Players to switch who you are tracking.</p></div>` : ""}
+        <div class="more-action-list">
+          <button class="more-action" type="button" data-nav="${active ? "live" : "start"}">
+            <span>${renderNavIcon("track")}</span>
+            <strong>${active ? "Resume Live Game" : "Track New Game"}</strong>
+            <small>${active ? `Continue tracking ${escapeHTML(playerTitle(activePlayer))}.` : "Open the game setup screen."}</small>
+          </button>
+          <button class="more-action" type="button" data-nav="player">
+            <span>${renderNavIcon("player")}</span>
+            <strong>Manage Players</strong>
+            <small>Choose who to track and review each player/team context.</small>
+          </button>
+          <button class="more-action" type="button" data-nav="team">
+            <span>${renderNavIcon("team")}</span>
+            <strong>Manage Teams</strong>
+            <small>Sync approvals, request access, and verify players.</small>
+          </button>
+        </div>
+      </section>
+
+      ${adminTools}
 
       ${renderWatchSharedGameForm()}
 
