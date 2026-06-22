@@ -146,13 +146,12 @@ button:disabled {
 
 .app-version-chip {
   display: block;
-  margin-left: 2px;
+  margin-left: clamp(4px, 1.7vw, 9px);
   color: #4b4f55;
   font-size: 0.62rem;
   font-weight: 800;
   line-height: 1;
   text-transform: uppercase;
-  transform: translateX(-10.2%);
 }
 
 .sr-only {
