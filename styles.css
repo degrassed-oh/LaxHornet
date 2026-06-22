@@ -134,19 +134,18 @@ button:disabled {
 
 .brand-logo {
   display: block;
-  width: min(60vw, 280px);
+  width: min(62vw, 292px);
   height: auto;
-  max-height: 46px;
+  max-height: 54px;
   margin: 0;
   object-fit: contain;
   object-position: left center;
   filter: drop-shadow(0 5px 8px rgba(0, 0, 0, 0.24));
-  transform: translateX(-10.2%);
 }
 
 .app-version-chip {
   display: block;
-  margin-left: clamp(4px, 1.7vw, 9px);
+  margin-left: clamp(5px, 1.8vw, 10px);
   color: #4b4f55;
   font-size: 0.62rem;
   font-weight: 800;

@@ -21,7 +21,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v177";
+const APP_VERSION = "v178";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -4257,7 +4257,7 @@ function renderShell(content, options = {}) {
       <div class="brand-row">
         <button class="brand" type="button" data-nav="home" aria-label="Go home">
           <span class="brand-logo-wrap">
-            <img class="brand-logo" src="assets/laxhornet-logo.png" alt="LaxHornet" />
+            <img class="brand-logo" src="assets/LHbanner.png?v=1" alt="LaxHornet" />
             <h1 class="sr-only">LaxHornet</h1>
             <span class="app-version-chip">App version: ${escapeHTML(APP_VERSION)}</span>
           </span>
