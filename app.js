@@ -13,6 +13,7 @@ const STORAGE_KEYS = {
   teamAccessRequests: "laxhornet.teamAccessRequests",
   playerClaims: "laxhornet.playerClaims",
   adminViewMode: "laxhornet.adminViewMode",
+  onboardingIntent: "laxhornet.onboardingIntent",
 };
 
 const SUPABASE_CONFIG = {
@@ -327,6 +328,20 @@ const DEFAULT_TEAM_INVITE_LENGTH = 6;
 const TEAM_MANAGE_ROLES = ["admin"];
 const APP_ROLES = ["tracker", "admin"];
 const PLAYER_POSITIONS = ["Attack", "Midfield", "Defense", "Goalie", "Faceoff", "LSM", "SSDM"];
+const ONBOARDING_INTENTS = {
+  child: {
+    label: "I'm tracking my child",
+    description: "Request player access and track only the approved player.",
+  },
+  roster: {
+    label: "I'm managing a team roster",
+    description: "Team roster tools require approved admin access.",
+  },
+  both: {
+    label: "I'm both",
+    description: "Use parent tracking now, and admin tools when approved.",
+  },
+};
 
 const app = document.querySelector("#app");
 const startupParams = new URLSearchParams(window.location.search);
@@ -382,6 +397,7 @@ const state = {
   exportToolsExpanded: false,
   helpExpanded: false,
   adminViewMode: initialStoredState.adminViewMode,
+  onboardingIntent: initialStoredState.onboardingIntent,
   signupDraft: null,
   accessRequestSummary: null,
   toast: "",
@@ -389,6 +405,8 @@ const state = {
   updateInstalling: false,
   authBusy: false,
   installInstructionsVisible: false,
+  isOffline: window.navigator.onLine === false,
+  pendingDeleteGameId: "",
 };
 
 mergeRosterPlayersIntoPlayers();
@@ -444,6 +462,7 @@ function readStoredAccountState(userId = activeStorageUserId) {
     reviewGameId: loadJSON(STORAGE_KEYS.reviewGameId, null),
     deletedGameIds: loadJSON(STORAGE_KEYS.deletedGames, []),
     deletedEventIds: loadJSON(STORAGE_KEYS.deletedEvents, []),
+    onboardingIntent: loadJSON(STORAGE_KEYS.onboardingIntent, "child"),
     adminViewMode,
   };
 }
@@ -1153,6 +1172,11 @@ function appRoleLabel(role = "tracker") {
   return "Parent Tracker";
 }
 
+function normalizeOnboardingIntent(intent = "child") {
+  const cleanIntent = String(intent || "").trim().toLowerCase();
+  return ONBOARDING_INTENTS[cleanIntent] ? cleanIntent : "child";
+}
+
 function isReviewerAccount() {
   return userEmail().trim().toLowerCase() === PLATFORM_REVIEWER_EMAIL.toLowerCase();
 }
@@ -1611,6 +1635,7 @@ function persistAll() {
   saveJSON(STORAGE_KEYS.teamAccessRequests, normalizeTeamAccessRequests(state.teamAccessRequests));
   saveJSON(STORAGE_KEYS.playerClaims, normalizePlayerClaims(state.playerClaims));
   saveJSON(STORAGE_KEYS.adminViewMode, state.adminViewMode === "tracker" ? "tracker" : "admin");
+  saveJSON(STORAGE_KEYS.onboardingIntent, state.onboardingIntent || "child");
   saveJSON(STORAGE_KEYS.deletedGames, uniqueIds(state.deletedGameIds));
   saveJSON(STORAGE_KEYS.deletedEvents, uniqueIds(state.deletedEventIds));
   saveJSON(STORAGE_KEYS.games, state.games);
@@ -1633,6 +1658,7 @@ function applyStoredAccountState(userId) {
   state.teamAccessRequests = stored.teamAccessRequests;
   state.playerClaims = stored.playerClaims;
   state.adminViewMode = stored.adminViewMode;
+  state.onboardingIntent = stored.onboardingIntent;
   state.games = stored.games;
   state.activeGame = stored.activeGame;
   state.reviewGameId = stored.reviewGameId;
@@ -2431,7 +2457,22 @@ function deleteGame(id) {
     showToast("View-only team access");
     return;
   }
-  if (!window.confirm(`Delete this game?\n\nThis removes ${game.opponent} on ${formatDate(game.date)} from this account's saved game history. This cannot be undone.`)) return;
+  state.pendingDeleteGameId = id;
+  render();
+}
+
+function confirmDeleteGame(id) {
+  const game = state.games.find((item) => item.id === id);
+  if (!game) {
+    state.pendingDeleteGameId = "";
+    render();
+    return;
+  }
+  if (!canEditGame(game)) {
+    state.pendingDeleteGameId = "";
+    showToast("View-only team access");
+    return;
+  }
   rememberDeletedGame(id);
   (game.events || []).forEach((event) => rememberDeletedEvent(event.id));
   state.games = state.games.filter((item) => item.id !== id);
@@ -2440,6 +2481,7 @@ function deleteGame(id) {
   state.editingGameDetails = false;
   state.editingEventId = null;
   state.tagEditingEventId = null;
+  state.pendingDeleteGameId = "";
   if (state.reviewGameId === id) state.reviewGameId = state.games[0]?.id || null;
   persistAll();
   deleteSupabaseGame(id);
@@ -3420,6 +3462,7 @@ async function saveParentProfile(formData) {
   const firstName = formData.get("firstName")?.trim() || "";
   const lastName = formData.get("lastName")?.trim() || "";
   const phone = formData.get("phone")?.trim() || "";
+  const onboardingIntent = normalizeOnboardingIntent(formData.get("onboardingIntent") || state.onboardingIntent);
   const hasChildJerseyField = formData.has("childJerseyNumber");
   const childJerseyNumber = hasChildJerseyField
     ? formData.get("childJerseyNumber")?.trim() || ""
@@ -3473,6 +3516,7 @@ async function saveParentProfile(formData) {
     onboardingCompleted: true,
     updatedAt: new Date().toISOString(),
   });
+  state.onboardingIntent = onboardingIntent;
 
   if (teamAccessCode) await requestTeamAccessByCode(teamAccessCode, { silent: true, childJerseyNumber });
   await loadUserProfile({ silent: true });
@@ -3483,6 +3527,7 @@ async function saveParentProfile(formData) {
       firstName,
       lastName,
       phone,
+      onboardingIntent,
       teamAccessCode,
       childJerseyNumber,
     };
@@ -3508,6 +3553,7 @@ async function submitSignupAccessRequest(formData) {
   const firstName = formData.get("firstName")?.trim() || "";
   const lastName = formData.get("lastName")?.trim() || "";
   const phone = formData.get("phone")?.trim() || "";
+  const onboardingIntent = normalizeOnboardingIntent(formData.get("onboardingIntent") || state.onboardingIntent);
   const teamAccessCode = formData.get("teamAccessCode")?.trim().toUpperCase() || "";
   const childJerseyNumber = formData.get("childJerseyNumber")?.trim() || "";
 
@@ -3521,6 +3567,7 @@ async function submitSignupAccessRequest(formData) {
     firstName,
     lastName,
     phone,
+    onboardingIntent,
     teamAccessCode,
     childJerseyNumber,
   };
@@ -3538,6 +3585,7 @@ async function submitSignupAccessRequest(formData) {
         first_name: firstName,
         last_name: lastName,
         phone,
+        onboarding_intent: onboardingIntent,
         team_access_code: teamAccessCode,
         child_jersey_number: childJerseyNumber,
         access_request_submitted_at: new Date().toISOString(),
@@ -3559,6 +3607,7 @@ async function submitSignupAccessRequest(formData) {
 
   state.cloudError = "";
   state.accessRequestSummary = requestSummary;
+  state.onboardingIntent = onboardingIntent;
   state.signupDraft = null;
   setAuthUser(result.data.session?.user || null);
   if (state.authUser) {
@@ -3995,6 +4044,10 @@ async function syncGameToSupabase(game, options = {}) {
     state.syncStatus = "Team roster is view-only";
     return false;
   }
+  if (state.isOffline) {
+    state.syncStatus = "Saved on this phone";
+    return false;
+  }
   const userId = currentUserId();
   if (!userId) {
     state.syncStatus = "Saved on this phone";
@@ -4263,9 +4316,49 @@ function renderShell(content, options = {}) {
       </div>
     </header>
     ${renderUpdateBanner()}
+    ${renderConnectionNotice()}
     ${content}
+    ${renderDeleteGameModal()}
     ${options.hideNav ? "" : renderBottomNav()}
     ${state.toast ? `<div class="toast" role="status">${escapeHTML(state.toast)}</div>` : ""}
+  `;
+}
+
+function renderConnectionNotice() {
+  if (state.isOffline) {
+    return `
+      <section class="sync-notice offline" role="status">
+        <strong>You&apos;re offline. Keep tracking.</strong>
+        <span>Events are saved on this device and will sync when your connection returns.</span>
+      </section>
+    `;
+  }
+  if (state.syncStatus === "Saved on this phone") {
+    return `
+      <section class="sync-notice waiting" role="status">
+        <strong>Saved on this phone</strong>
+        <span>We&apos;ll sync this game when your connection returns.</span>
+      </section>
+    `;
+  }
+  return "";
+}
+
+function renderDeleteGameModal() {
+  if (!state.pendingDeleteGameId) return "";
+  const game = state.games.find((item) => item.id === state.pendingDeleteGameId);
+  if (!game) return "";
+  return `
+    <section class="modal-backdrop" role="presentation">
+      <div class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="deleteGameTitle">
+        <h3 id="deleteGameTitle">Delete this game?</h3>
+        <p class="muted small">This removes the game from your saved history and season totals. This cannot be undone.</p>
+        <div class="edit-actions">
+          <button class="btn secondary" type="button" data-action="cancel-delete-game">Cancel</button>
+          <button class="btn danger" type="button" data-action="confirm-delete-game" data-game-id="${escapeHTML(game.id)}">Delete Game</button>
+        </div>
+      </div>
+    </section>
   `;
 }
 
@@ -4292,7 +4385,7 @@ function renderBottomNav() {
     { screen: trackTarget, label: state.activeGame ? "Live" : "Track", icon: "track", active: ["start", "live"].includes(state.screen) },
     { screen: "past", label: "Review", icon: "games", active: ["past", "review"].includes(state.screen) },
     { screen: "dashboard", label: "Season", icon: "season", active: state.screen === "dashboard" },
-    { screen: "more", label: isPlatformReviewer() ? "Manage" : "More", icon: "manage", active: ["more", "player", "settings", "team", "teamAccess", "profileSetup", "tutorial", "help", "launchKit", "promoDemo"].includes(state.screen) },
+    { screen: "more", label: isPlatformReviewer() ? "Manage" : "More", icon: "manage", active: ["more", "player", "settings", "team", "teamAccess", "profileSetup", "tutorial", "help", "launchKit", "promoDemo", "demo"].includes(state.screen) },
   ];
   return `
     <nav class="bottom-nav" aria-label="Primary">
@@ -4374,8 +4467,9 @@ function renderAccountCard() {
         <input id="authPassword" name="password" type="password" autocomplete="current-password" minlength="6" required />
       </div>
       <div class="account-actions">
+        <button class="btn secondary auth-create" type="submit" name="authAction" value="sign-up" ${state.authBusy ? "disabled" : ""}>${state.authBusy ? "Sending..." : "Create Parent/Admin Account"}</button>
         <button class="btn positive" type="submit" name="authAction" value="sign-in" ${state.authBusy ? "disabled" : ""}>${state.authBusy ? "Working..." : "Log In"}</button>
-        <button class="btn secondary auth-create" type="submit" name="authAction" value="sign-up" ${state.authBusy ? "disabled" : ""}>${state.authBusy ? "Sending..." : "Create Account"}</button>
+        <button class="btn neutral" type="button" data-nav="demo">View Demo Game</button>
       </div>
       ${renderInstallCard({ compact: true })}
       <p class="auth-legal muted small"><a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a></p>
@@ -4547,7 +4641,7 @@ function renderMyPlayersList() {
     return `
       <section class="card pad">
         <h3>No approved player yet</h3>
-        <p class="muted small">Request access with your team code. After approval, enter your player's jersey number to unlock the correct roster player.</p>
+        <p class="muted small">Request access with your team code and jersey number. Once your team admin approves it, you can start tracking games.</p>
         <button class="mini-btn" type="button" data-nav="team">Request Player Access</button>
       </section>
     `;
@@ -5012,6 +5106,7 @@ function renderHome() {
     </section>
 
     <section class="stack">
+      ${renderApprovedPlayerCallout()}
       ${renderPlayerSwitcher({
         helper: false,
       })}
@@ -5094,6 +5189,7 @@ function renderMore() {
             <strong>${escapeHTML(APP_VERSION)}</strong>
           </div>
         </div>
+        ${renderAccountSyncMessage()}
         ${accountModeToggle}
         ${state.cloudError ? `<div class="notice-card error-card"><strong>Last setup error</strong><p class="muted small">${escapeHTML(state.cloudError)}</p></div>` : ""}
         <div class="more-action-list compact-actions">
@@ -5199,7 +5295,7 @@ function renderWelcome() {
     <section class="welcome-hero">
       <div class="welcome-copy">
         <h2>Track the plays that show the whole game.</h2>
-        <p>LaxHornet helps parents log youth lacrosse stats quickly, share live game updates, and keep each player&apos;s season organized.</p>
+        <p>LaxHornet helps parents track youth lacrosse stats, share live updates with family, and understand a player&apos;s game impact after the final whistle.</p>
       </div>
     </section>
 
@@ -5272,6 +5368,8 @@ function renderProfileSetup() {
         <label for="phone">Phone number <span class="optional-label">optional</span></label>
         <input id="phone" name="phone" value="${escapeHTML(profile.phone || "")}" type="tel" autocomplete="tel" placeholder="For team coordination" />
       </div>
+
+      ${renderOnboardingIntentPicker(state.onboardingIntent)}
 
       ${showAccessRequestFields ? `
         <div class="form-grid two">
@@ -5379,6 +5477,7 @@ function renderTeamAccessTools() {
 
 function renderTeamPage() {
   const admin = canCreateTeams();
+  const showNoTeamCodeCard = !admin && !activeTeam();
   return renderShell(`
     <section class="screen-title">
       <h2>${admin ? "Team" : "Team Access"}</h2>
@@ -5387,10 +5486,21 @@ function renderTeamPage() {
 
     <section class="stack">
       ${renderAdminTeamRequestInbox()}
+      ${showNoTeamCodeCard ? renderNoTeamCodeCard() : ""}
       ${renderTeamRosterCard()}
       ${renderTeamAccessTools()}
     </section>
   `);
+}
+
+function renderNoTeamCodeCard() {
+  return `
+    <section class="card pad empty-state-card">
+      <h3>Need a team code?</h3>
+      <p class="muted small">Ask your coach, team admin, or parent coordinator for the LaxHornet team code.</p>
+      <button class="mini-btn" type="button" data-action="toggle-team-access">I Have a Code</button>
+    </section>
+  `;
 }
 
 function renderTeamAccess() {
@@ -5848,9 +5958,9 @@ function renderReview() {
         <p>No games tracked yet.</p>
       </section>
       <section class="card pad empty-state-card">
-        <h3>No game history yet</h3>
-        <p class="muted small">Track a game first. After it is saved, this screen will show the timeline, corrections, tags, Game Impact, and takeaway.</p>
-        <button class="btn positive" type="button" data-nav="start">Track New Game</button>
+        <h3>No games tracked yet</h3>
+        <p class="muted small">Start your first game to build a timeline, stats, Game Impact, and season dashboard.</p>
+        <button class="btn positive" type="button" data-nav="start">Start New Game</button>
       </section>
     `);
   }
@@ -6167,8 +6277,8 @@ function renderPastGames() {
             ? games.map(renderGameListRow).join("")
             : `<div class="empty empty-state-card">
                 <h3>No games tracked yet</h3>
-                <p class="muted small">Track and save a game to review stats, edit events, export data, and see Game Impact.</p>
-                <button class="mini-btn" type="button" data-nav="start">Track New Game</button>
+                <p class="muted small">Start your first game to build a timeline, stats, Game Impact, and season dashboard.</p>
+                <button class="mini-btn" type="button" data-nav="start">Start New Game</button>
               </div>`
         }
       </section>
@@ -6257,6 +6367,31 @@ function renderPositionPicker({ name, selected = "", label = "Positions" } = {})
         ).join("")}
       </div>
     </fieldset>
+  `;
+}
+
+function renderOnboardingIntentPicker(selected = "child") {
+  const activeIntent = normalizeOnboardingIntent(selected);
+  return `
+    <section class="onboarding-intent-block">
+      <div>
+        <h3>How will you use LaxHornet?</h3>
+        <p class="muted small">You can switch later if your role changes.</p>
+      </div>
+      <div class="intent-options" role="radiogroup" aria-label="How will you use LaxHornet?">
+        ${Object.entries(ONBOARDING_INTENTS).map(
+          ([value, option]) => `
+            <label class="intent-option">
+              <input type="radio" name="onboardingIntent" value="${escapeHTML(value)}" ${activeIntent === value ? "checked" : ""} />
+              <span>
+                <strong>${escapeHTML(option.label)}</strong>
+                <small>${escapeHTML(option.description)}</small>
+              </span>
+            </label>
+          `,
+        ).join("")}
+      </div>
+    </section>
   `;
 }
 
@@ -6375,6 +6510,147 @@ function renderHelp() {
       </div>
     </section>
   `);
+}
+
+function renderApprovedPlayerCallout() {
+  const player = state.player;
+  if (!isTeamPlayer(player) || !canTrackPlayer(player) || visibleGamesForPlayer(player).length) return "";
+  const teamName = player.team || teamById(player.teamId)?.name || "your team";
+  return `
+    <section class="card pad approved-player-card">
+      <span class="demo-label">Approved</span>
+      <h3>You&apos;re approved for ${escapeHTML(player.name)}${player.number ? ` #${escapeHTML(player.number)}` : ""} on ${escapeHTML(teamName)}.</h3>
+      <p class="muted small">You can now track games, review stats, and follow season progress for this player.</p>
+      <div class="action-grid compact">
+        <button class="btn positive" type="button" data-nav="start">Track First Game</button>
+        <button class="btn secondary" type="button" data-action="install-app">Add LaxHornet to Home Screen</button>
+      </div>
+    </section>
+  `;
+}
+
+function renderAccountSyncMessage() {
+  if (state.syncStatus === "Synced") {
+    return `<div class="notice-card compact-notice"><strong>Synced</strong><p class="muted small">Your latest game data is saved to your account.</p></div>`;
+  }
+  if (state.syncStatus === "Saved on this phone") {
+    return `<div class="notice-card compact-notice"><strong>Saved on this phone</strong><p class="muted small">We&apos;ll sync this game when your connection returns.</p></div>`;
+  }
+  return "";
+}
+
+const DEMO_PLAYER = normalizePlayer({
+  id: "demo-player-12",
+  rosterPlayerId: "demo-roster-player-12",
+  teamId: "demo-team",
+  name: "Demo Player",
+  number: "12",
+  team: "Branford Demo Hornets",
+  position: "Midfield",
+});
+
+function demoGame() {
+  return normalizeGame(
+    {
+      id: "demo-game-sample",
+      playerId: DEMO_PLAYER.id,
+      teamId: DEMO_PLAYER.teamId,
+      rosterPlayerId: DEMO_PLAYER.rosterPlayerId,
+      playerSnapshot: DEMO_PLAYER,
+      opponent: "Sample Game",
+      date: todayISO(),
+      gameType: "Demo",
+      periodFormat: "quarters",
+      currentQuarter: "Q2",
+      shareCode: "DEMO12",
+      status: "complete",
+      createdAt: new Date().toISOString(),
+      endedAt: new Date().toISOString(),
+      events: [
+        { id: "demo-event-1", statType: "groundBall", quarter: "Q1", timestamp: "2026-06-25T14:02:00.000Z", tags: ["Contested"], note: "Sample possession win" },
+        { id: "demo-event-2", statType: "causedTurnover", quarter: "Q1", timestamp: "2026-06-25T14:06:00.000Z", tags: ["Good footwork"] },
+        { id: "demo-event-3", statType: "successfulClear", quarter: "Q1", timestamp: "2026-06-25T14:08:00.000Z", tags: ["Outlet"] },
+        { id: "demo-event-4", statType: "assist", quarter: "Q2", timestamp: "2026-06-25T14:18:00.000Z", tags: ["Right hand"] },
+        { id: "demo-event-5", statType: "shotOnGoal", quarter: "Q2", timestamp: "2026-06-25T14:21:00.000Z", tags: ["On the run"] },
+        { id: "demo-event-6", statType: "goal", quarter: "Q2", timestamp: "2026-06-25T14:25:00.000Z", tags: ["Inside finish"] },
+        { id: "demo-event-7", statType: "backedUpShot", quarter: "Q3", timestamp: "2026-06-25T14:37:00.000Z", tags: ["Endline", "Saved possession"] },
+        { id: "demo-event-8", statType: "hustlePlay", quarter: "Q3", timestamp: "2026-06-25T14:41:00.000Z", tags: ["Ride effort"] },
+      ],
+    },
+    DEMO_PLAYER,
+  );
+}
+
+function renderDemoPage() {
+  const game = demoGame();
+  const totals = calculateTotals(game.events, DEMO_PLAYER);
+  const seasonTotals = calculateSeasonTotalsFromGames([game]);
+  const headlineMetrics = dashboardHeadlineMetrics(seasonTotals, DEMO_PLAYER).slice(0, 6);
+  const archetypeResult = calculateArchetypeResult(seasonTotals);
+  return renderShell(`
+    <section class="screen-title">
+      <h2>Demo Game</h2>
+      <p>Sample data only. Nothing here saves to your account or changes real team/player access.</p>
+    </section>
+
+    <section class="stack demo-screen">
+      <section class="card pad demo-context-card">
+        <span class="demo-label">Demo / Sample</span>
+        <h3>Demo Player #12</h3>
+        <p class="muted small">Branford Demo Hornets - Sample Game</p>
+        <div class="action-grid compact">
+          <button class="btn positive" type="button" data-nav="home">${state.authUser ? "Back to My Account" : "Create or Log In"}</button>
+          <button class="btn secondary" type="button" data-nav="tutorial">Open Tracker Guide</button>
+        </div>
+      </section>
+
+      <section class="card pad">
+        <div class="section-head compact-head">
+          <div>
+            <h3>Sample Live Tracker</h3>
+            <p class="muted small">These buttons are display-only in demo mode.</p>
+          </div>
+        </div>
+        <div class="period-tabs demo-period-tabs" role="group" aria-label="Sample period selector">
+          <button class="period-tab active" type="button">Q1</button>
+          <button class="period-tab" type="button">Q2</button>
+          <button class="period-tab" type="button">Q3</button>
+          <button class="period-tab" type="button">Q4</button>
+        </div>
+        <section class="live-summary" aria-label="Sample live summary">
+          <div class="live-pill">${renderImpactGrade(totals.impact)}<span>Game Impact</span></div>
+          <div class="live-pill"><strong>${totals.points}</strong><span>Points</span></div>
+          <div class="live-pill"><strong>${totals.eventCount}</strong><span>Events</span></div>
+        </section>
+        ${renderLiveStatGroups({ demo: true, interactive: false })}
+      </section>
+
+      <section class="card pad">
+        <h3>Sample Completed Game Review</h3>
+        <div class="metric-grid compact-demo-grid">
+          <div class="metric">${renderImpactGrade(totals.impact)}<span>Game Impact</span></div>
+          <div class="metric"><strong>${totals.points}</strong><span>Points</span></div>
+          <div class="metric"><strong>${statWithExtraPossessions(totals.groundBalls, totals.possessionImpact.eventsByType.groundBall || 0)}</strong><span>Ground Balls</span></div>
+          <div class="metric"><strong>${signedMetric(totals.possessionValue)}</strong><span>Poss Value</span></div>
+        </div>
+        <div class="event-list">${game.events.slice(-5).reverse().map(renderEventRow).join("")}</div>
+      </section>
+
+      <section class="card pad">
+        <h3>Sample Season Dashboard Preview</h3>
+        <div class="metric-grid compact-demo-grid">
+          ${headlineMetrics.map(([value, label]) => metricTile(value, label)).join("")}
+        </div>
+        ${generateShareCard(DEMO_PLAYER, archetypeResult)}
+      </section>
+
+      <section class="card pad">
+        <h3>Sample Live Share</h3>
+        <p class="muted small">During a real game, Live Share gives family a read-only link so they can follow updates from another iPhone, phone, tablet, or computer.</p>
+        <p class="share-code">DEMO12</p>
+      </section>
+    </section>
+  `, { hideNav: !state.authUser });
 }
 
 const PROMO_DEMO_STEPS = [
@@ -6666,7 +6942,7 @@ function renderRequestSubmitted() {
   return renderShell(`
     <section class="screen-title">
       <h2>Request sent. Your team admin needs to approve access.</h2>
-      <p>You can come back here after approval and log in to start tracking the verified player.</p>
+      <p>Once approved, you will be able to track this player&apos;s games and review their stats. While you wait, you can explore a demo game or read the quick tracker guide.</p>
     </section>
 
     <section class="stack">
@@ -6681,8 +6957,9 @@ function renderRequestSubmitted() {
         </div>
         <p class="muted small">Check your inbox for account verification. After approval, log in with this email and password to open your player&apos;s tracker.</p>
         <div class="account-actions">
-          <button class="btn positive" type="button" data-nav="home">Check Approval Status</button>
+          <button class="btn positive" type="button" data-nav="demo">View Demo Game</button>
           <button class="btn secondary" type="button" data-nav="tutorial">Open Tracker Guide</button>
+          <button class="btn neutral" type="button" data-nav="home">Check Approval Status</button>
         </div>
       </div>
     </section>
@@ -6754,7 +7031,7 @@ function renderTutorial() {
 }
 
 function render() {
-  const publicScreens = ["home", "tutorial", "help", "shared", "authSuccess", "requestSubmitted"];
+  const publicScreens = ["home", "tutorial", "help", "shared", "authSuccess", "requestSubmitted", "demo"];
   const signupProfileAllowed = state.screen === "profileSetup" && state.signupDraft;
   if (!state.authUser && state.screen === "profileSetup" && !state.signupDraft) {
     state.screen = "home";
@@ -6777,6 +7054,7 @@ function render() {
     teamAccess: renderTeamAccess,
     launchKit: renderLaunchKitPage,
     promoDemo: renderPromoDemoPage,
+    demo: renderDemoPage,
     tutorial: renderTutorial,
     settings: renderSettings,
     start: renderStartGame,
@@ -7096,6 +7374,13 @@ function handleClick(event) {
     if (action.dataset.action === "export-json") exportJSON();
     if (action.dataset.action === "copy-share-link") copyShareLink();
     if (action.dataset.action === "install-app") installApp();
+    if (action.dataset.action === "cancel-delete-game") {
+      state.pendingDeleteGameId = "";
+      render();
+    }
+    if (action.dataset.action === "confirm-delete-game") {
+      confirmDeleteGame(action.dataset.gameId);
+    }
     if (action.dataset.action === "focus-auth") {
       if (state.screen !== "home") {
         navigate("home");
@@ -7420,6 +7705,21 @@ window.addEventListener("appinstalled", () => {
   deferredInstallPrompt = null;
   state.installInstructionsVisible = false;
   showToast("LaxHornet saved to home screen");
+});
+window.addEventListener("online", async () => {
+  state.isOffline = false;
+  if (state.authUser) {
+    await loadCloudGames({ silent: true });
+    state.syncStatus = "Synced";
+    showToast("Synced");
+    return;
+  }
+  if (state.syncStatus === "Saved on this phone") state.syncStatus = "Synced";
+  render();
+});
+window.addEventListener("offline", () => {
+  state.isOffline = true;
+  render();
 });
 registerServiceWorker();
 initApp();

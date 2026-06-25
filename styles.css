@@ -2705,6 +2705,131 @@ button:focus-visible,
   gap: 10px;
 }
 
+.onboarding-intent-block {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid rgba(232, 16, 16, 0.2);
+  border-radius: var(--radius);
+  background: #f6f7f8;
+}
+
+.onboarding-intent-block h3 {
+  margin: 0 0 4px;
+}
+
+.intent-options {
+  display: grid;
+  gap: 8px;
+}
+
+.intent-option {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: start;
+  padding: 12px;
+  border: 1px solid rgba(17, 19, 23, 0.12);
+  border-radius: var(--radius);
+  background: #ffffff;
+}
+
+.intent-option input {
+  margin-top: 4px;
+  accent-color: var(--hornet-red);
+}
+
+.intent-option span {
+  display: grid;
+  gap: 3px;
+}
+
+.intent-option strong {
+  color: var(--text);
+}
+
+.intent-option small {
+  color: var(--muted);
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.demo-screen .card {
+  border-color: rgba(232, 16, 16, 0.18);
+}
+
+.demo-label {
+  display: inline-flex;
+  width: fit-content;
+  padding: 4px 8px;
+  border-radius: 999px;
+  color: var(--hornet-red);
+  background: var(--hornet-red-soft);
+  font-size: 0.72rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.demo-context-card h3 {
+  margin: 8px 0 0;
+}
+
+.compact-demo-grid {
+  margin: 12px 0;
+}
+
+.sync-notice {
+  display: grid;
+  gap: 3px;
+  margin: 0 -12px 14px;
+  padding: 10px 18px;
+  border-top: 1px solid rgba(232, 16, 16, 0.24);
+  border-bottom: 1px solid rgba(232, 16, 16, 0.24);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--text);
+}
+
+.sync-notice strong {
+  font-size: 0.92rem;
+}
+
+.sync-notice span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 750;
+}
+
+.sync-notice.offline {
+  border-color: rgba(232, 16, 16, 0.4);
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: end center;
+  padding: 18px 14px calc(18px + var(--safe-bottom));
+  background: rgba(0, 0, 0, 0.58);
+}
+
+.confirm-modal {
+  width: min(520px, 100%);
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid rgba(232, 16, 16, 0.45);
+  border-radius: 14px;
+  background: #ffffff;
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+
+.confirm-modal h3,
+.confirm-modal p {
+  margin: 0;
+}
+
 .share-code {
   display: inline-grid;
   min-height: 46px;
