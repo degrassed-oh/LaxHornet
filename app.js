@@ -22,7 +22,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v190";
+const APP_VERSION = "v191";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -5868,10 +5868,11 @@ function renderNoApprovedPlayerHome() {
 
 function renderHomeReadyCard() {
   const lastGame = latestVisibleGame();
+  const playerName = normalizePlayer(state.player).name || playerTitle(state.player);
   return `
     <section class="card pad home-next-card">
       <div>
-        <h3>Ready to track ${escapeHTML(playerTitle(state.player))}?</h3>
+        <h3>Ready to track ${escapeHTML(playerName)}?</h3>
         <p class="muted small">${escapeHTML(playerReadySubcopy(state.player))}</p>
       </div>
       <div class="action-grid compact">
