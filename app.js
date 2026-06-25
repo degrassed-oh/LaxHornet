@@ -22,7 +22,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v187";
+const APP_VERSION = "v188";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -2462,6 +2462,7 @@ function undoLastEvent() {
   }
   const removed = state.activeGame.events.pop();
   state.activeGame.savedAt = new Date().toISOString();
+  state.lastEventConfirmation = null;
   persistAll();
   deleteSupabaseEvent(removed.id);
   syncGameToSupabase(state.activeGame);
@@ -2469,9 +2470,53 @@ function undoLastEvent() {
   showToast(`Undo last event: ${removed.statLabel}`);
 }
 
+function addNoteToLastEvent() {
+  const confirmation = state.lastEventConfirmation;
+  if (!confirmation || !state.activeGame || confirmation.gameId !== state.activeGame.id) {
+    showToast("No recent event to note");
+    return;
+  }
+  if (!canEditGame(state.activeGame)) {
+    showToast("View-only team access");
+    return;
+  }
+  const eventIndex = state.activeGame.events.findIndex((event) => event.id === confirmation.eventId);
+  if (eventIndex < 0) {
+    showToast("Recent event not found");
+    return;
+  }
+  const note = window.prompt(`Add note for ${confirmation.label}`)?.trim() || "";
+  if (!note) return;
+  state.activeGame.events[eventIndex] = {
+    ...state.activeGame.events[eventIndex],
+    note,
+    correctedAt: new Date().toISOString(),
+  };
+  state.activeGame.savedAt = new Date().toISOString();
+  persistAll();
+  syncLoggedEvent(state.activeGame, state.activeGame.events[eventIndex]);
+  render();
+  showToast("Note added");
+}
+
 function endGame() {
   if (!state.activeGame) return;
   if (!canEditGame(state.activeGame)) {
+    showToast("View-only team access");
+    return;
+  }
+  state.pendingEndGame = true;
+  render();
+}
+
+function confirmEndGame() {
+  if (!state.activeGame) {
+    state.pendingEndGame = false;
+    render();
+    return;
+  }
+  if (!canEditGame(state.activeGame)) {
+    state.pendingEndGame = false;
     showToast("View-only team access");
     return;
   }
@@ -2482,10 +2527,13 @@ function endGame() {
   upsertGame(state.activeGame);
   state.reviewGameId = state.activeGame.id;
   state.activeGame = null;
+  state.pendingEndGame = false;
+  state.gameSavedSummaryId = completedGame.id;
+  state.lastEventConfirmation = null;
   persistAll();
   syncGameToSupabase(completedGame, { includeEvents: true });
-  navigate("review");
-  showToast("Game ended and saved");
+  render();
+  showToast(`Game saved. Review ${playerTitle(gamePlayerSnapshot(completedGame))}'s impact.`);
 }
 
 function deleteGame(id) {
@@ -4273,6 +4321,13 @@ async function loadSharedGame(shareCode) {
 async function copyShareLink() {
   const game = state.activeGame || currentReviewGame();
   if (!game) return;
+  state.liveSharePromptGameId = game.id;
+  render();
+}
+
+async function copyLiveShareLinkNow(gameId) {
+  const game = (state.activeGame?.id === gameId ? state.activeGame : null) || state.games.find((item) => item.id === gameId) || currentReviewGame();
+  if (!game) return;
   if (!supabaseClient) {
     showToast("Live Share is not available");
     return;
@@ -4292,9 +4347,56 @@ async function copyShareLink() {
   const link = shareLinkForGame(game);
   try {
     await navigator.clipboard.writeText(link);
-    showToast("Live share link copied");
+    state.liveSharePromptGameId = "";
+    render();
+    showToast("Live Share link copied");
   } catch {
     window.prompt("Copy this share link", link);
+    state.liveSharePromptGameId = "";
+    render();
+  }
+}
+
+function turnOffLiveShare(gameId) {
+  const game = (state.activeGame?.id === gameId ? state.activeGame : null) || state.games.find((item) => item.id === gameId);
+  if (!game) {
+    state.liveSharePromptGameId = "";
+    render();
+    return;
+  }
+  game.isShared = false;
+  if (state.activeGame?.id === game.id) {
+    state.activeGame = { ...state.activeGame, isShared: false };
+  } else {
+    upsertGame(game);
+  }
+  state.liveSharePromptGameId = "";
+  persistAll();
+  syncGameToSupabase(game, { includeEvents: true });
+  render();
+  showToast("Live Share turned off");
+}
+
+async function copyFamilySummary(gameId) {
+  const game = state.games.find((item) => item.id === gameId);
+  if (!game) return;
+  const player = gamePlayerSnapshot(game);
+  const totals = calculateTotals(game.events, player);
+  const summary = [
+    `LaxHornet game summary for ${playerTitle(player)} vs ${game.opponent}`,
+    `Game Impact: ${impactLetterGrade(totals.impact)} (${formatImpactNumber(totals.impact)})`,
+    `Goals: ${totals.goals}`,
+    `Assists: ${totals.assists}`,
+    `Ground Balls: ${totals.groundBalls}`,
+    `Caused Turnovers: ${totals.causedTurnovers}`,
+    `Saves: ${totals.saves}`,
+    `Possession Value: ${signedMetric(totals.possessionValue)}`,
+  ].join("\n");
+  try {
+    await navigator.clipboard.writeText(summary);
+    showToast("Family summary copied");
+  } catch {
+    window.prompt("Copy family summary", summary);
   }
 }
 
@@ -4356,6 +4458,9 @@ function renderShell(content, options = {}) {
     ${renderUpdateBanner()}
     ${renderConnectionNotice()}
     ${content}
+    ${renderEndGameModal()}
+    ${renderGameSavedModal()}
+    ${renderLiveShareModal()}
     ${renderDeleteGameModal()}
     ${options.hideNav ? "" : renderBottomNav()}
     ${state.toast ? `<div class="toast" role="status">${escapeHTML(state.toast)}</div>` : ""}
@@ -4394,6 +4499,60 @@ function renderDeleteGameModal() {
         <div class="edit-actions">
           <button class="btn secondary" type="button" data-action="cancel-delete-game">Cancel</button>
           <button class="btn danger" type="button" data-action="confirm-delete-game" data-game-id="${escapeHTML(game.id)}">Delete Game</button>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function renderEndGameModal() {
+  if (!state.pendingEndGame || !state.activeGame) return "";
+  return `
+    <section class="modal-backdrop" role="presentation">
+      <div class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="endGameTitle">
+        <h3 id="endGameTitle">End game and save review?</h3>
+        <p class="muted small">You can still reopen this game to edit events, tags, notes, and game details.</p>
+        <div class="edit-actions">
+          <button class="btn secondary" type="button" data-action="cancel-end-game">Keep Tracking</button>
+          <button class="btn danger" type="button" data-action="confirm-end-game">End Game &amp; Review</button>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function renderGameSavedModal() {
+  if (!state.gameSavedSummaryId) return "";
+  const game = state.games.find((item) => item.id === state.gameSavedSummaryId);
+  if (!game) return "";
+  const player = gamePlayerSnapshot(game);
+  return `
+    <section class="modal-backdrop" role="presentation">
+      <div class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="gameSavedTitle">
+        <h3 id="gameSavedTitle">Game saved. Review ${escapeHTML(playerTitle(player))}&apos;s impact.</h3>
+        <p class="muted small">The game is saved in Past Games and can be reopened for corrections.</p>
+        <div class="edit-actions">
+          <button class="btn positive" type="button" data-action="open-saved-review" data-game-id="${escapeHTML(game.id)}">Open Game Review</button>
+          <button class="btn secondary" type="button" data-action="copy-family-summary" data-game-id="${escapeHTML(game.id)}">Copy Family Summary</button>
+          <button class="btn neutral" type="button" data-action="close-saved-game">Back Home</button>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function renderLiveShareModal() {
+  if (!state.liveSharePromptGameId) return "";
+  const game = (state.activeGame?.id === state.liveSharePromptGameId ? state.activeGame : null) || state.games.find((item) => item.id === state.liveSharePromptGameId);
+  if (!game) return "";
+  return `
+    <section class="modal-backdrop" role="presentation">
+      <div class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="liveShareTitle">
+        <h3 id="liveShareTitle">Live Share</h3>
+        <p class="muted small">Anyone with this link can view the live game timeline. Only share it with people you trust.</p>
+        <div class="edit-actions">
+          <button class="btn positive" type="button" data-action="confirm-copy-share-link" data-game-id="${escapeHTML(game.id)}">Copy Live Share Link</button>
+          <button class="btn secondary" type="button" data-action="turn-off-live-share" data-game-id="${escapeHTML(game.id)}">Turn Off Live Share</button>
         </div>
       </div>
     </section>
@@ -5598,8 +5757,8 @@ function renderStartGame() {
   const availablePlayers = visiblePlayers();
   return renderShell(`
     <section class="screen-title">
-      <h2>Track New Game</h2>
-      <p>${availablePlayers.length > 1 ? "Choose the player/team context, then set the game details." : "Set the opponent, choose the game format, then start tracking."}</p>
+      <h2>Set up game</h2>
+      <p>You can edit game details later.</p>
     </section>
 
     <form class="start-game-form" data-form="start-game">
@@ -5624,7 +5783,7 @@ function renderStartGame() {
         <div class="section-head compact-head">
           <div>
             <h3>Game Details</h3>
-            <p class="muted small">Set the matchup, date, and format before the whistle.</p>
+            <p class="muted small">Keep setup quick so you can get to the sideline tracker.</p>
           </div>
         </div>
         <div class="field">
@@ -5637,27 +5796,30 @@ function renderStartGame() {
             <input id="date" name="date" type="date" value="${todayISO()}" required />
           </div>
           <div class="field">
-            <label for="gameType">Game type</label>
-            <select id="gameType" name="gameType">
-              <option>Regular season</option>
-              <option>Tournament</option>
-              <option>Playoff</option>
-              <option>Scrimmage</option>
+            <label for="periodFormat">Game format</label>
+            <select id="periodFormat" name="periodFormat">
+              <option value="quarters">Quarters</option>
+              <option value="halves">Halves</option>
             </select>
           </div>
         </div>
-        <div class="field">
-          <label for="periodFormat">Game format</label>
-          <select id="periodFormat" name="periodFormat">
-            <option value="quarters">Quarters</option>
-            <option value="halves">Halves</option>
-          </select>
+        <div class="form-grid two">
+          <div class="field">
+            <label for="startingPeriod">Starting period</label>
+            <select id="startingPeriod" name="startingPeriod">
+              <option value="Q1">Q1</option>
+              <option value="H1">H1</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="liveShare">Live Share</label>
+            <select id="liveShare" name="liveShare">
+              <option value="off">Off</option>
+              <option value="on">On</option>
+            </select>
+          </div>
         </div>
-        <div class="field">
-          <label for="location">Location</label>
-          <input id="location" name="location" placeholder="Field or town" />
-        </div>
-        <button class="btn positive" type="submit" ${viewOnlyTeamPlayer ? "disabled" : ""}>Start Live Tracker</button>
+        <button class="btn positive" type="submit" ${viewOnlyTeamPlayer ? "disabled" : ""}>Start Tracking</button>
       </section>
     </form>
   `);
@@ -5678,22 +5840,54 @@ function renderStatButton(stat, options = {}) {
   `;
 }
 
+function renderStatButtonsForKeys(keys = [], options = {}) {
+  const stepByKey = options.stepByKey || {};
+  return keys
+    .map((key) => STAT_BY_KEY[key])
+    .filter(Boolean)
+    .map((stat) =>
+      renderStatButton(stat, {
+        compact: options.compact,
+        interactive: options.interactive,
+        promoStep: Number.isFinite(stepByKey[stat.key]) ? stepByKey[stat.key] : null,
+      }),
+    )
+    .join("");
+}
+
 function renderLiveStatGroups(options = {}) {
   const stepByKey = options.stepByKey || {};
+  if (!options.demo) {
+    const player = options.player || state.player;
+    const defaultKeys = liveDefaultStatKeysForPlayer(player);
+    const moreKeys = STAT_DEFS.map((stat) => stat.key).filter((key) => !defaultKeys.includes(key));
+    return `
+      <section class="live-stat-groups position-aware" aria-label="Stat buttons">
+        <div class="stat-group">
+          <div class="stat-group-head">
+            <h3>Quick Plays</h3>
+            <span>${escapeHTML((IMPACT_POSITION_WEIGHTS[liveTrackerPositionGroup(player)]?.label || "Default"))}</span>
+          </div>
+          <div class="tracker-grid">${renderStatButtonsForKeys(defaultKeys)}</div>
+        </div>
+        <div class="stat-group more-plays ${state.morePlaysExpanded ? "expanded" : "collapsed"}">
+          <button class="more-plays-toggle" type="button" data-action="toggle-more-plays" aria-expanded="${state.morePlaysExpanded}">
+            <strong>More Plays</strong>
+            <span>${state.morePlaysExpanded ? "Hide less-used stats" : "Show all other stats"}</span>
+          </button>
+          ${state.morePlaysExpanded ? `<div class="tracker-grid">${renderStatButtonsForKeys(moreKeys, { compact: true })}</div>` : ""}
+        </div>
+      </section>
+    `;
+  }
   return `
     <section class="live-stat-groups${options.demo ? " promo-demo-groups" : ""}" aria-label="Stat buttons">
       ${LIVE_STAT_GROUPS.map((group) => {
-        const buttons = group.keys
-          .map((key) => STAT_BY_KEY[key])
-          .filter(Boolean)
-          .map((stat) =>
-            renderStatButton(stat, {
-              compact: group.compact,
-              interactive: options.interactive,
-              promoStep: Number.isFinite(stepByKey[stat.key]) ? stepByKey[stat.key] : null,
-            }),
-          )
-          .join("");
+        const buttons = renderStatButtonsForKeys(group.keys, {
+          compact: group.compact,
+          interactive: options.interactive,
+          stepByKey,
+        });
         return `
           <div class="stat-group ${group.compact ? "compact" : ""}">
             <div class="stat-group-head">
@@ -5704,6 +5898,52 @@ function renderLiveStatGroups(options = {}) {
           </div>
         `;
       }).join("")}
+    </section>
+  `;
+}
+
+function liveSyncChipLabel() {
+  if (state.isOffline) return "Will sync when online";
+  if (!currentUserId()) return "Saved on this phone";
+  if (state.syncStatus === "Saved on this phone") return "Will sync when online";
+  if (state.syncStatus === "Synced") return "Synced to your account";
+  return "Saved on this phone";
+}
+
+function renderLiveStatusChips(game) {
+  const liveShareLabel = game.isShared ? "Live Share On" : "Live Share Off";
+  return `
+    <div class="live-status-chips" aria-label="Game save and share status">
+      <span>${escapeHTML(liveSyncChipLabel())}</span>
+      <span class="${game.isShared ? "share-on" : ""}">${liveShareLabel}</span>
+    </div>
+  `;
+}
+
+function renderLivePlayerCard(player) {
+  const jersey = player.number ? ` #${player.number}` : "";
+  const meta = [player.team, player.position].filter(Boolean).join(" · ");
+  return `
+    <section class="card pad live-player-card">
+      <div>
+        <h3>Tracking: ${escapeHTML(player.name || "Player")}${escapeHTML(jersey)}</h3>
+        ${meta ? `<p class="muted small">${escapeHTML(meta)}</p>` : ""}
+      </div>
+      <button class="mini-btn light" type="button" data-nav="player">Switch Player</button>
+    </section>
+  `;
+}
+
+function renderLastEventConfirmation(game) {
+  const confirmation = state.lastEventConfirmation;
+  if (!confirmation || confirmation.gameId !== game.id) return "";
+  return `
+    <section class="live-confirmation" role="status">
+      <strong>${escapeHTML(confirmation.label)} added · ${escapeHTML(confirmation.quarter)} ${formatTime(confirmation.timestamp)}</strong>
+      <div>
+        <button class="mini-btn light" type="button" data-action="undo">Undo last event: ${escapeHTML(confirmation.label)}</button>
+        <button class="mini-btn" type="button" data-action="add-note-last-event">Add Note</button>
+      </div>
     </section>
   `;
 }
@@ -5724,17 +5964,20 @@ function renderLiveTracker() {
   const totals = calculateTotals(game.events, player);
   const recentEvents = [...game.events].reverse().slice(0, 5);
   const periods = periodsForGame(game);
-  const details = `${escapeHTML(playerTitle(player))} - ${formatDate(game.date)} - ${periodFormatLabel(game)}${game.location ? ` - ${escapeHTML(game.location)}` : ""}`;
+  const statusLine = `${escapeHTML(game.currentQuarter)} · ${formatTime(new Date().toISOString())} · vs ${escapeHTML(game.opponent)}`;
 
   return renderShell(`
     <section class="screen-title live-title">
-      <h2>${escapeHTML(game.opponent)}</h2>
+      <h2>${statusLine}</h2>
       <p class="live-meta">
-        <span>${details}</span>
+        <span>${formatDate(game.date)} · ${periodFormatLabel(game)}${game.location ? ` · ${escapeHTML(game.location)}` : ""}</span>
         <button class="live-share-link" type="button" data-action="copy-share-link">Live Share</button>
       </p>
-      <p class="safety-note">Anyone with the Live Share link can watch this game read-only. Share it only with people you trust.</p>
+      ${renderLiveStatusChips(game)}
     </section>
+
+    ${renderLivePlayerCard(player)}
+    ${renderLastEventConfirmation(game)}
 
     <div class="period-tabs" role="group" aria-label="Period selector">
       ${periods.map(
@@ -5749,7 +5992,7 @@ function renderLiveTracker() {
       <div class="live-pill"><strong>${game.events.length}</strong><span>Events</span></div>
     </section>
 
-    ${renderLiveStatGroups()}
+    ${renderLiveStatGroups({ player })}
 
     <section class="card pad" style="margin-top: 12px;">
       <h3>Recent Log</h3>
@@ -7180,6 +7423,7 @@ function handleSubmit(event) {
     }
     state.activeGame = makeGame(formData);
     state.reviewGameId = state.activeGame.id;
+    if (state.activeGame.isShared) state.liveSharePromptGameId = state.activeGame.id;
     persistAll();
     syncGameToSupabase(state.activeGame);
     navigate("live");
@@ -7361,6 +7605,21 @@ function handleClick(event) {
     if (action.dataset.action === "undo") undoLastEvent();
     if (action.dataset.action === "save-game") saveActiveGame();
     if (action.dataset.action === "end-game") endGame();
+    if (action.dataset.action === "cancel-end-game") {
+      state.pendingEndGame = false;
+      render();
+    }
+    if (action.dataset.action === "confirm-end-game") confirmEndGame();
+    if (action.dataset.action === "open-saved-review") {
+      state.reviewGameId = action.dataset.gameId;
+      state.gameSavedSummaryId = "";
+      navigate("review");
+    }
+    if (action.dataset.action === "copy-family-summary") copyFamilySummary(action.dataset.gameId);
+    if (action.dataset.action === "close-saved-game") {
+      state.gameSavedSummaryId = "";
+      navigate("home");
+    }
     if (action.dataset.action === "cancel-edit-event") {
       state.editingEventId = null;
       render();
@@ -7411,7 +7670,14 @@ function handleClick(event) {
     if (action.dataset.action === "export-csv") exportCSV();
     if (action.dataset.action === "export-json") exportJSON();
     if (action.dataset.action === "copy-share-link") copyShareLink();
+    if (action.dataset.action === "confirm-copy-share-link") copyLiveShareLinkNow(action.dataset.gameId);
+    if (action.dataset.action === "turn-off-live-share") turnOffLiveShare(action.dataset.gameId);
     if (action.dataset.action === "install-app") installApp();
+    if (action.dataset.action === "add-note-last-event") addNoteToLastEvent();
+    if (action.dataset.action === "toggle-more-plays") {
+      state.morePlaysExpanded = !state.morePlaysExpanded;
+      render();
+    }
     if (action.dataset.action === "cancel-delete-game") {
       state.pendingDeleteGameId = "";
       render();
