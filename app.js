@@ -12,6 +12,7 @@ const STORAGE_KEYS = {
   activeTeamId: "laxhornet.activeTeamId",
   teamAccessRequests: "laxhornet.teamAccessRequests",
   playerClaims: "laxhornet.playerClaims",
+  removedPlayerAccess: "laxhornet.removedPlayerAccess",
   adminViewMode: "laxhornet.adminViewMode",
   onboardingIntent: "laxhornet.onboardingIntent",
 };
@@ -22,7 +23,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v199";
+const APP_VERSION = "v200";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -387,6 +388,7 @@ const state = {
   activeTeamId: initialStoredState.activeTeamId,
   teamAccessRequests: initialStoredState.teamAccessRequests,
   playerClaims: initialStoredState.playerClaims,
+  removedPlayerAccess: initialStoredState.removedPlayerAccess,
   games: initialStoredState.games,
   activeGame: initialStoredState.activeGame,
   reviewGameId: initialStoredState.reviewGameId,
@@ -480,6 +482,7 @@ function readStoredAccountState(userId = activeStorageUserId) {
     activeTeamId: loadJSON(STORAGE_KEYS.activeTeamId, ""),
     teamAccessRequests: normalizeTeamAccessRequests(loadJSON(STORAGE_KEYS.teamAccessRequests, [])),
     playerClaims: normalizePlayerClaims(loadJSON(STORAGE_KEYS.playerClaims, [])),
+    removedPlayerAccess: normalizeRemovedPlayerAccess(loadJSON(STORAGE_KEYS.removedPlayerAccess, [])),
     games: loadJSON(STORAGE_KEYS.games, []),
     activeGame: loadJSON(STORAGE_KEYS.activeGame, null),
     reviewGameId: loadJSON(STORAGE_KEYS.reviewGameId, null),
@@ -628,6 +631,34 @@ function normalizePlayerClaims(claims = []) {
   return [...merged.values()];
 }
 
+function normalizeRemovedPlayerAccessItem(item = {}) {
+  return {
+    teamId: item.teamId || item.team_id || "",
+    rosterPlayerId: item.rosterPlayerId || item.roster_player_id || item.id || "",
+    jerseyNumber: String(item.jerseyNumber || item.jersey_number || item.number || "").trim(),
+    playerName: String(item.playerName || item.player_name || item.name || "").trim(),
+    removedAt: item.removedAt || item.removed_at || new Date().toISOString(),
+  };
+}
+
+function removedPlayerAccessKey(teamId = "", rosterPlayerId = "", jerseyNumber = "") {
+  const team = String(teamId || "").trim();
+  const roster = String(rosterPlayerId || "").trim();
+  const jersey = String(jerseyNumber || "").trim();
+  if (!team || (!roster && !jersey)) return "";
+  return `${team}|${roster || `jersey:${jersey}`}`;
+}
+
+function normalizeRemovedPlayerAccess(items = []) {
+  const merged = new Map();
+  (Array.isArray(items) ? items : []).forEach((item) => {
+    const normalized = normalizeRemovedPlayerAccessItem(item);
+    const key = removedPlayerAccessKey(normalized.teamId, normalized.rosterPlayerId, normalized.jerseyNumber);
+    if (key) merged.set(key, { ...merged.get(key), ...normalized });
+  });
+  return [...merged.values()];
+}
+
 function teamById(teamId) {
   return state.teams.find((team) => team.id === teamId) || null;
 }
@@ -728,16 +759,46 @@ function isCloudBackedTeam(teamId) {
 
 function hasPlayerClaim(teamId, rosterPlayerId) {
   if (!teamId || !rosterPlayerId) return false;
+  if (isPlayerAccessRemoved(teamId, rosterPlayerId)) return false;
   return state.playerClaims.some((claim) => claim.teamId === teamId && claim.rosterPlayerId === rosterPlayerId);
+}
+
+function isPlayerAccessRemoved(teamId = "", rosterPlayerId = "", jerseyNumber = "") {
+  if (isPlatformReviewer()) return false;
+  const exactKey = removedPlayerAccessKey(teamId, rosterPlayerId, jerseyNumber);
+  const jerseyKey = removedPlayerAccessKey(teamId, "", jerseyNumber);
+  return normalizeRemovedPlayerAccess(state.removedPlayerAccess).some((item) => {
+    const itemKey = removedPlayerAccessKey(item.teamId, item.rosterPlayerId, item.jerseyNumber);
+    return itemKey && (itemKey === exactKey || (!!jerseyKey && itemKey === jerseyKey));
+  });
+}
+
+function removedAccessForPlayer(player = {}) {
+  const normalized = normalizePlayer(player);
+  const rosterPlayerId = normalized.rosterPlayerId || normalized.id;
+  if (!normalized.teamId || !rosterPlayerId) return null;
+  return normalizeRemovedPlayerAccessItem({
+    teamId: normalized.teamId,
+    rosterPlayerId,
+    jerseyNumber: normalized.number,
+    playerName: normalized.name,
+    removedAt: new Date().toISOString(),
+  });
+}
+
+function requestAccessRemoved(request = {}) {
+  const rosterPlayer = requestedRosterPlayerForAccess(request);
+  return isPlayerAccessRemoved(request.teamId, rosterPlayer?.id || "", request.childJerseyNumber);
 }
 
 function playerClaimForRequest(request = {}) {
   if (!request.teamId || !request.userId) return null;
+  if (requestAccessRemoved(request)) return null;
   return state.playerClaims.find((claim) => claim.teamId === request.teamId && claim.userId === request.userId) || null;
 }
 
 function requestNeedsPlayerVerification(request = {}) {
-  return request.status === "approved" && !playerClaimForRequest(request);
+  return request.status === "approved" && !requestAccessRemoved(request) && !playerClaimForRequest(request);
 }
 
 function inferredClaimFromRosterPlayer(player = {}) {
@@ -755,6 +816,7 @@ function inferredClaimFromRosterPlayer(player = {}) {
 
 function teamAccessStatusCopy(request = {}) {
   if (request.status === "pending") return "Waiting for team admin approval";
+  if (requestAccessRemoved(request)) return "Player removed from this account";
   if (requestNeedsPlayerVerification(request)) return "Team access approved - verify player";
   if (request.status === "approved") return "Player access verified";
   if (request.status === "rejected") return "Request not approved";
@@ -1728,6 +1790,7 @@ function persistAll() {
   saveJSON(STORAGE_KEYS.activeTeamId, state.activeTeamId);
   saveJSON(STORAGE_KEYS.teamAccessRequests, normalizeTeamAccessRequests(state.teamAccessRequests));
   saveJSON(STORAGE_KEYS.playerClaims, normalizePlayerClaims(state.playerClaims));
+  saveJSON(STORAGE_KEYS.removedPlayerAccess, normalizeRemovedPlayerAccess(state.removedPlayerAccess));
   saveJSON(STORAGE_KEYS.adminViewMode, state.adminViewMode === "tracker" ? "tracker" : "admin");
   saveJSON(STORAGE_KEYS.onboardingIntent, state.onboardingIntent || "child");
   saveJSON(STORAGE_KEYS.deletedGames, uniqueIds(state.deletedGameIds));
@@ -1751,6 +1814,7 @@ function applyStoredAccountState(userId) {
   state.activeTeamId = stored.activeTeamId;
   state.teamAccessRequests = stored.teamAccessRequests;
   state.playerClaims = stored.playerClaims;
+  state.removedPlayerAccess = stored.removedPlayerAccess;
   state.adminViewMode = stored.adminViewMode;
   state.onboardingIntent = stored.onboardingIntent;
   state.games = stored.games;
@@ -1779,6 +1843,7 @@ function resetCloudAccountState() {
   state.activeTeamId = "";
   state.teamAccessRequests = [];
   state.playerClaims = [];
+  state.removedPlayerAccess = [];
   state.adminViewMode = "admin";
   state.userProfile = null;
   state.adminRequests = [];
@@ -3266,7 +3331,7 @@ async function fetchVisibleCloudRosterPlayers(teamIdsForSync = []) {
   const rpcResult = await supabaseClient.rpc("laxhornet_visible_roster_players");
   if (!rpcResult.error && Array.isArray(rpcResult.data)) {
     const rosterPlayers = normalizeRosterPlayers(rpcResult.data.map(rosterPlayerFromSupabaseRow))
-      .filter((player) => !ids.length || ids.includes(player.teamId));
+      .filter((player) => (!ids.length || ids.includes(player.teamId)) && !isPlayerAccessRemoved(player.teamId, player.id, player.number));
     return { rosterPlayers, error: null, source: "rpc" };
   }
   if (rpcResult.error && !isMissingRpcError(rpcResult.error)) {
@@ -3282,7 +3347,8 @@ async function fetchVisibleCloudRosterPlayers(teamIdsForSync = []) {
 
   if (rosterError) return { rosterPlayers: [], error: rosterError, source: "tables" };
   return {
-    rosterPlayers: normalizeRosterPlayers((rosterRows || []).map(rosterPlayerFromSupabaseRow)),
+    rosterPlayers: normalizeRosterPlayers((rosterRows || []).map(rosterPlayerFromSupabaseRow))
+      .filter((player) => !isPlayerAccessRemoved(player.teamId, player.id, player.number)),
     error: null,
     source: "tables",
   };
@@ -3403,7 +3469,8 @@ async function repairApprovedPlayerClaims(options = {}) {
     if (!isMissingRpcError(error) && !options.silent) reportTeamSetupError(error);
     return [];
   }
-  const repairedClaims = normalizePlayerClaims((Array.isArray(data) ? data : []).map(playerClaimFromSupabaseRow));
+  const repairedClaims = normalizePlayerClaims((Array.isArray(data) ? data : []).map(playerClaimFromSupabaseRow))
+    .filter((claim) => !isPlayerAccessRemoved(claim.teamId, claim.rosterPlayerId));
   if (repairedClaims.length) {
     state.playerClaims = normalizePlayerClaims([...state.playerClaims, ...repairedClaims]);
   }
@@ -3417,7 +3484,8 @@ async function loadPlayerClaims(options = {}) {
     if (!options.silent) reportTeamSetupError(error);
     return [];
   }
-  state.playerClaims = normalizePlayerClaims((Array.isArray(data) ? data : []).map(playerClaimFromSupabaseRow));
+  state.playerClaims = normalizePlayerClaims((Array.isArray(data) ? data : []).map(playerClaimFromSupabaseRow))
+    .filter((claim) => !isPlayerAccessRemoved(claim.teamId, claim.rosterPlayerId));
   if (!options.silent) render();
   return state.playerClaims;
 }
@@ -3429,7 +3497,8 @@ async function loadClaimedRosterPlayers(options = {}) {
     if (!options.silent) reportTeamSetupError(error);
     return [];
   }
-  const claimedRosterPlayers = normalizeRosterPlayers((Array.isArray(data) ? data : []).map(rosterPlayerFromSupabaseRow));
+  const claimedRosterPlayers = normalizeRosterPlayers((Array.isArray(data) ? data : []).map(rosterPlayerFromSupabaseRow))
+    .filter((player) => !isPlayerAccessRemoved(player.teamId, player.id, player.number));
   if (claimedRosterPlayers.length) {
     state.playerClaims = normalizePlayerClaims([
       ...state.playerClaims,
@@ -3928,6 +3997,9 @@ async function claimRosterPlayer(formData) {
     return;
   }
   const claim = playerClaimFromSupabaseRow((Array.isArray(data) ? data[0] : data) || {});
+  state.removedPlayerAccess = normalizeRemovedPlayerAccess(state.removedPlayerAccess).filter(
+    (item) => !(item.teamId === claim.teamId && ((claim.rosterPlayerId && item.rosterPlayerId === claim.rosterPlayerId) || (jerseyNumber && item.jerseyNumber === jerseyNumber))),
+  );
   state.playerClaims = normalizePlayerClaims([...state.playerClaims, claim]);
   await loadCloudTeams({ silent: true });
   state.activePlayerId = claim.rosterPlayerId || state.activePlayerId;
@@ -4184,21 +4256,21 @@ async function removeClaimedRosterPlayer() {
     showToast("No verified player selected");
     return;
   }
-  if (playerHasAnyGames(player)) {
-    showToast("Saved games must be deleted before removing this player from your account");
-    return;
-  }
-  if (!window.confirm(`Remove ${playerTitle(player)} from your account? This does not remove the player from the team roster. It only removes your access to this player.`)) return;
+  if (!window.confirm(`Remove ${playerTitle(player)} from this account? This does not delete saved games or remove the player from the team roster. It only removes this player's access from this parent account.`)) return;
 
   const { error } = await supabaseClient.rpc("laxhornet_delete_player_claim", {
     p_team_id: player.teamId,
     p_roster_player_id: rosterPlayerId,
   });
-  if (error) {
+  if (error && !/not found|access not found|player access not found/i.test(readableSupabaseError(error))) {
     reportTeamSetupError(error);
     return;
   }
 
+  const removedAccess = removedAccessForPlayer(player);
+  if (removedAccess) {
+    state.removedPlayerAccess = normalizeRemovedPlayerAccess([...state.removedPlayerAccess, removedAccess]);
+  }
   state.playerClaims = state.playerClaims.filter(
     (claim) => !(claim.teamId === player.teamId && claim.rosterPlayerId === rosterPlayerId),
   );
@@ -6101,7 +6173,7 @@ function renderPlayerPage() {
     ? canRemoveClaimedRosterPlayer
       ? `<section class="card pad">
           <h3>Remove Player From My Account</h3>
-          <p class="muted small">This does not remove ${escapeHTML(playerTitle(selectedRosterPlayer))} from the team roster. It only removes your access to this player.</p>
+          <p class="muted small">This removes ${escapeHTML(playerTitle(selectedRosterPlayer))} from this parent account only. It does not delete saved games and does not remove the player from the team roster.</p>
           <button class="btn danger" type="button" data-action="remove-claimed-player">Remove Player From My Account</button>
         </section>`
       : ""
