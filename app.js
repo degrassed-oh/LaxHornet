@@ -23,7 +23,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v206";
+const APP_VERSION = "v207";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -5687,6 +5687,10 @@ function renderMore() {
   const gameDaySummary = teamMismatch
     ? `Tracking ${playerTitle(state.player)} on ${activePlayerTeamName}. Managing ${activeTeamName}.`
     : `${playerTitle(activePlayer || state.player)}${playerLine ? ` - ${playerLine}` : ""}`;
+  const gameDayContext = [
+    `Active player: ${playerTitle(state.player)}${activePlayerTeamName ? ` (${activePlayerTeamName})` : ""}`,
+    `Team: ${activeTeamName || state.player.team || "Not connected"}`,
+  ];
   const accountAdminPortalAction = isReviewerAccount()
     ? `<button class="more-action" type="button" data-action="${isPlatformReviewer() ? "open-tracker-view" : "open-admin-portal"}">
         <span>${renderNavIcon(isPlatformReviewer() ? "home" : "team")}</span>
@@ -5747,18 +5751,6 @@ function renderMore() {
           <h3>Account & App</h3>
           <p class="muted small">${escapeHTML(profileName || "Signed in")}${userEmail() ? ` - ${escapeHTML(userEmail())}` : ""}</p>
         </div>
-        <div class="more-status-grid">
-          <div class="more-status-cell">
-            <span>Sync</span>
-            <strong>${escapeHTML(displaySyncStatus())}</strong>
-          </div>
-          <div class="more-status-cell">
-            <span>Version</span>
-            <strong>${escapeHTML(APP_VERSION)}</strong>
-          </div>
-        </div>
-        ${renderAccountSyncMessage()}
-        ${state.cloudError ? `<div class="notice-card error-card"><strong>Sync needs attention</strong><p class="muted small">${escapeHTML(state.cloudError)}</p></div>` : ""}
         <div class="more-action-list compact-actions">
           ${accountAdminPortalAction}
           <button class="more-action" type="button" data-nav="profileSetup">
@@ -5792,23 +5784,13 @@ function renderMore() {
             <small>Clear cached app state here without deleting cloud data.</small>
           </button>
         </div>
+        ${renderAccountAppHelper()}
       </section>
 
       <section class="card pad more-card primary-manage-card">
         <div>
           <h3>Game Day Manager</h3>
-          <p class="muted small">${escapeHTML(gameDaySummary)}</p>
-        </div>
-        <div class="more-status-grid">
-          <div class="more-status-cell">
-            <span>Active player</span>
-            <strong>${escapeHTML(playerTitle(state.player))}</strong>
-            ${activePlayerTeamName ? `<small>${escapeHTML(activePlayerTeamName)}</small>` : ""}
-          </div>
-          <div class="more-status-cell">
-            <span>Managing team</span>
-            <strong>${escapeHTML(activeTeamName || state.player.team || "Not connected")}</strong>
-          </div>
+          <p class="muted small">Game setup, tracking, and player context.</p>
         </div>
         ${teamMismatch ? `<div class="notice-card compact-notice"><strong>Different team selected.</strong><p class="muted small">Open Players &amp; Teams to switch who you are tracking or add another player.</p></div>` : ""}
         <div class="more-action-list">
@@ -5822,6 +5804,10 @@ function renderMore() {
             <strong>Players &amp; Teams</strong>
             <small>Choose who to track, view team context, or add another player.</small>
           </button>
+        </div>
+        <div class="more-helper-text" aria-label="Game day details">
+          <p>${escapeHTML(gameDaySummary)}</p>
+          ${gameDayContext.map((line) => `<p>${escapeHTML(line)}</p>`).join("")}
         </div>
       </section>
 
@@ -7608,21 +7594,24 @@ function renderApprovedPlayerCallout() {
   `;
 }
 
-function renderAccountSyncMessage() {
-  const label = displaySyncStatus();
-  if (label === "Synced to your account") {
-    return `<div class="notice-card compact-notice"><strong>Synced to your account</strong><p class="muted small">Your latest game data is saved to your account.</p></div>`;
-  }
-  if (label === "Will sync when online") {
-    return `<div class="notice-card compact-notice"><strong>Will sync when online</strong><p class="muted small">Events are saved on this device and will sync when your connection returns.</p></div>`;
-  }
-  if (label === "Saved on this phone") {
-    return `<div class="notice-card compact-notice"><strong>Saved on this phone</strong><p class="muted small">We&apos;ll sync this game when your connection returns.</p></div>`;
-  }
-  if (label === "Sync needs attention") {
-    return `<div class="notice-card error-card compact-notice"><strong>Sync needs attention</strong><p class="muted small">Use Sync or Updates from Account & App to refresh games, teams, and player access.</p></div>`;
-  }
+function accountSyncHelperText(label = displaySyncStatus()) {
+  if (label === "Synced to your account") return "Your latest game data is saved to your account.";
+  if (label === "Will sync when online") return "Events are saved on this device and will sync when your connection returns.";
+  if (label === "Saved on this phone") return "We&apos;ll sync this game when your connection returns.";
+  if (label === "Sync needs attention") return "Use Sync or Updates to refresh games, teams, and player access.";
   return "";
+}
+
+function renderAccountAppHelper() {
+  const label = displaySyncStatus();
+  const helper = accountSyncHelperText(label);
+  return `
+    <div class="more-helper-text" aria-label="Account and app details">
+      <p><strong>Sync:</strong> ${escapeHTML(label)}${helper ? ` - ${helper}` : ""}</p>
+      <p><strong>Version:</strong> ${escapeHTML(APP_VERSION)}</p>
+      ${state.cloudError ? `<p class="warning"><strong>Last sync issue:</strong> ${escapeHTML(state.cloudError)}</p>` : ""}
+    </div>
+  `;
 }
 
 const DEMO_PLAYER = normalizePlayer({

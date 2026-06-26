@@ -2628,6 +2628,29 @@ button:focus-visible,
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.more-helper-text {
+  display: grid;
+  gap: 3px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 750;
+  line-height: 1.32;
+}
+
+.more-helper-text p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.more-helper-text strong {
+  color: #505963;
+  font-weight: 900;
+}
+
+.more-helper-text .warning {
+  color: #8f1518;
+}
+
 .more-status-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
