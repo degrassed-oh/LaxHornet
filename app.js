@@ -23,7 +23,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v200";
+const APP_VERSION = "v201";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -1332,19 +1332,23 @@ function canCreateTeams() {
   return isPlatformReviewer();
 }
 
-function setAdminViewMode(mode) {
+async function setAdminViewMode(mode, options = {}) {
   if (!isReviewerAccount()) return;
   state.adminViewMode = mode === "tracker" ? "tracker" : "admin";
   if (isPlatformReviewer()) {
+    if (options.screen) state.screen = options.screen;
+    await loadCloudTeams({ silent: true });
     mergeRosterPlayersIntoPlayers();
     ensureActiveTeamRosterPlayer();
     syncActivePlayer();
   } else {
+    mergeRosterPlayersIntoPlayers();
     const firstVisible = visiblePlayers()[0];
     if (firstVisible) {
       state.activePlayerId = firstVisible.id;
       state.player = firstVisible;
     }
+    if (options.screen) state.screen = options.screen;
   }
   persistAll();
   render();
@@ -1916,6 +1920,7 @@ function renderInstallCard(options = {}) {
 function navigate(screen) {
   if (screen === "settings") screen = "player";
   if (screen === "teamAccess") screen = "team";
+  if (screen === "adminPortal" && isReviewerAccount()) state.adminViewMode = "admin";
   state.screen = screen;
   recoverAdminTeamContext();
   render();
@@ -4274,7 +4279,9 @@ async function removeClaimedRosterPlayer() {
   state.playerClaims = state.playerClaims.filter(
     (claim) => !(claim.teamId === player.teamId && claim.rosterPlayerId === rosterPlayerId),
   );
-  state.rosterPlayers = state.rosterPlayers.filter((item) => !(item.teamId === player.teamId && item.id === rosterPlayerId));
+  if (!isReviewerAccount()) {
+    state.rosterPlayers = state.rosterPlayers.filter((item) => !(item.teamId === player.teamId && item.id === rosterPlayerId));
+  }
   state.players = state.players.filter((item) => !(item.teamId === player.teamId && (item.rosterPlayerId || item.id) === rosterPlayerId));
   if (!state.players.length) state.players = [normalizePlayer(DEFAULT_PLAYER, { createId: true })];
   mergeRosterPlayersIntoPlayers();
@@ -4891,11 +4898,8 @@ function renderAccountCard() {
 
   if (state.authUser) {
     const role = currentAppRole();
-    const modeToggle = isReviewerAccount()
-      ? `<div class="mode-toggle" role="group" aria-label="Admin view mode">
-          <button class="mini-btn ${isPlatformReviewer() ? "" : "light"}" type="button" data-admin-view-mode="admin" aria-pressed="${isPlatformReviewer()}">Switch to Team Admin Tools</button>
-          <button class="mini-btn ${!isPlatformReviewer() ? "" : "light"}" type="button" data-admin-view-mode="tracker" aria-pressed="${!isPlatformReviewer()}">Switch to Tracker View</button>
-        </div>`
+    const adminPortalButton = isReviewerAccount()
+      ? `<button class="btn brand neutral" type="button" data-action="${isPlatformReviewer() ? "open-tracker-view" : "open-admin-portal"}">${isPlatformReviewer() ? "Open Parent Tracker App" : "Open Team Admin Portal"}</button>`
       : "";
     return `
       <section class="card pad account-card">
@@ -4905,8 +4909,8 @@ function renderAccountCard() {
         <p class="muted small">Access: ${escapeHTML(isReviewerAccount() ? `Reviewer / ${appRoleLabel(role)}` : appRoleLabel(role))}</p>
         <p class="muted small">${escapeHTML(displaySyncStatus())}</p>
         ${state.cloudError ? `<p class="muted small">Sync issue: ${escapeHTML(state.cloudError)}</p>` : ""}
-        ${modeToggle}
         <div class="account-actions">
+          ${adminPortalButton}
           <button class="btn neutral" type="button" data-action="sync-cloud-games">Sync</button>
           <button class="btn secondary" type="button" data-nav="profileSetup">Edit Profile</button>
           <button class="btn secondary" type="button" data-action="refresh-profile">Refresh Profile</button>
@@ -5618,6 +5622,7 @@ function renderTeamRosterCard(options = {}) {
 
 function renderHome() {
   if (!state.authUser) return renderWelcome();
+  if (isPlatformReviewer()) return renderAdminPortal();
 
   const season = calculateSeasonTotals();
   const hasApprovedPlayer = visiblePlayers().length > 0 && playerAccessStatus(state.player) === "Approved";
@@ -5657,11 +5662,12 @@ function renderMore() {
   const gameDaySummary = teamMismatch
     ? `Tracking ${playerTitle(state.player)} on ${activePlayerTeamName}. Managing ${activeTeamName}.`
     : `${playerTitle(activePlayer || state.player)}${playerLine ? ` - ${playerLine}` : ""}`;
-  const accountModeToggle = isReviewerAccount()
-    ? `<div class="mode-toggle" role="group" aria-label="Admin view mode">
-        <button class="mini-btn ${isPlatformReviewer() ? "" : "light"}" type="button" data-admin-view-mode="admin" aria-pressed="${isPlatformReviewer()}">Team Admin Tools</button>
-        <button class="mini-btn ${!isPlatformReviewer() ? "" : "light"}" type="button" data-admin-view-mode="tracker" aria-pressed="${!isPlatformReviewer()}">Tracker View</button>
-      </div>`
+  const accountAdminPortalAction = isReviewerAccount()
+    ? `<button class="more-action" type="button" data-action="${isPlatformReviewer() ? "open-tracker-view" : "open-admin-portal"}">
+        <span>${renderNavIcon(isPlatformReviewer() ? "home" : "team")}</span>
+        <strong>${isPlatformReviewer() ? "Parent Tracker App" : "Team Admin Portal"}</strong>
+        <small>${isPlatformReviewer() ? "Use the parent-facing tracker screens." : "Manage teams, rosters, and parent access."}</small>
+      </button>`
     : "";
   const adminTools = isPlatformReviewer()
     ? `
@@ -5727,9 +5733,9 @@ function renderMore() {
           </div>
         </div>
         ${renderAccountSyncMessage()}
-        ${accountModeToggle}
         ${state.cloudError ? `<div class="notice-card error-card"><strong>Sync needs attention</strong><p class="muted small">${escapeHTML(state.cloudError)}</p></div>` : ""}
         <div class="more-action-list compact-actions">
+          ${accountAdminPortalAction}
           <button class="more-action" type="button" data-nav="profileSetup">
             <span>${renderNavIcon("more")}</span>
             <strong>User Profile</strong>
@@ -6034,7 +6040,87 @@ function renderTeamPage() {
       ${renderTeamRosterCard()}
       ${renderAdminTeamRequestInbox()}
     </section>
-  `);
+  `, { hideNav: admin });
+}
+
+function renderAdminPortal() {
+  if (!isPlatformReviewer()) {
+    return renderShell(`
+      <section class="screen-title">
+        <h2>Team Admin Portal</h2>
+        <p>Open this area from the approved admin account.</p>
+      </section>
+      <section class="stack">
+        <section class="card pad">
+          <h3>Admin access required</h3>
+          <p class="muted small">Use the parent tracker app for game tracking, or sign in with the approved admin account for roster management.</p>
+          <button class="btn secondary" type="button" data-nav="home">Back Home</button>
+        </section>
+      </section>
+    `);
+  }
+
+  const managedTeams = state.teams.filter((team) => canManageRoster(team.id) || canDeleteTeam(team.id));
+  const activeTeamId = activeTeam()?.id || "";
+  const allRosterCount = state.rosterPlayers.filter((player) => managedTeams.some((team) => team.id === player.teamId) && player.active !== false).length;
+  const pendingRequests = state.teamAccessRequests.filter((request) => request.status === "pending").length;
+  const verificationNeeded = state.teamAccessRequests.filter(requestNeedsPlayerVerification).length;
+
+  return renderShell(`
+    <section class="admin-portal-shell">
+      <section class="admin-portal-hero">
+        <div>
+          <p class="admin-portal-kicker">Team Admin Portal</p>
+          <h2>Manage teams, rosters, and parent access.</h2>
+          <p>Admin work stays separate from the Parent Tracker app so roster management is not affected by parent-only player cleanup.</p>
+        </div>
+        <div class="admin-portal-actions">
+          <button class="btn brand positive" type="button" data-action="sync-team-roster">Sync Admin Data</button>
+          <button class="btn secondary" type="button" data-action="open-tracker-view">Open Parent Tracker App</button>
+        </div>
+      </section>
+
+      <section class="admin-portal-metrics" aria-label="Admin overview">
+        <div><span>Teams</span><strong>${managedTeams.length}</strong></div>
+        <div><span>Roster Players</span><strong>${allRosterCount}</strong></div>
+        <div><span>Pending Requests</span><strong>${pendingRequests}</strong></div>
+        <div><span>Need Verification</span><strong>${verificationNeeded}</strong></div>
+      </section>
+
+      <section class="admin-portal-grid">
+        ${renderTeamAccessTools()}
+        ${renderTeamRosterCard()}
+
+        <section class="card pad admin-portal-card">
+          <div class="section-head compact-head">
+            <div>
+              <h3>Parent Access Queue</h3>
+              <p class="muted small">Approve requests and remind parents to verify their player.</p>
+            </div>
+            <button class="mini-btn light" type="button" data-action="sync-team-roster">Sync</button>
+          </div>
+          ${renderTeamAccessRequests() || `<p class="muted small">No requests need action for the selected team.</p>`}
+          ${renderAdminTeamRequestInbox()}
+        </section>
+
+        <section class="card pad admin-portal-card">
+          <h3>Admin Resources</h3>
+          <div class="more-action-list compact-actions">
+            <button class="more-action" type="button" data-nav="launchKit">
+              <span>${renderNavIcon("games")}</span>
+              <strong>Launch Kit</strong>
+              <small>Share materials, QR code, and parent instructions.</small>
+            </button>
+            <button class="more-action" type="button" data-nav="profileSetup">
+              <span>${renderNavIcon("manage")}</span>
+              <strong>Admin Profile</strong>
+              <small>Update account details and sign out.</small>
+            </button>
+          </div>
+        </section>
+      </section>
+    </section>
+  `, { hideNav: true });
 }
 
 function renderNoTeamCodeCard() {
@@ -7951,12 +8037,16 @@ function render() {
   if (state.authUser && needsParentProfileSetup() && !["profileSetup", "shared", "help", "tutorial", "authSuccess", "requestSubmitted"].includes(state.screen)) {
     state.screen = "profileSetup";
   }
+  if (state.authUser && isPlatformReviewer() && !["adminPortal", "team", "launchKit", "promoDemo", "profileSetup", "help", "tutorial", "shared", "authSuccess"].includes(state.screen)) {
+    state.screen = "adminPortal";
+  }
   if (state.authUser) recoverAdminTeamContext();
   const screens = {
     home: renderHome,
     authSuccess: renderAuthSuccess,
     requestSubmitted: renderRequestSubmitted,
     profileSetup: renderProfileSetup,
+    adminPortal: renderAdminPortal,
     more: renderMore,
     player: renderPlayerPage,
     team: renderTeamPage,
@@ -8329,6 +8419,8 @@ function handleClick(event) {
     if (action.dataset.action === "sign-out") signOut();
     if (action.dataset.action === "reset-device-state") resetThisDeviceState();
     if (action.dataset.action === "refresh-profile") loadUserProfile();
+    if (action.dataset.action === "open-admin-portal") setAdminViewMode("admin", { screen: "adminPortal" });
+    if (action.dataset.action === "open-tracker-view") setAdminViewMode("tracker", { screen: "home" });
     if (action.dataset.action === "request-admin") requestUserRole("admin");
     if (action.dataset.action === "refresh-admin-requests") loadAdminRequests();
     if (action.dataset.action === "sync-cloud-games") loadCloudGames();
