@@ -23,7 +23,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v201";
+const APP_VERSION = "v202";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -763,6 +763,15 @@ function hasPlayerClaim(teamId, rosterPlayerId) {
   return state.playerClaims.some((claim) => claim.teamId === teamId && claim.rosterPlayerId === rosterPlayerId);
 }
 
+function teamHasVerifiedPlayerAccess(teamId) {
+  if (!teamId) return false;
+  return state.playerClaims.some((claim) => claim.teamId === teamId && !isPlayerAccessRemoved(claim.teamId, claim.rosterPlayerId));
+}
+
+function ownTeamAccessRequests() {
+  return state.teamAccessRequests.filter((request) => request.userId === currentUserId());
+}
+
 function isPlayerAccessRemoved(teamId = "", rosterPlayerId = "", jerseyNumber = "") {
   if (isPlatformReviewer()) return false;
   const exactKey = removedPlayerAccessKey(teamId, rosterPlayerId, jerseyNumber);
@@ -817,8 +826,8 @@ function inferredClaimFromRosterPlayer(player = {}) {
 function teamAccessStatusCopy(request = {}) {
   if (request.status === "pending") return "Waiting for team admin approval";
   if (requestAccessRemoved(request)) return "Player removed from this account";
-  if (requestNeedsPlayerVerification(request)) return "Team access approved - verify player";
-  if (request.status === "approved") return "Player access verified";
+  if (requestNeedsPlayerVerification(request)) return `Approved - verify player${request.childJerseyNumber ? ` #${request.childJerseyNumber}` : ""}`;
+  if (request.status === "approved") return "Verified player access";
   if (request.status === "rejected") return "Request not approved";
   return request.status || "Request";
 }
@@ -3419,6 +3428,9 @@ async function loadCloudTeams(options = {}) {
   mergeRosterPlayersIntoPlayers();
   ensureActiveTeamRosterPlayer();
   syncActivePlayer();
+  if (!canCreateTeams() && state.player?.teamId && teamHasVerifiedPlayerAccess(state.player.teamId)) {
+    state.activeTeamId = state.player.teamId;
+  }
   persistAll();
   if (!options.silent) {
     render();
@@ -5426,14 +5438,18 @@ function renderAdminTeamSnapshot(team, roster = []) {
 
 function renderMyTeamAccessRequests() {
   if (canCreateTeams()) return "";
-  const ownRequests = state.teamAccessRequests.filter((request) => request.userId === currentUserId());
+  const ownRequests = ownTeamAccessRequests().filter((request) => {
+    if (requestAccessRemoved(request)) return true;
+    if (request.status !== "approved") return true;
+    return requestNeedsPlayerVerification(request);
+  });
   if (!ownRequests.length) return "";
   return `
     <div class="team-roster-block">
       <div class="section-head compact-head">
         <div>
-          <h4>My Team Requests</h4>
-          <p class="muted small">Approved requests appear here before the roster loads.</p>
+          <h4>Player Access Requests</h4>
+          <p class="muted small">Only requests that still need attention appear here. Verified players appear under your player list.</p>
         </div>
       </div>
       <div class="admin-request-list">
@@ -5473,20 +5489,28 @@ function renderTeamRosterCard(options = {}) {
     `;
   }
 
-  const team = activeTeam();
-  const roster = activeTeamRoster();
+  const rawTeam = activeTeam();
+  const team = canCreateTeams()
+    ? rawTeam
+    : rawTeam && teamHasVerifiedPlayerAccess(rawTeam.id)
+      ? rawTeam
+      : state.teams.find((item) => teamHasVerifiedPlayerAccess(item.id)) || null;
+  const roster = team ? visibleRosterPlayers(teamRosterPlayers(team.id)) : [];
   const fullTeamRoster = team ? teamRosterPlayers(team.id) : [];
   const editable = team ? canManageRoster(team.id) : false;
   const manageRoster = team ? canManageRoster(team.id) : false;
   const deletableTeam = team ? canDeleteTeam(team.id) : false;
-  const teams = state.teams
+  const displayTeams = canCreateTeams()
+    ? state.teams
+    : state.teams.filter((item) => teamHasVerifiedPlayerAccess(item.id));
+  const teams = displayTeams
     .map((item) => {
-      const active = item.id === state.activeTeamId;
+      const active = item.id === team?.id;
       const accessCopy = item.localRecovered && !item.cloudBacked
         ? "Local copy"
         : item.role === "admin" && canCreateTeams()
         ? `${item.inviteCode ? `Team code: ${item.inviteCode}` : "Access: approved"}`
-        : "Access: approved";
+        : "Verified player access";
       return `
         <button class="team-chip ${active ? "active" : ""}" type="button" data-team-select="${item.id}" aria-pressed="${active}">
           <strong>${escapeHTML(item.name)}</strong>
@@ -5532,11 +5556,11 @@ function renderTeamRosterCard(options = {}) {
   const claimByNumberForm = showClaimByNumber
     ? renderPlayerVerificationBlock(team.id, { suffix: "active-team" })
     : "";
-  const teamCardTitle = canCreateTeams() ? "Connected Team" : "Team Access";
+  const teamCardTitle = canCreateTeams() ? "Connected Team" : "Verified Player Team";
   const teamHeaderCopy = !team
     ? canCreateTeams()
       ? "Create a team or request access with a team code."
-      : "Ask your coach, team admin, or parent coordinator for the team code."
+      : "No verified player team yet. Request access, then verify the player jersey number after approval."
     : "";
   const teamCodeHelper = team?.inviteCode
     ? `<p class="team-code-helper">Team Code: <code>${escapeHTML(team.inviteCode)}</code></p>`
@@ -5573,7 +5597,7 @@ function renderTeamRosterCard(options = {}) {
                   : `<p class="muted small">${
                       canCreateTeams()
                         ? "No teams yet. Create one for your roster or request access with a team code."
-                        : "No approved teams yet. Ask your coach, team admin, or parent coordinator for the team code."
+                        : "No verified player teams yet. Use Player Access Requests to finish verification after approval."
                     }</p>`
               }
               ${team?.localRecovered && !team.cloudBacked ? `<div class="notice-card error-card compact-notice"><strong>Team needs attention.</strong><p class="muted small">This team was recovered from this device, but it is not connected to your account. Remove it or recreate the team before adding roster players.</p></div>` : ""}
@@ -6014,11 +6038,11 @@ function renderTeamAccessTools() {
           requestList ||
           `<div class="section-head compact-head">
             <div>
-              <h3>My Team Requests</h3>
-              <p class="muted small">Approved access appears here. Parent Trackers verify one player by jersey number.</p>
+              <h3>Player Access Requests</h3>
+              <p class="muted small">Requests that need approval or player verification appear here.</p>
             </div>
           </div>
-          <p class="muted small">No team access requests yet.</p>`
+          <p class="muted small">No player access requests need attention.</p>`
         }
       </section>
   `;
