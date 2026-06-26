@@ -22,7 +22,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v194";
+const APP_VERSION = "v195";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -3578,6 +3578,19 @@ async function signOut() {
   showToast("Signed out");
 }
 
+async function resetThisDeviceState() {
+  const confirmed = window.confirm(
+    "Reset LaxHornet on this device? This signs out and clears locally cached players, teams, games, and app state from this browser. Cloud teams, accounts, approvals, and saved cloud data are not deleted.",
+  );
+  if (!confirmed) return;
+  if (supabaseClient) await supabaseClient.auth.signOut().catch(() => {});
+  Object.keys(localStorage)
+    .filter((key) => key.startsWith("laxhornet."))
+    .forEach((key) => localStorage.removeItem(key));
+  await clearLaxHornetCaches().catch(() => {});
+  window.location.replace("app.html?fresh=device-reset");
+}
+
 async function requestUserRole(role, options = {}) {
   if (!supabaseClient || !currentUserId()) return null;
   const requestedRole = isReviewerAccount() && normalizeAppRole(role) === "admin" ? "admin" : "tracker";
@@ -5643,6 +5656,11 @@ function renderMore() {
             <span>${renderNavIcon("more")}</span>
             <strong>Sign Out</strong>
             <small>Switch accounts on this device.</small>
+          </button>
+          <button class="more-action danger-link" type="button" data-action="reset-device-state">
+            <span>${renderNavIcon("manage")}</span>
+            <strong>Reset This Device</strong>
+            <small>Clear cached app state here without deleting cloud data.</small>
           </button>
         </div>
       </section>
@@ -8211,6 +8229,7 @@ function handleClick(event) {
       document.querySelector(".account-card")?.scrollIntoView({ behavior: "smooth", block: "center" });
     }
     if (action.dataset.action === "sign-out") signOut();
+    if (action.dataset.action === "reset-device-state") resetThisDeviceState();
     if (action.dataset.action === "refresh-profile") loadUserProfile();
     if (action.dataset.action === "request-admin") requestUserRole("admin");
     if (action.dataset.action === "refresh-admin-requests") loadAdminRequests();
