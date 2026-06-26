@@ -4848,3 +4848,351 @@ a.btn {
     animation-duration: 0.01ms !important;
   }
 }
+
+/* Professional refinement pass */
+.app-shell {
+  padding-bottom: calc(96px + var(--safe-bottom));
+}
+
+.lh-screen,
+.start-game-form,
+.review-section,
+.quick-actions-card,
+.recent-log,
+.live-recent-log {
+  scroll-margin-bottom: calc(96px + var(--safe-bottom));
+}
+
+.live-stat-groups,
+.live-recent-log {
+  padding-bottom: 12px;
+}
+
+.live-recent-log {
+  margin-bottom: calc(120px + var(--safe-bottom));
+}
+
+.screen-title {
+  margin: 16px 0 12px;
+}
+
+.screen-title h2 {
+  font-size: clamp(1.48rem, 6.6vw, 2.08rem);
+  line-height: 1.08;
+}
+
+.screen-title p {
+  max-width: 40rem;
+  font-size: clamp(0.9rem, 3.7vw, 1rem);
+  font-weight: 560;
+  line-height: 1.48;
+}
+
+.home-title h2 {
+  font-size: clamp(1.42rem, 6vw, 1.9rem);
+}
+
+.welcome-hero {
+  margin-top: 12px;
+  padding-top: 12px;
+}
+
+.welcome-copy h2 {
+  max-width: 13ch;
+  font-size: clamp(2rem, 10.6vw, 3.35rem);
+  line-height: 1.02;
+}
+
+.welcome-copy p {
+  max-width: 34rem;
+  font-size: clamp(0.96rem, 4vw, 1.12rem);
+  font-weight: 560;
+}
+
+form.account-card,
+.welcome-info-card,
+.faq-card,
+.share-watch-form,
+.profile-setup-card,
+.start-game-form > .card,
+.team-card,
+.my-players-card,
+.current-player-manage-card,
+.player-account-tools-card,
+.game-day-status-card,
+.quick-actions-card,
+.development-card,
+.archetype-card,
+.impact-card,
+.possession-impact-card,
+.edit-tools-card,
+.export-card,
+.more-card,
+.admin-portal-card,
+.review-section > .card,
+.edit-event-form,
+.edit-game-form,
+.tag-editor {
+  border-color: var(--lh-card-border);
+}
+
+form.account-card::before,
+.welcome-info-card::before,
+.faq-card::before,
+.share-watch-form::before,
+.team-card::before,
+.my-players-card::before,
+.game-day-status-card::before,
+.quick-actions-card::before,
+.development-card::before,
+.impact-card::before,
+.possession-impact-card::before,
+.edit-tools-card::before,
+.more-card::before,
+.admin-portal-card::before,
+.empty-state-card::before {
+  opacity: 0;
+}
+
+.home-next-card,
+.primary-manage-card,
+.live-player-card,
+.admin-portal-hero,
+.admin-portal-entry-card {
+  border-color: rgba(232, 16, 16, 0.28);
+}
+
+.home-next-card::before,
+.primary-manage-card::before,
+.live-player-card::before,
+.admin-portal-hero::before,
+.admin-portal-entry-card::before {
+  opacity: 0.9;
+}
+
+.empty-state-card {
+  border-color: rgba(17, 19, 23, 0.12);
+}
+
+.btn.secondary,
+.mini-btn.light {
+  border-color: rgba(17, 19, 23, 0.16);
+  color: #171b20;
+  background: linear-gradient(180deg, #ffffff, #f3f5f7);
+  box-shadow: inset 0 0 0 1px rgba(17, 19, 23, 0.035), 0 8px 18px rgba(17, 19, 23, 0.08);
+}
+
+.btn.neutral:not(.brand) {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: linear-gradient(180deg, #343a42, #20252b);
+  box-shadow: 0 9px 20px rgba(0, 0, 0, 0.22), inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+.btn.danger-outline {
+  border: 1px solid rgba(199, 42, 46, 0.48);
+  color: #941d22;
+  background: linear-gradient(180deg, #ffffff, #f6f7f8);
+  box-shadow: inset 0 0 0 1px rgba(17, 19, 23, 0.035), 0 8px 18px rgba(17, 19, 23, 0.08);
+}
+
+.confirm-modal .btn.ghost.modal-ghost {
+  border-color: rgba(17, 19, 23, 0.14);
+  color: #303842;
+  background: #f1f3f5;
+  box-shadow: none;
+}
+
+.quick-action,
+.more-action {
+  border-color: rgba(17, 19, 23, 0.12);
+  background:
+    linear-gradient(90deg, rgba(232, 16, 16, 0.86) 0 4px, transparent 4px),
+    linear-gradient(180deg, #ffffff, #f5f6f8);
+}
+
+.quick-action span,
+.more-action > span {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+}
+
+.game-day-status-card,
+.quick-actions-card {
+  box-shadow: var(--lh-shadow-crisp);
+}
+
+.status-row {
+  min-height: 38px;
+  padding: 9px 11px;
+}
+
+.status-row span {
+  font-size: 0.74rem;
+  font-weight: 820;
+}
+
+.status-row strong {
+  font-size: 0.8rem;
+}
+
+form.account-card,
+.profile-setup-card,
+.start-game-form > .card {
+  gap: 16px;
+}
+
+.field {
+  gap: 7px;
+}
+
+.field label,
+.position-picker legend,
+.tag-editor-label {
+  color: #242a31;
+  font-size: 0.75rem;
+}
+
+.field-help,
+.safety-note {
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.field input,
+.field textarea,
+.field select {
+  min-height: 50px;
+  border-color: rgba(17, 19, 23, 0.16);
+  border-radius: 9px;
+}
+
+.field input:focus,
+.field textarea:focus,
+.field select:focus {
+  border-color: rgba(68, 96, 128, 0.72);
+  box-shadow: 0 0 0 3px rgba(68, 96, 128, 0.18);
+}
+
+.error-card,
+.field input[aria-invalid="true"],
+.field textarea[aria-invalid="true"],
+.field select[aria-invalid="true"] {
+  border-color: rgba(199, 42, 46, 0.62);
+}
+
+.live-title h2 {
+  font-size: clamp(1.04rem, 4.7vw, 1.36rem);
+  line-height: 1.12;
+}
+
+.live-meta {
+  align-items: center;
+  gap: 10px;
+}
+
+.live-share-link {
+  min-height: 36px;
+  padding: 8px 10px;
+}
+
+.live-pill-pending strong {
+  font-size: clamp(1.1rem, 6vw, 1.5rem);
+}
+
+.live-pill-pending span {
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.live-confirmation {
+  gap: 10px;
+  padding: 10px 12px;
+}
+
+.live-confirmation strong {
+  font-size: 0.88rem;
+  line-height: 1.25;
+}
+
+.live-confirmation div {
+  gap: 8px;
+}
+
+.live-confirmation .mini-btn {
+  min-height: 42px;
+}
+
+.insight-card-copy {
+  min-height: 136px;
+}
+
+.insight-value-copy {
+  color: #2d3540;
+  font-size: clamp(0.82rem, 2.45vw, 0.9rem);
+  font-weight: 620;
+  line-height: 1.42;
+}
+
+.takeaway-stack {
+  display: grid;
+  gap: 8px;
+}
+
+.takeaway-stack p {
+  margin: 0;
+  color: #303842;
+  font-size: 0.86rem;
+  font-weight: 620;
+  line-height: 1.42;
+}
+
+.takeaway-stack span {
+  display: block;
+  margin-bottom: 2px;
+  color: #66717d;
+  font-size: 0.66rem;
+  font-weight: 950;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.modal-backdrop {
+  padding-bottom: calc(18px + var(--safe-bottom));
+}
+
+.confirm-modal h3 {
+  font-size: clamp(1.08rem, 4.5vw, 1.28rem);
+}
+
+.confirm-modal p {
+  font-size: 0.88rem;
+  font-weight: 580;
+  line-height: 1.45;
+}
+
+@media (max-width: 430px) {
+  .app-shell {
+    padding-bottom: calc(96px + var(--safe-bottom));
+  }
+
+  .welcome-copy h2 {
+    max-width: 12ch;
+    font-size: clamp(1.92rem, 10.8vw, 2.95rem);
+  }
+
+  .screen-title h2 {
+    font-size: clamp(1.38rem, 6.8vw, 1.82rem);
+  }
+
+  .home-next-card .action-grid.compact,
+  .confirm-modal .edit-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .live-confirmation div {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .insight-card-copy {
+    min-height: auto;
+  }
+}

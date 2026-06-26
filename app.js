@@ -23,7 +23,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v216";
+const APP_VERSION = "v217";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -4686,8 +4686,15 @@ function setQuarter(quarter) {
   render();
 }
 
+function shouldHideShellStatus(options = {}) {
+  if (options.hideStatus) return true;
+  if (!state.authUser) return true;
+  return ["profileSetup", "requestSubmitted", "authSuccess", "teamAccess"].includes(state.screen);
+}
+
 function renderShell(content, options = {}) {
   const statusText = state.activeGame ? "Live" : "";
+  const hideShellStatus = shouldHideShellStatus(options);
   return `
     <header class="topbar">
       <div class="brand-row">
@@ -4706,7 +4713,7 @@ function renderShell(content, options = {}) {
       </div>
     </header>
     ${renderUpdateBanner()}
-    ${renderConnectionNotice()}
+    ${hideShellStatus ? "" : renderConnectionNotice()}
     ${content}
     ${renderEndGameModal()}
     ${renderGameSavedModal()}
@@ -4785,7 +4792,7 @@ function renderGameSavedModal() {
         <div class="edit-actions">
           <button class="btn positive" type="button" data-action="open-saved-review" data-game-id="${escapeHTML(game.id)}">Open Game Review</button>
           <button class="btn secondary" type="button" data-action="copy-family-summary" data-game-id="${escapeHTML(game.id)}">Copy Family Summary</button>
-          <button class="btn neutral" type="button" data-action="close-saved-game">Back Home</button>
+          <button class="btn ghost modal-ghost" type="button" data-action="close-saved-game">Back Home</button>
         </div>
       </div>
     </section>
@@ -4803,7 +4810,7 @@ function renderLiveShareModal() {
         <p class="muted small">Anyone with this link can view the live game timeline. Only share it with people you trust.</p>
         <div class="edit-actions">
           <button class="btn positive" type="button" data-action="confirm-copy-share-link" data-game-id="${escapeHTML(game.id)}">Copy Live Share Link</button>
-          <button class="btn secondary" type="button" data-action="turn-off-live-share" data-game-id="${escapeHTML(game.id)}">Turn Off Live Share</button>
+          <button class="btn danger-outline" type="button" data-action="turn-off-live-share" data-game-id="${escapeHTML(game.id)}">Turn Off Live Share</button>
         </div>
       </div>
     </section>
@@ -5955,7 +5962,7 @@ function renderProfileSetup() {
         ${state.authUser ? `<button class="btn danger" type="button" data-action="sign-out">Sign Out</button>` : ""}
       </div>
     </form>
-  `, { hideNav: !state.authUser });
+  `, { hideNav: true, hideStatus: true });
 }
 
 function renderTeamAccessTools() {
@@ -6248,9 +6255,9 @@ function renderNoApprovedPlayerHome() {
   return `
     <section class="card pad empty-state-card">
       <h3>No approved player yet</h3>
-      <p class="muted small">Add a player with your team code and jersey number. Once your team admin approves it, you can start tracking games.</p>
+      <p class="muted small">Request access with your team code and jersey number. Once your team admin approves it, you can start tracking games.</p>
       <div class="action-grid compact">
-        <button class="btn positive" type="button" data-nav="team">Add Player</button>
+        <button class="btn positive" type="button" data-nav="team">Request Player Access</button>
         <button class="btn secondary" type="button" data-nav="tutorial">Help / Tracker Guide</button>
       </div>
     </section>
@@ -6559,13 +6566,25 @@ function renderLastEventConfirmation(game) {
   if (!confirmation || confirmation.gameId !== game.id) return "";
   return `
     <section class="live-confirmation" role="status">
-      <strong>${escapeHTML(confirmation.label)} added · ${escapeHTML(confirmation.quarter)} ${formatTime(confirmation.timestamp)}</strong>
+      <strong>${escapeHTML(confirmation.label)} added &middot; ${escapeHTML(confirmation.quarter)}</strong>
       <div>
-        <button class="mini-btn light" type="button" data-action="undo">Undo last event: ${escapeHTML(confirmation.label)}</button>
-        <button class="mini-btn" type="button" data-action="add-note-last-event">Add Note</button>
+        <button class="mini-btn" type="button" data-action="undo">Undo</button>
+        <button class="mini-btn light" type="button" data-action="add-note-last-event">Add Note</button>
       </div>
     </section>
   `;
+}
+
+function renderLiveImpactPill(game, totals) {
+  if ((game.events || []).length < 3) {
+    return `
+      <div class="live-pill live-pill-pending">
+        <strong>&mdash;</strong>
+        <span>Not enough plays yet</span>
+      </div>
+    `;
+  }
+  return `<div class="live-pill">${renderImpactGrade(totals.impact)}<span>Game Impact</span></div>`;
 }
 
 function renderLiveTracker() {
@@ -6584,13 +6603,17 @@ function renderLiveTracker() {
   const totals = calculateTotals(game.events, player);
   const recentEvents = [...game.events].reverse().slice(0, 5);
   const periods = periodsForGame(game);
-  const statusLine = `${escapeHTML(game.currentQuarter)} · ${formatTime(new Date().toISOString())} · vs ${escapeHTML(game.opponent)}`;
+  const statusLine = `${escapeHTML(game.currentQuarter)} <span aria-hidden="true">&middot;</span> vs ${escapeHTML(game.opponent || "Opponent")}`;
+  const liveMeta = [formatDate(game.date), periodFormatLabel(game), game.location]
+    .filter(Boolean)
+    .map((item) => escapeHTML(item))
+    .join(' <span aria-hidden="true">&middot;</span> ');
 
   return renderShell(`
     <section class="screen-title live-title">
       <h2>${statusLine}</h2>
       <p class="live-meta">
-        <span>${formatDate(game.date)} · ${periodFormatLabel(game)}${game.location ? ` · ${escapeHTML(game.location)}` : ""}</span>
+        <span>${liveMeta}</span>
         <button class="live-share-link" type="button" data-action="copy-share-link">Live Share</button>
       </p>
       ${renderLiveStatusChips(game)}
@@ -6607,14 +6630,14 @@ function renderLiveTracker() {
     </div>
 
     <section class="live-summary" aria-label="Live game summary">
-      <div class="live-pill">${renderImpactGrade(totals.impact)}<span>Game Impact</span></div>
+      ${renderLiveImpactPill(game, totals)}
       <div class="live-pill"><strong>${totals.points}</strong><span>Points</span></div>
       <div class="live-pill"><strong>${game.events.length}</strong><span>Events</span></div>
     </section>
 
     ${renderLiveStatGroups({ player })}
 
-    <section class="card pad" style="margin-top: 12px;">
+    <section class="card pad live-recent-log" style="margin-top: 12px;">
       <h3>Recent Log</h3>
       ${
         recentEvents.length
@@ -6878,6 +6901,30 @@ function insightCard(label, value, helper = "") {
   `;
 }
 
+function renderTakeawayValue(text) {
+  const copy = String(text || "").trim() || "Track more plays to build the takeaway.";
+  const chunks = (copy.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [copy])
+    .map((item) => item.trim())
+    .filter(Boolean);
+  const labels = ["Biggest impact", "Possession story", "Watch next", "Next focus"];
+  if (chunks.length <= 1) return escapeHTML(copy);
+  return `
+    <div class="takeaway-stack">
+      ${chunks
+        .slice(0, labels.length)
+        .map(
+          (chunk, index) => `
+            <p>
+              <span>${labels[index]}</span>
+              ${escapeHTML(chunk)}
+            </p>
+          `,
+        )
+        .join("")}
+    </div>
+  `;
+}
+
 function topContributionForTotals(totals) {
   const options = [
     {
@@ -6960,7 +7007,7 @@ function renderReviewSummarySection(game, player, totals, archetypeResult) {
         ${insightCard("Game Impact", renderImpactGrade(totals.impact), "Snapshot, not a coach grade")}
         ${insightCard("Top Contribution", escapeHTML(topContribution.display), topContribution.label)}
         ${insightCard("Possession Impact", escapeHTML(signedMetric(totals.possessionValue)), `${signedMetric(totals.extraPossessions)} extra chances`)}
-        ${insightCard("Key Takeaway", escapeHTML(totals.gameImpact?.takeaway || "Track more plays to build the takeaway."))}
+        ${insightCard("Key Takeaway", renderTakeawayValue(totals.gameImpact?.takeaway))}
       </div>
       <div class="explainer-card">
         <strong>Game Impact</strong>
@@ -8014,7 +8061,7 @@ function renderAuthSuccess() {
         </div>
       </div>
     </section>
-  `);
+  `, { hideNav: true, hideStatus: true });
 }
 
 function renderRequestSubmitted() {
@@ -8049,7 +8096,7 @@ function renderRequestSubmitted() {
         </div>
       </div>
     </section>
-  `, { hideNav: !state.authUser });
+  `, { hideNav: true, hideStatus: true });
 }
 
 function renderTutorial() {
