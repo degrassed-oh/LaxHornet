@@ -22,7 +22,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v198";
+const APP_VERSION = "v199";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -738,6 +738,19 @@ function playerClaimForRequest(request = {}) {
 
 function requestNeedsPlayerVerification(request = {}) {
   return request.status === "approved" && !playerClaimForRequest(request);
+}
+
+function inferredClaimFromRosterPlayer(player = {}) {
+  const normalized = normalizeRosterPlayer(player);
+  const userId = currentUserId();
+  if (!userId || !normalized.teamId || !normalized.id) return null;
+  return normalizePlayerClaim({
+    id: `claim-local-${normalized.teamId}-${userId}-${normalized.id}`,
+    teamId: normalized.teamId,
+    rosterPlayerId: normalized.id,
+    userId,
+    createdAt: new Date().toISOString(),
+  });
 }
 
 function teamAccessStatusCopy(request = {}) {
@@ -3418,6 +3431,10 @@ async function loadClaimedRosterPlayers(options = {}) {
   }
   const claimedRosterPlayers = normalizeRosterPlayers((Array.isArray(data) ? data : []).map(rosterPlayerFromSupabaseRow));
   if (claimedRosterPlayers.length) {
+    state.playerClaims = normalizePlayerClaims([
+      ...state.playerClaims,
+      ...claimedRosterPlayers.map(inferredClaimFromRosterPlayer).filter(Boolean),
+    ]);
     state.rosterPlayers = normalizeRosterPlayers([
       ...state.rosterPlayers,
       ...claimedRosterPlayers,
@@ -5350,7 +5367,7 @@ function renderMyTeamAccessRequests() {
               const needsClaim =
                 request.status === "approved" &&
                 request.requestedRole === "tracker" &&
-                !state.playerClaims.some((claim) => claim.teamId === request.teamId);
+                !playerClaimForRequest(request);
               return `
                 <div class="admin-request-row">
                   <span>
