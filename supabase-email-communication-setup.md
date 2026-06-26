@@ -1,46 +1,48 @@
-# LaxHornet Email Communication Setup
+# LaxHornet Email Communication Plan
 
-This app is hosted as a static frontend, so the browser can request access and write records, but it cannot safely send private transactional email by itself.
+This document defines the email side of LaxHornet: what Supabase owns, what Resend owns, which product events send email, the copy for each email, and the implementation work still needed.
 
-LaxHornet currently uses two communication layers:
+LaxHornet is a static PWA, so the browser must never send email directly and must never contain private email-service credentials. The browser can create auth/session/team-access records through Supabase. Supabase should queue communication events. A server-side sender should read that queue and send through Resend.
 
-1. Supabase Auth sends the account verification email after `signUp`.
-2. The database writes request/approval messages into `public.notification_queue`.
+## Recommended Architecture
 
-To make the communication feel professional, configure both.
+Use two email lanes:
 
-## 1. Account Verification Email
+1. Supabase Auth email
+   - Purpose: account confirmation, password reset, email change.
+   - Preferred path: Supabase Auth Send Email Hook backed by a Supabase Edge Function that calls Resend.
+   - Simpler fallback: Supabase Auth email templates with Resend SMTP/custom SMTP.
 
-In Supabase:
+2. LaxHornet transactional notifications
+   - Purpose: team access request received, admin request notification, approval/rejection, player verification reminder.
+   - Preferred path: write deterministic rows to `public.notification_queue`, then send with a Supabase Edge Function using Resend.
+   - The Edge Function should run with server-side secrets only and update queue status after every send attempt.
 
-1. Open the project.
-2. Go to Authentication.
-3. Open Email Templates.
-4. Edit the Confirm signup template.
+Recommended sender identities:
 
-Recommended subject:
+- Auth/account email: `LaxHornet <accounts@laxhornet.mybranford.com>`
+- Transactional notifications: `LaxHornet <notifications@laxhornet.mybranford.com>`
+- Reply-To: `degrassed@gmail.com` until there is a dedicated support/team inbox
 
-```text
-Confirm your LaxHornet account
-```
+Before production sending, verify the sender domain in Resend and configure SPF, DKIM, DMARC, and bounce handling. Use Resend's sandbox/testing sender only for development.
 
-Recommended body:
+## Current App Events
 
-```html
-<h2>Welcome to LaxHornet</h2>
-<p>Confirm your account so your team admin can finish approving player access.</p>
-<p>
-  <a href="{{ .ConfirmationURL }}">Confirm my LaxHornet account</a>
-</p>
-<p>After confirming, sign in to LaxHornet. Once your team admin approves your request, you will only see the player/team access assigned to your account.</p>
-<p>If you did not request access to LaxHornet, you can ignore this email.</p>
-```
+These flows already exist in the app and database.
 
-Make sure email confirmations are enabled for email/password signups.
+| Flow | Trigger | Current behavior | Email behavior needed |
+| --- | --- | --- | --- |
+| New parent signs up with team code | `supabaseClient.auth.signUp(...)` in `submitSignupAccessRequest` | Supabase Auth sends confirmation; `laxhornet_handle_new_user` creates profile/request | Send account confirmation, parent request receipt, admin request notification |
+| Existing signed-in parent requests player access | `laxhornet_request_team_player_access(join_code, jersey)` | Creates/updates `team_access_requests` | Gap: also queue parent request receipt and admin request notification |
+| Team admin approves access | `laxhornet_review_team_access_request(request_id, true)` | Approves request, creates team member/player claim, queues `team_access_approved` | Send approval email |
+| Team admin rejects access | `laxhornet_review_team_access_request(request_id, false)` | Rejects request, queues `team_access_rejected` | Send neutral update email |
+| Admin sends reminder after approval | `laxhornet_send_player_verification_reminder(request_id)` | Queues `player_verification_reminder` | Send reminder email |
+| Password reset / email change | Supabase Auth | Uses Supabase Auth templates or hook | Branded account email |
+| Live Share / family recap | UI copy/share action only | No email send | Keep opt-in/manual for now; do not auto-email family links in Phase 1 |
 
-## 2. Request And Approval Emails
+## Queue Event Types
 
-The schema writes these event types to `public.notification_queue`:
+`public.notification_queue` currently uses:
 
 - `team_access_requested_user`
 - `team_access_requested_admin`
@@ -48,93 +50,516 @@ The schema writes these event types to `public.notification_queue`:
 - `team_access_rejected`
 - `player_verification_reminder`
 
-Those rows are not emails yet. They need a sender, such as:
+Recommended queue columns to add before wiring the sender:
 
-- Supabase Edge Function with Resend
-- Supabase Database Webhook to an email service
-- A small scheduled worker that reads pending rows and sends email
-
-Recommended sender:
-
-```text
-LaxHornet <notifications@your-domain.com>
+```sql
+alter table public.notification_queue
+  add column if not exists template_key text not null default '',
+  add column if not exists attempts integer not null default 0,
+  add column if not exists last_attempt_at timestamptz,
+  add column if not exists last_error text not null default '',
+  add column if not exists provider_message_id text not null default '',
+  add column if not exists delivered_at timestamptz,
+  add column if not exists bounced_at timestamptz,
+  add column if not exists complained_at timestamptz,
+  add column if not exists suppressed_at timestamptz;
 ```
 
-Recommended parent request-submitted email:
+Keep queue row IDs deterministic, such as `notify-request-user-{request_id}`. Use the queue row ID as the Resend idempotency key, formatted as `{event_type}/{queue_id}`. That makes retries safe.
+
+## Sender Function Structure
+
+Create a Supabase Edge Function such as `send-laxhornet-email-queue`.
+
+Responsibilities:
+
+1. Read a small batch of pending queue rows.
+2. Choose the template from `event_type` or `template_key`.
+3. Render both HTML and plain text.
+4. Send through Resend with an idempotency key.
+5. Update `status`, `sent_at`, `attempts`, `last_attempt_at`, `last_error`, and `provider_message_id`.
+6. Leave failed rows retryable until a maximum attempt count is reached.
+
+Recommended queue statuses:
+
+- `pending`
+- `sending`
+- `sent`
+- `failed`
+- `bounced`
+- `complained`
+- `suppressed`
+
+Recommended secrets:
 
 ```text
-Subject: LaxHornet request received
-
-Hi [First Name],
-
-We received your LaxHornet request for [Team Name], jersey #[Jersey Number].
-
-A team admin will review your request. After approval, sign in to LaxHornet and your verified player will appear automatically.
-
-Player privacy matters. Parents only see the player/team access approved by a team admin.
+RESEND_API_KEY
+EMAIL_FROM_NOTIFICATIONS
+EMAIL_FROM_ACCOUNTS
+EMAIL_REPLY_TO
+SITE_URL
+QUEUE_BATCH_SIZE
+QUEUE_MAX_ATTEMPTS
 ```
 
-Recommended admin notification email:
+Supabase Edge Functions also expose Supabase project secrets by default. Use server-side credentials only in Edge Functions; never expose service-role or Resend keys in `app.js`.
+
+Pseudo-flow:
 
 ```text
-Subject: LaxHornet player access request
+Scheduled job or admin action
+  -> invoke Supabase Edge Function
+  -> Edge Function selects pending rows
+  -> render template
+  -> Resend sends email
+  -> queue row becomes sent/failed
+  -> Resend webhook later updates delivery/bounce/complaint status
+```
 
-[Parent Name] ([Email]) requested access to [Team Name], jersey #[Jersey Number].
+## Resend Webhooks
+
+Add a second Edge Function such as `resend-webhook`.
+
+Track these outcomes:
+
+- delivered: set `delivered_at`
+- bounced: set `status = 'bounced'`, set `bounced_at`
+- complained: set `status = 'complained'`, set `complained_at`
+- suppressed: set `status = 'suppressed'`, set `suppressed_at`
+
+Use this to avoid repeatedly emailing addresses that bounce or complain.
+
+## Email Templates
+
+All emails should be short, mobile-friendly, and plain English. Avoid sensitive youth data beyond the team name, player first/last name when approved, and jersey number needed to match the request. Do not include private game stats in automatic emails.
+
+Use a consistent footer:
+
+```text
+You are receiving this transactional LaxHornet message because this email address was used for a LaxHornet account, team access request, or team admin action.
+
+Questions? Reply to this email or contact degrassed@gmail.com.
+```
+
+### 1. Account Confirmation
+
+Event source: Supabase Auth signup confirmation.
+
+Subject:
+
+```text
+Confirm your LaxHornet account
+```
+
+Preview:
+
+```text
+Confirm your email so your team admin can finish approving player access.
+```
+
+Body:
+
+```text
+Hi {{first_name | default: "there"}},
+
+Welcome to LaxHornet.
+
+Confirm your email so your team admin can finish reviewing your player access request.
+
+Confirm your account:
+{{confirmation_url}}
+
+After confirming, sign in to LaxHornet. Once your team admin approves access, the app will only show the player/team access assigned to your account.
+
+If you did not request access to LaxHornet, you can ignore this email.
+```
+
+CTA:
+
+```text
+Confirm my LaxHornet account
+```
+
+### 2. Parent Request Received
+
+Event type: `team_access_requested_user`
+
+Subject:
+
+```text
+LaxHornet request received for {{team_name}}
+```
+
+Preview:
+
+```text
+Your team admin will review jersey #{{child_jersey_number}}.
+```
+
+Body:
+
+```text
+Hi {{first_name | default: "there"}},
+
+We received your LaxHornet request for {{team_name}}, jersey #{{child_jersey_number}}.
+
+What happens next:
+
+1. Confirm your LaxHornet account email if you have not already.
+2. A team admin reviews your team code and jersey number.
+3. After approval, sign in and your verified player will appear automatically.
+
+Player privacy matters. Parent accounts only see the player/team access approved by a team admin.
+
+Open LaxHornet:
+{{site_url}}/app.html
+```
+
+CTA:
+
+```text
+Open LaxHornet
+```
+
+### 3. Admin New Request Notification
+
+Event type: `team_access_requested_admin`
+
+Subject:
+
+```text
+LaxHornet player access request: {{team_name}} #{{child_jersey_number}}
+```
+
+Preview:
+
+```text
+{{parent_name}} requested access to {{team_name}}.
+```
+
+Body:
+
+```text
+Hi Team Admin,
+
+{{parent_name | default: recipient_email}} requested LaxHornet access.
+
+Team: {{team_name}}
+Jersey: #{{child_jersey_number}}
+Parent email: {{email}}
+Phone: {{phone | default: "Not provided"}}
 
 Open LaxHornet, go to More > Team Admin Tools, and approve or reject the request.
+
+Only approve if the team code and jersey number match the rostered player this parent should track.
+
+Open admin tools:
+{{site_url}}/app.html
 ```
 
-Recommended approval email:
+CTA:
 
 ```text
-Subject: LaxHornet access approved
-
-Hi [First Name],
-
-Your LaxHornet access was approved for [Player Name] #[Jersey Number] on [Team Name].
-
-Sign in to start tracking games, reviewing stats, and following season progress for this player.
+Review request
 ```
 
-Recommended rejection email:
+### 4. Access Approved
+
+Event type: `team_access_approved`
+
+Subject:
 
 ```text
-Subject: LaxHornet access update
-
-Hi [First Name],
-
-Your LaxHornet access request was not approved.
-
-If the team code or jersey number was entered incorrectly, you can submit a new request or contact your team admin.
+LaxHornet access approved
 ```
 
-Recommended player verification reminder email:
+Preview:
 
 ```text
-Subject: Verify your LaxHornet player
+You are approved for {{team_name}}, jersey #{{child_jersey_number}}.
+```
 
-Hi [First Name],
+Body:
 
-Your LaxHornet access for [Team Name] was approved.
+```text
+Hi {{first_name | default: "there"}},
 
-Please sign in and verify jersey #[Jersey Number] so your player's tracker opens on your device.
+Your LaxHornet access was approved for {{team_name}}, jersey #{{child_jersey_number}}.
+
+Sign in to LaxHornet and sync your account. Your verified player should appear automatically.
+
+Open LaxHornet:
+{{site_url}}/app.html
+
+If the player does not appear, use More > Sync or contact your team admin.
+```
+
+CTA:
+
+```text
+Open LaxHornet
+```
+
+### 5. Access Not Approved
+
+Event type: `team_access_rejected`
+
+Subject:
+
+```text
+LaxHornet access update
+```
+
+Preview:
+
+```text
+Your player access request needs a correction.
+```
+
+Body:
+
+```text
+Hi {{first_name | default: "there"}},
+
+Your LaxHornet request was not approved.
+
+This usually means the team code or jersey number did not match the team roster, or the team admin needs more information.
+
+You can submit a new request with the correct team code and jersey number, or contact your team admin.
+
+Open LaxHornet:
+{{site_url}}/app.html
+```
+
+CTA:
+
+```text
+Open LaxHornet
+```
+
+### 6. Player Verification Reminder
+
+Event type: `player_verification_reminder`
+
+Subject:
+
+```text
+Verify your LaxHornet player
+```
+
+Preview:
+
+```text
+Finish connecting jersey #{{child_jersey_number}} on {{team_name}}.
+```
+
+Body:
+
+```text
+Hi {{first_name | default: "there"}},
+
+Your LaxHornet access for {{team_name}} was approved.
+
+Please sign in and verify jersey #{{child_jersey_number}} so your player's tracker opens on this device.
+
+Open LaxHornet:
+{{site_url}}/app.html
 
 If you already verified your player, no action is needed.
 ```
 
-## 3. Verification Checks
+CTA:
 
-Use `supabase-access-flow-audit.sql` to check:
-
-- Approved requests missing player claims
-- Which roster players are verified by parent accounts
-- Duplicate jersey numbers on the same team
-- Recent queued notification messages
-
-If a parent was approved but the app still shows the player as unverified, first run:
-
-```sql
-select * from public.laxhornet_my_player_claims();
+```text
+Verify my player
 ```
 
-while signed in as the admin in Supabase SQL Editor impersonation is not available, so the more practical check is the audit query for approved requests missing claims.
+### 7. Password Reset
+
+Event source: Supabase Auth recovery email.
+
+Subject:
+
+```text
+Reset your LaxHornet password
+```
+
+Preview:
+
+```text
+Use this secure link to reset your password.
+```
+
+Body:
+
+```text
+Hi {{first_name | default: "there"}},
+
+We received a request to reset your LaxHornet password.
+
+Reset your password:
+{{recovery_url}}
+
+If you did not request this, you can ignore this email.
+```
+
+CTA:
+
+```text
+Reset password
+```
+
+### 8. Optional Future: Live Share Invitation
+
+Do not send automatically in Phase 1. Keep Live Share manual until family-recipient permissions are explicit.
+
+Subject:
+
+```text
+Watch {{player_name}} live on LaxHornet
+```
+
+Body:
+
+```text
+{{sender_name}} shared a read-only LaxHornet game link.
+
+Player: {{player_name}}
+Game: {{opponent}} on {{game_date}}
+
+Watch live:
+{{share_url}}
+
+This link is read-only. It does not allow editing stats or account access.
+```
+
+## Template Data Contract
+
+Normalize payload values before rendering:
+
+```text
+recipient_email
+event_type
+subject
+body
+payload.team_id
+payload.team_name
+payload.request_id
+payload.email
+payload.first_name
+payload.last_name
+payload.parent_name
+payload.phone
+payload.child_jersey_number
+payload.roster_player_id
+payload.roster_player_name
+SITE_URL
+```
+
+Derived helpers:
+
+```text
+first_name = payload.first_name || "there"
+parent_name = trim(payload.parent_name || payload.first_name + " " + payload.last_name) || payload.email
+team_name = payload.team_name || "your team"
+child_jersey_number = payload.child_jersey_number || "provided"
+site_url = SITE_URL || "https://laxhornet.mybranford.com"
+```
+
+## Backend Fixes Needed
+
+1. Queue request emails for signed-in team access requests.
+   - Current `laxhornet_handle_new_user` queues `team_access_requested_user` and `team_access_requested_admin` during signup with a team code.
+   - Current `laxhornet_request_team_player_access` creates the request for already signed-in users, but does not queue those two emails.
+   - Add the same deterministic queue inserts there.
+
+2. Add queue delivery columns.
+   - Add attempts/error/provider/delivery fields from the SQL above.
+
+3. Add an Edge Function queue sender.
+   - Use Resend API key from Edge Function secrets.
+   - Use idempotency key `{event_type}/{queue_id}`.
+   - Send HTML and text.
+   - Update queue rows.
+
+4. Add a Resend webhook endpoint.
+   - Store delivered/bounced/complained/suppressed outcomes.
+   - Prevent repeat sends to suppressed/bounced addresses.
+
+5. Decide how to send Supabase Auth mail.
+   - Recommended: Auth Send Email Hook -> Supabase Edge Function -> Resend.
+   - Acceptable launch shortcut: Supabase built-in auth templates with Resend SMTP/custom SMTP.
+
+6. Update Supabase Auth templates.
+   - Confirm signup.
+   - Password reset.
+   - Email change, if enabled.
+
+7. Create a test matrix before production.
+   - New parent signup with team code.
+   - Existing signed-in parent requests access.
+   - Admin approves request.
+   - Admin rejects request.
+   - Admin sends verification reminder.
+   - Duplicate function retry does not duplicate sends.
+   - Bounce/complaint webhook marks status.
+
+## Suggested Edge Function File Layout
+
+If this repo starts tracking Supabase function source, use:
+
+```text
+supabase/
+  functions/
+    send-laxhornet-email-queue/
+      index.ts
+    resend-webhook/
+      index.ts
+```
+
+Keep reusable template rendering either in each function or in:
+
+```text
+supabase/functions/_shared/email-templates.ts
+```
+
+## QA Checklist
+
+Database checks:
+
+```sql
+select created_at, event_type, status, recipient_email, subject, attempts, last_error
+from public.notification_queue
+order by created_at desc
+limit 50;
+```
+
+Request flow checks:
+
+- Parent sees "Request sent" screen.
+- Parent receives account confirmation email.
+- Parent receives request received email.
+- Admin receives request review email.
+- Admin approval creates a `player_claims` row.
+- Parent receives approval email.
+- More > Sync shows the approved player.
+
+Delivery checks:
+
+- Resend dashboard shows the same provider message ID stored in the queue.
+- Retrying the same queue row does not send duplicates.
+- Webhook updates delivery status.
+- Suppressed/bounced addresses are not retried indefinitely.
+
+## Phase 1 Decision
+
+Ship transactional email only:
+
+- Account confirmation
+- Request received
+- Admin request notification
+- Approval/rejection
+- Verification reminder
+- Password reset
+
+Do not ship marketing emails, newsletters, automatic family recap emails, or automatic Live Share invitations until recipient consent and unsubscribe/suppression flows are explicitly designed.
