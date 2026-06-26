@@ -23,7 +23,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v218";
+const APP_VERSION = "v219";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -5015,7 +5015,9 @@ function renderAccountCard() {
         <button class="btn neutral" type="button" data-nav="demo">View Demo Game</button>
       </div>
       ${renderInstallCard({ compact: true })}
-      <p class="auth-legal muted small"><a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a></p>
+      <p class="auth-legal muted small">
+        By creating an account, you agree to the <a href="terms.html" target="_blank" rel="noopener">LaxHornet Terms of Use</a> and <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a>. LaxHornet is for adults managing youth lacrosse tracking. Children may not create accounts. You are responsible for entering only player/team information you are authorized to manage or track.
+      </p>
     </form>
   `;
 }
@@ -5887,6 +5889,11 @@ function renderMore() {
             <span>${renderNavIcon("games")}</span>
             <strong>Privacy Policy</strong>
             <small>Review how LaxHornet handles accounts, teams, players, and game data.</small>
+          </a>
+          <a class="more-action" href="terms.html" target="_blank" rel="noopener">
+            <span>${renderNavIcon("games")}</span>
+            <strong>Terms of Use</strong>
+            <small>Review account, team access, Live Share, recap, and usage rules.</small>
           </a>
           <button class="more-action danger-link" type="button" data-action="sign-out">
             <span>${renderNavIcon("more")}</span>

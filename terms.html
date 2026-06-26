@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b0c0e" />
+    <meta name="description" content="LaxHornet Terms of Use for youth lacrosse stat tracking, team access, Live Share, exports, and player impact summaries." />
+    <title>LaxHornet Terms of Use</title>
+    <link rel="manifest" href="manifest.json?v=219" />
+    <link rel="icon" href="assets/LHicon.png?v=1" type="image/png" />
+    <link rel="apple-touch-icon" href="assets/LHicon.png?v=1" />
+    <style>
+      :root { color-scheme: dark; --black: #070707; --panel: #f7f8fa; --text: #111318; --muted: #5b6470; --line: #d9dde3; --brand: #e81010; --white: #ffffff; }
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body { margin: 0; min-height: 100vh; font-family: Arial, Helvetica, sans-serif; background: #0b0b0b url("assets/honeycombblack.png?v=1") top center / 520px auto repeat; color: var(--white); }
+      body::before { content: ""; position: fixed; inset: 0; pointer-events: none; background: linear-gradient(180deg, rgba(7,7,7,.72), rgba(7,7,7,.94)); }
+      .policy-shell { position: relative; z-index: 1; }
+      .topbar { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 18px clamp(18px, 4vw, 46px); border-bottom: 1px solid rgba(255,255,255,.12); background: rgba(8,8,8,.78); backdrop-filter: blur(10px); position: sticky; top: 0; z-index: 5; }
+      .brand img { display: block; width: min(230px, 56vw); height: auto; }
+      .top-links { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+      .top-links a, .print-btn { min-height: 42px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid rgba(255,255,255,.22); padding: 10px 14px; color: var(--white); background: rgba(255,255,255,.08); text-decoration: none; font-weight: 800; font-size: 14px; }
+      .top-links a.primary { border-color: var(--brand); box-shadow: inset 4px 0 0 var(--brand); }
+      .print-btn { cursor: pointer; font: inherit; }
+      .hero { padding: 44px clamp(18px, 4vw, 46px) 24px; max-width: 1080px; margin: 0 auto; }
+      .hero h1 { margin: 0; font-size: clamp(38px, 7vw, 74px); line-height: .95; letter-spacing: 0; max-width: 760px; }
+      .hero p { max-width: 780px; color: #d7d9dd; font-size: 18px; line-height: 1.55; }
+      .meta-card { margin-top: 22px; padding: 18px; border: 1px solid rgba(232,16,16,.42); border-radius: 10px; background: rgba(255,255,255,.08); box-shadow: 0 18px 42px rgba(0,0,0,.34); }
+      .meta-card ul { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); list-style: none; padding: 0; margin: 0; }
+      .meta-card li { display: grid; gap: 4px; }
+      .meta-card span { color: #b9bec6; font-size: 12px; font-weight: 900; text-transform: uppercase; }
+      .meta-card strong { color: var(--white); font-size: 15px; }
+      .policy-wrap { max-width: 1080px; margin: 0 auto; padding: 0 clamp(18px, 4vw, 46px) 70px; }
+      .policy-grid { display: grid; grid-template-columns: 290px minmax(0, 1fr); gap: 22px; align-items: start; }
+      .toc { position: sticky; top: 92px; border-radius: 10px; background: var(--panel); color: var(--text); padding: 18px; border: 1px solid var(--line); }
+      .toc h2 { margin: 0 0 12px; font-size: 20px; }
+      .toc nav { display: grid; gap: 8px; }
+      .toc a { color: #20252c; font-weight: 800; font-size: 13px; line-height: 1.25; text-decoration: none; }
+      .toc a:hover { color: var(--brand); }
+      .policy-card { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: clamp(20px, 4vw, 34px); box-shadow: 0 22px 60px rgba(0,0,0,.34); }
+      .policy-section { padding: 24px 0; border-top: 1px solid var(--line); scroll-margin-top: 110px; }
+      .policy-section:first-child { border-top: 0; padding-top: 0; }
+      .policy-section h2 { margin: 0 0 14px; font-size: clamp(24px, 4vw, 34px); line-height: 1.05; color: #111318; }
+      .policy-section h3 { margin: 20px 0 8px; font-size: 17px; color: #20252c; }
+      .policy-section p { margin: 0 0 13px; color: #303741; line-height: 1.62; font-size: 16px; }
+      .policy-section ul { margin: 0 0 16px 20px; padding: 0; color: #303741; }
+      .policy-section li { margin: 7px 0; line-height: 1.5; }
+      .policy-section a { color: #b80c0c; font-weight: 800; overflow-wrap: anywhere; }
+      .footer { max-width: 1080px; margin: 0 auto; padding: 0 clamp(18px, 4vw, 46px) 34px; color: #aeb4bd; }
+      .footer a { color: #ffffff; font-weight: 800; }
+      @media (max-width: 820px) { .topbar { align-items: flex-start; flex-direction: column; } .top-links { width: 100%; justify-content: flex-start; } .policy-grid { grid-template-columns: 1fr; } .toc { position: static; } }
+      @media (max-width: 520px) { .hero { padding-top: 34px; } .top-links a, .print-btn { flex: 1 1 auto; } .policy-card { border-radius: 8px; } }
+      @media print { body { background: white; color: black; } body::before, .topbar, .toc, .footer { display: none; } .policy-wrap, .hero { max-width: none; padding: 0; } .hero h1 { color: black; font-size: 34px; } .hero p { color: black; } .meta-card, .policy-card { box-shadow: none; border-color: #999; background: white; color: black; } }
+    </style>
+  </head>
+  <body>
+    <div class="policy-shell">
+      <header class="topbar">
+        <a class="brand" href="/" aria-label="LaxHornet home"><img src="assets/LHbanner.png?v=3" alt="LaxHornet" /></a>
+        <div class="top-links">
+          <a href="/">Home</a>
+          <a href="privacy.html">Privacy</a>
+          <a class="primary" href="app.html">Open App</a>
+          <button class="print-btn" type="button" onclick="window.print()">Print</button>
+        </div>
+      </header>
+      <main>
+        <section class="hero">
+          <h1>LaxHornet Terms of Use</h1>
+          <p>These Terms govern access to and use of LaxHornet, including the website, app, stat tracking tools, team management features, Live Share, exports, launch materials, and related services.</p>
+          <div class="meta-card" aria-label="Terms details">
+            <ul>
+              <li><span>Effective Date</span><strong>June 26, 2026</strong></li>
+              <li><span>Last Updated</span><strong>June 26, 2026</strong></li>
+              <li><span>Operator</span><strong>David DeGrasse and LaxHornet developers</strong></li>
+              <li><span>App/Website</span><strong>laxhornet.mybranford.com</strong></li>
+              <li><span>Contact</span><strong>degrassed@gmail.com</strong></li>
+            </ul>
+          </div>
+        </section>
+        <section class="policy-wrap">
+          <div class="policy-grid">
+            <aside class="toc" aria-label="Terms contents">
+              <h2>Contents</h2>
+              <nav>
+                <a href="#intro">Introduction</a>
+                <a href="#what-laxhornet-is">1. What LaxHornet Is</a>
+                <a href="#adult-use">2. Adult Use Only</a>
+                <a href="#responsibilities">3. Adult Responsibilities</a>
+                <a href="#child-accounts">4. No Child Accounts</a>
+                <a href="#account-security">5. Account Registration and Security</a>
+                <a href="#team-codes">6. Team Codes and Player Access</a>
+                <a href="#live-share">7. Live Share Links</a>
+                <a href="#content">8. Notes, Tags, and Content</a>
+                <a href="#content-license">9. User Content License</a>
+                <a href="#ip">10. LaxHornet Intellectual Property</a>
+                <a href="#acceptable-use">11. Acceptable Use</a>
+                <a href="#sports-disclaimer">12. Youth Sports Disclaimer</a>
+                <a href="#accuracy">13. Stat Tracking and Data Accuracy</a>
+                <a href="#offline-sync">14. Offline Use, Sync, and Backups</a>
+                <a href="#exports">15. Exports and Imports</a>
+                <a href="#recaps">16. Family Recaps</a>
+                <a href="#third-party">17. Third-Party Services</a>
+                <a href="#fees">18. Fees and Paid Features</a>
+                <a href="#changes">19. Beta, Updates, and Changes</a>
+                <a href="#termination">20. Account Suspension or Termination</a>
+                <a href="#privacy">21. Privacy</a>
+                <a href="#warranties">22. No Warranties</a>
+                <a href="#liability">23. Limitation of Liability</a>
+                <a href="#indemnification">24. Indemnification</a>
+                <a href="#disputes">25. Dispute Resolution</a>
+                <a href="#law">26. Governing Law and Venue</a>
+                <a href="#terms-updates">27. Changes to These Terms</a>
+                <a href="#contact">28. Contact</a>
+              </nav>
+            </aside>
+            <article class="policy-card">
+              <section class="policy-section" id="intro">
+                <h2>Introduction</h2>
+                <p>Welcome to LaxHornet. These Terms of Use govern your access to and use of LaxHornet, including our website, progressive web app, stat tracking tools, team management features, Live Share features, exports, launch materials, and related services.</p>
+                <p>LaxHornet is operated by David DeGrasse, a Connecticut-based operator/developer.</p>
+                <p>By accessing or using LaxHornet, you agree to these Terms of Use and our <a href="privacy.html">Privacy Policy</a>. If you do not agree, do not use LaxHornet.</p>
+                <p>For questions, contact us at <a href="mailto:degrassed@gmail.com">degrassed@gmail.com</a>.</p>
+              </section>
+              <section class="policy-section" id="what-laxhornet-is">
+                <h2>1. What LaxHornet Is</h2>
+                <p>LaxHornet is a mobile-first youth lacrosse stat tracking app designed for parents, guardians, team administrators, coaches, and authorized adults.</p>
+                <p>LaxHornet helps users track lacrosse game events, organize stats by approved player and team, review game and season performance, generate player impact summaries, share read-only live game updates, export or back up certain data, and manage team access and roster approval workflows.</p>
+                <p>LaxHornet is intended to support youth sports tracking, family communication, and player development conversations. It is not an official league scoring system, coaching certification tool, medical tool, recruiting service, or professional evaluation platform.</p>
+              </section>
+              <section class="policy-section" id="adult-use">
+                <h2>2. Adult Use Only</h2>
+                <p>LaxHornet accounts are intended for adults. You may use LaxHornet only if you are at least 18 years old, or the age of legal majority where you live, and authorized to enter into these Terms.</p>
+                <p>Children may not create LaxHornet accounts.</p>
+                <p>Youth player information may only be entered, managed, approved, tracked, or shared by a parent, legal guardian, coach, team administrator, or another adult with proper authorization.</p>
+                <p>By entering, uploading, approving, tracking, syncing, exporting, or sharing youth player information, you represent that you have the right and authority to do so.</p>
+              </section>
+              <section class="policy-section" id="responsibilities">
+                <h2>3. Parent, Guardian, Coach, and Admin Responsibilities</h2>
+                <p>LaxHornet depends on responsible adult use.</p>
+                <p>You are responsible for entering accurate account, team, player, and game information; keeping your login credentials secure; using team codes responsibly; requesting access only to players you are authorized to track; approving access requests only for authorized parents, guardians, coaches, or trackers; sharing Live Share links only with trusted recipients; avoiding sensitive or private information in notes, tags, exports, or shared recaps; complying with team, league, school, club, and family privacy expectations; and using LaxHornet in a respectful and lawful way.</p>
+                <p>Team admins are responsible for managing team codes, roster information, access requests, parent approvals, and roster accuracy.</p>
+                <p>Parent Trackers are responsible for tracking only approved player/team contexts and not attempting to access unauthorized players, teams, rosters, or accounts.</p>
+              </section>
+              <section class="policy-section" id="child-accounts">
+                <h2>4. No Child Accounts</h2>
+                <p>Children are not permitted to create accounts or submit personal information directly to LaxHornet.</p>
+                <p>If we learn that a child has created an account or directly submitted personal information without appropriate adult involvement, we may delete or disable that account and associated information.</p>
+                <p>If you believe a child has created an account, contact us at <a href="mailto:degrassed@gmail.com">degrassed@gmail.com</a>.</p>
+              </section>
+              <section class="policy-section" id="account-security">
+                <h2>5. Account Registration and Security</h2>
+                <p>To use certain LaxHornet features, you may need to create an account.</p>
+                <p>You agree to provide accurate account information, keep your password secure, not share your account with unauthorized people, notify us if you believe your account has been compromised, and use LaxHornet only for lawful and authorized purposes.</p>
+                <p>We may suspend, restrict, or terminate accounts if we believe the account has been misused, compromised, used to access unauthorized data, or used in violation of these Terms.</p>
+              </section>
+              <section class="policy-section" id="team-codes">
+                <h2>6. Team Codes and Player Access</h2>
+                <p>LaxHornet uses team codes, roster verification, and admin approval to help limit access to player data. Parent Trackers may request access to a player by entering a team code and jersey number. Admins may approve or reject access requests.</p>
+                <p>You agree not to guess, misuse, scrape, publish, or distribute team codes without permission; request access to a player you are not authorized to track; approve unauthorized access requests; attempt to view, edit, export, or share roster data you are not authorized to access; or circumvent role-based access controls.</p>
+                <p>Access approval does not transfer ownership of team or roster data. It only grants limited use of LaxHornet features for the approved player/team context.</p>
+              </section>
+              <section class="policy-section" id="live-share">
+                <h2>7. Live Share Links</h2>
+                <p>LaxHornet may allow users to create Live Share links or codes that let family members or others view a read-only game timeline. Anyone with the Live Share link or code may be able to view the shared game information.</p>
+                <p>You are responsible for deciding who receives a Live Share link. Live Share viewers cannot edit game data, roster data, player profiles, or stats.</p>
+                <p>Because Live Share links may reveal game activity, timing, player context, notes, or tags depending on app settings, you should only share them with people you trust.</p>
+                <p>We may disable, expire, limit, or restrict Live Share links at any time to protect privacy, security, player safety, or app integrity.</p>
+              </section>
+              <section class="policy-section" id="content">
+                <h2>8. Notes, Tags, and User-Entered Content</h2>
+                <p>LaxHornet may allow users to add notes, tags, custom labels, game details, roster information, player context, and other user-entered content.</p>
+                <p>You agree not to enter or upload medical information, health information, disciplinary information, school-record information, highly sensitive family information, private comments about a child, coach, parent, or teammate, offensive or unlawful content, or content you do not have permission to provide.</p>
+                <p>Notes, tags, exports, backups, recaps, and Live Share features may make certain information visible to others depending on how you use the app. Use caution before entering sensitive information.</p>
+                <p>We may remove, restrict, or disable content that we believe violates these Terms, creates legal risk, threatens player privacy or safety, or harms the operation of LaxHornet.</p>
+              </section>
+              <section class="policy-section" id="content-license">
+                <h2>9. User Content and License to Operate the Service</h2>
+                <p>You retain whatever rights you have in the content and data you submit to LaxHornet.</p>
+                <p>By entering, uploading, syncing, saving, exporting, importing, or sharing content through LaxHornet, you grant us a limited license to host, store, process, display, transmit, sync, back up, modify for formatting, and otherwise use that content as needed to provide, secure, support, and improve LaxHornet.</p>
+                <p>This license is limited to operating LaxHornet and providing the features you use. We do not claim ownership of your team's roster information, player information, game data, notes, tags, or exported files.</p>
+              </section>
+              <section class="policy-section" id="ip">
+                <h2>10. LaxHornet Intellectual Property</h2>
+                <p>LaxHornet, including the app, source code, design, layout, user interface, branding, logos, text, graphics, launch materials, scoring summaries, Game Impact presentation, possession-impact presentation, player archetype presentation, workflows, and related materials, is owned by David DeGrasse, LaxHornet, or its licensors.</p>
+                <p>You may not copy, modify, distribute, sell, lease, sublicense, reverse engineer, scrape, reproduce, mirror, resell, or create derivative works based on LaxHornet except as expressly allowed by these Terms or by written permission from us.</p>
+                <p>Nothing in these Terms gives you ownership of LaxHornet or its intellectual property. You may use LaxHornet only for your own authorized family, team, or administrative use.</p>
+              </section>
+              <section class="policy-section" id="acceptable-use">
+                <h2>11. Acceptable Use</h2>
+                <p>You agree not to use LaxHornet for unlawful purposes; access or attempt to access accounts, teams, players, rosters, or games without authorization; interfere with security or role-based access controls; reverse engineer, copy, scrape, or extract the app or its data; use automated tools to overload or disrupt the app; upload malicious code; bypass authentication, team codes, approval workflows, or permissions; misrepresent your identity or authority; harass, shame, defame, or target a player, parent, coach, official, or team; enter sensitive child information into notes, tags, or recaps; use LaxHornet for gambling, wagering, scouting for compensation, or unauthorized commercial exploitation; resell or provide paid access to LaxHornet without written permission; or use LaxHornet in a way that violates team, league, school, club, or tournament rules.</p>
+                <p>We may investigate and take action if we believe you have violated these rules.</p>
+              </section>
+              <section class="policy-section" id="sports-disclaimer">
+                <h2>12. Youth Sports Disclaimer</h2>
+                <p>LaxHornet is intended to help families and authorized adults track and understand youth lacrosse activity.</p>
+                <p>LaxHornet does not guarantee perfect stat accuracy, official scoring accuracy, coaching accuracy, athletic potential, recruiting outcomes, player rankings, scholarship outcomes, team selection outcomes, or medical, psychological, or developmental conclusions.</p>
+                <p>Game Impact, possession metrics, player archetypes, takeaways, recaps, and summaries are informational tools. They are not official coach grades, medical assessments, mental-health assessments, recruiting evaluations, or permanent labels.</p>
+                <p>Youth sports involve judgment, context, development, and human factors that no app can fully measure.</p>
+              </section>
+              <section class="policy-section" id="accuracy">
+                <h2>13. Stat Tracking and Data Accuracy</h2>
+                <p>LaxHornet relies on user-entered events and user-managed roster information. Stats may be incomplete or inaccurate, a tracker may miss plays, different users may interpret lacrosse events differently, edits and deletions may affect totals and summaries, offline use and sync conditions may affect when data appears across devices, and exports or backups depend on the data available when they are created.</p>
+                <p>You are responsible for reviewing and correcting your own tracked game information.</p>
+              </section>
+              <section class="policy-section" id="offline-sync">
+                <h2>14. Offline Use, Sync, and Backups</h2>
+                <p>LaxHornet may store certain information locally on your device to support fast sideline tracking and offline use. If you use LaxHornet with an account, certain information may sync to cloud services. Sync may depend on internet connectivity, browser settings, device settings, app version, and service availability.</p>
+                <p>We do not guarantee that offline data will always be preserved, sync will always occur immediately, data will never be lost, local device storage will remain available, deleted items can always be recovered, or exports and backups will always be complete.</p>
+                <p>You are responsible for creating and protecting your own backups and exports where available.</p>
+              </section>
+              <section class="policy-section" id="exports">
+                <h2>15. Exports, Backups, and Imported Files</h2>
+                <p>LaxHornet may allow users to export or import data in formats such as CSV or JSON. Exported files may contain player names, jersey numbers, team details, game stats, notes, tags, and other information.</p>
+                <p>Once you export data from LaxHornet, you are responsible for storing it securely, sharing it carefully, deleting it when no longer needed, avoiding unauthorized disclosure, and complying with team, family, league, school, or club rules.</p>
+                <p>We are not responsible for files after you export, download, send, upload, or share them outside LaxHornet.</p>
+              </section>
+              <section class="policy-section" id="recaps">
+                <h2>16. Family Recaps, Guardian Notes, and Shared Summaries</h2>
+                <p>LaxHornet may generate or allow users to copy family recaps, summaries, or other plain-English takeaways based on tracked stats and game data. These summaries are informational and may be incomplete or imperfect.</p>
+                <p>You are responsible for reviewing any recap or summary before sharing it. Do not share summaries containing private, sensitive, medical, disciplinary, or inappropriate information.</p>
+                <p>Unless clearly stated otherwise, recaps and summaries are not official team statements, coach evaluations, or league records.</p>
+              </section>
+              <section class="policy-section" id="third-party">
+                <h2>17. Third-Party Services</h2>
+                <p>LaxHornet may rely on third-party service providers for hosting, authentication, cloud sync, database storage, email, analytics, payments, or support. Your use of LaxHornet may also be subject to certain third-party terms or policies.</p>
+                <p>We are not responsible for third-party services, outages, data practices, or security incidents except where required by law.</p>
+                <p>Current or expected providers may include Supabase for authentication, database, and cloud sync; GitHub Pages or another hosting provider for hosting; Resend or another email/support provider for email; and other providers if analytics, support, or paid features are added later.</p>
+              </section>
+              <section class="policy-section" id="fees">
+                <h2>18. Fees and Paid Features</h2>
+                <p>LaxHornet may currently be free, in beta, or offered without paid subscriptions. We may later offer paid plans, premium features, team plans, club plans, exports, analytics, or other paid services.</p>
+                <p>If paid features are introduced, we will provide pricing, billing, renewal, cancellation, and refund terms before charging users.</p>
+              </section>
+              <section class="policy-section" id="changes">
+                <h2>19. Beta, Updates, and Service Changes</h2>
+                <p>LaxHornet may change over time. We may add, modify, limit, suspend, or remove features at any time, including tracking categories, Game Review features, Season Dashboard features, Live Share features, export/import tools, admin tools, team access workflows, scoring or summary presentation, and free or paid feature availability.</p>
+                <p>We may also update the app, service worker, cache, versioning, backend services, or supported browsers. We are not required to continue offering any particular feature forever.</p>
+              </section>
+              <section class="policy-section" id="termination">
+                <h2>20. Account Suspension or Termination</h2>
+                <p>We may suspend, restrict, or terminate your access to LaxHornet if we believe you violated these Terms, misused team codes, accessed or attempted to access unauthorized player/team data, exposed youth player information inappropriately, used LaxHornet unlawfully or abusively, your account was compromised, your use creates security, privacy, legal, or operational risk, or we stop offering LaxHornet or a related feature.</p>
+                <p>You may stop using LaxHornet at any time. To request account deletion, contact <a href="mailto:degrassed@gmail.com">degrassed@gmail.com</a>.</p>
+                <p>Some information may remain where needed for legal compliance, security, backup integrity, fraud prevention, dispute resolution, or sync/delete integrity.</p>
+              </section>
+              <section class="policy-section" id="privacy">
+                <h2>21. Privacy</h2>
+                <p>Your use of LaxHornet is also governed by our <a href="privacy.html">Privacy Policy</a>. The Privacy Policy explains how we collect, use, store, share, and protect information, including youth player information, account information, game data, Live Share information, local/offline data, and cloud sync data.</p>
+                <p>If there is a conflict between these Terms and the Privacy Policy regarding privacy practices, the Privacy Policy controls for that issue.</p>
+              </section>
+              <section class="policy-section" id="warranties">
+                <h2>22. No Warranties</h2>
+                <p>LaxHornet is provided "as is" and "as available." To the maximum extent permitted by law, we disclaim all warranties, express or implied, including warranties of merchantability, fitness for a particular purpose, non-infringement, accuracy, availability, reliability, and security.</p>
+                <p>We do not guarantee that LaxHornet will be uninterrupted, error-free, secure, accurate, or available at all times.</p>
+              </section>
+              <section class="policy-section" id="liability">
+                <h2>23. Limitation of Liability</h2>
+                <p>To the maximum extent permitted by law, David DeGrasse, LaxHornet, its owners, developers, contractors, service providers, affiliates, and representatives will not be liable for indirect, incidental, special, consequential, exemplary, or punitive damages, or for lost profits, lost data, lost goodwill, lost opportunities, service interruptions, data loss, or unauthorized access arising out of or relating to LaxHornet.</p>
+                <p>To the maximum extent permitted by law, our total liability for any claim related to LaxHornet will not exceed the greater of the amount you paid to use LaxHornet in the 12 months before the claim, or $100.</p>
+                <p>Some jurisdictions do not allow certain limitations of liability, so some limitations may not apply to you.</p>
+              </section>
+              <section class="policy-section" id="indemnification">
+                <h2>24. Indemnification</h2>
+                <p>You agree to defend, indemnify, and hold harmless David DeGrasse, LaxHornet, its owners, developers, contractors, service providers, affiliates, and representatives from and against any claims, damages, liabilities, losses, costs, and expenses, including reasonable attorneys' fees, arising from or related to your use or misuse of LaxHornet; violation of these Terms; violation of another person's rights; unauthorized entry, approval, tracking, export, or sharing of player, team, or game data; misuse of Live Share links; user-entered content, notes, tags, exports, imports, or shared recaps; or violation of team, league, club, school, tournament, or family rules.</p>
+              </section>
+              <section class="policy-section" id="disputes">
+                <h2>25. Dispute Resolution</h2>
+                <p>Before filing a legal claim, you agree to first contact us at <a href="mailto:degrassed@gmail.com">degrassed@gmail.com</a> and try to resolve the dispute informally. Your message should include your name, account email, a description of the issue, and the outcome you are requesting.</p>
+                <p>We will attempt to respond within a reasonable time. If the dispute cannot be resolved informally, the dispute will be handled as described below.</p>
+              </section>
+              <section class="policy-section" id="law">
+                <h2>26. Governing Law and Venue</h2>
+                <p>These Terms are governed by the laws of the State of Connecticut, without regard to conflict-of-law rules. To the maximum extent permitted by law, any lawsuit or legal proceeding arising from or related to LaxHornet or these Terms will be brought in the state or federal courts located in Connecticut.</p>
+                <p>You and LaxHornet consent to the personal jurisdiction and venue of those courts. Nothing in these Terms limits any rights you may have under applicable consumer protection laws that cannot legally be waived.</p>
+              </section>
+              <section class="policy-section" id="terms-updates">
+                <h2>27. Changes to These Terms</h2>
+                <p>We may update these Terms from time to time. When we update them, we will revise the "Last Updated" date above. If changes are material, we may provide notice in the app, by email, or by another reasonable method.</p>
+                <p>Your continued use of LaxHornet after updated Terms become effective means you accept the updated Terms, to the extent permitted by law. If you do not agree to the updated Terms, you should stop using LaxHornet.</p>
+              </section>
+              <section class="policy-section" id="contact">
+                <h2>28. Contact</h2>
+                <p>For questions about these Terms, contact David DeGrasse and LaxHornet developers at <a href="mailto:degrassed@gmail.com">degrassed@gmail.com</a>.</p>
+              </section>
+            </article>
+          </div>
+        </section>
+      </main>
+      <footer class="footer">&copy; 2026 LaxHornet. All rights reserved. LaxHornet is a youth lacrosse stat tracking tool and is not an official league scoring system, medical tool, or recruiting evaluation service. <a href="privacy.html">Privacy Policy</a></footer>
+    </div>
+  </body>
+</html>
