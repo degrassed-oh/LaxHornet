@@ -33,7 +33,7 @@ These flows already exist in the app and database.
 | Flow | Trigger | Current behavior | Email behavior needed |
 | --- | --- | --- | --- |
 | New parent signs up with team code | `supabaseClient.auth.signUp(...)` in `submitSignupAccessRequest` | Supabase Auth sends confirmation; `laxhornet_handle_new_user` creates profile/request | Send account confirmation, parent request receipt, admin request notification |
-| Existing signed-in parent requests player access | `laxhornet_request_team_player_access(join_code, jersey)` | Creates/updates `team_access_requests` | Gap: also queue parent request receipt and admin request notification |
+| Existing signed-in parent requests player access | `laxhornet_request_team_player_access(join_code, jersey)` | Creates/updates `team_access_requests` and queues request notifications | Send parent request receipt and admin request notification |
 | Team admin approves access | `laxhornet_review_team_access_request(request_id, true)` | Approves request, creates team member/player claim, queues `team_access_approved` | Send approval email |
 | Team admin rejects access | `laxhornet_review_team_access_request(request_id, false)` | Rejects request, queues `team_access_rejected` | Send neutral update email |
 | Admin sends reminder after approval | `laxhornet_send_player_verification_reminder(request_id)` | Queues `player_verification_reminder` | Send reminder email |
@@ -468,10 +468,10 @@ site_url = SITE_URL || "https://laxhornet.mybranford.com"
 
 ## Backend Fixes Needed
 
-1. Queue request emails for signed-in team access requests.
-   - Current `laxhornet_handle_new_user` queues `team_access_requested_user` and `team_access_requested_admin` during signup with a team code.
-   - Current `laxhornet_request_team_player_access` creates the request for already signed-in users, but does not queue those two emails.
-   - Add the same deterministic queue inserts there.
+1. Keep request email queueing covered for both request paths.
+   - `laxhornet_handle_new_user` queues `team_access_requested_user` and `team_access_requested_admin` during signup with a team code.
+   - `laxhornet_request_team_player_access` should also queue those two events for already signed-in users.
+   - Run `tools/test_email_sql.py` after touching email SQL.
 
 2. Add queue delivery columns.
    - Add attempts/error/provider/delivery fields from the SQL above.

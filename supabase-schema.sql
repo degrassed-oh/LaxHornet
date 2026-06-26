@@ -817,6 +817,7 @@ declare
   requester_profile public.user_profiles%rowtype;
   requester_email text;
   jersey_number text;
+  request_id text;
 begin
   if (select auth.uid()) is null then
     raise exception 'Sign in required';
@@ -841,6 +842,7 @@ begin
 
   requester_email := lower(coalesce((auth.jwt() ->> 'email'), requester_profile.email, ''));
   jersey_number := trim(coalesce(nullif(requested_child_jersey_number, ''), requester_profile.child_jersey_number, ''));
+  request_id := 'access-' || matched_team.id || '-' || (select auth.uid())::text;
 
   insert into public.team_access_requests (
     id,
@@ -855,7 +857,7 @@ begin
     status
   )
   values (
-    'access-' || matched_team.id || '-' || (select auth.uid())::text,
+    request_id,
     matched_team.id,
     (select auth.uid()),
     requester_email,
@@ -875,6 +877,46 @@ begin
       requested_role = 'tracker',
       status = case when public.team_access_requests.status = 'approved' then 'approved' else 'pending' end,
       created_at = case when public.team_access_requests.status = 'approved' then public.team_access_requests.created_at else now() end;
+
+  insert into public.notification_queue (id, event_type, recipient_email, subject, body, payload)
+  values (
+    'notify-request-user-' || request_id,
+    'team_access_requested_user',
+    requester_email,
+    'LaxHornet request submitted',
+    'Your LaxHornet request was submitted for ' || matched_team.name || ', jersey #' || jersey_number || '. Admin is reviewing your request.',
+    jsonb_build_object(
+      'team_id', matched_team.id,
+      'team_name', matched_team.name,
+      'request_id', request_id,
+      'email', requester_email,
+      'first_name', coalesce(requester_profile.first_name, ''),
+      'last_name', coalesce(requester_profile.last_name, ''),
+      'phone', coalesce(requester_profile.phone, ''),
+      'child_jersey_number', jersey_number
+    )
+  )
+  on conflict (id) do nothing;
+
+  insert into public.notification_queue (id, event_type, recipient_email, subject, body, payload)
+  values (
+    'notify-request-admin-' || request_id,
+    'team_access_requested_admin',
+    'degrassed@gmail.com',
+    'LaxHornet team access request',
+    requester_email || ' requested access to ' || matched_team.name || ', jersey #' || jersey_number || '.',
+    jsonb_build_object(
+      'team_id', matched_team.id,
+      'team_name', matched_team.name,
+      'request_id', request_id,
+      'email', requester_email,
+      'first_name', coalesce(requester_profile.first_name, ''),
+      'last_name', coalesce(requester_profile.last_name, ''),
+      'phone', coalesce(requester_profile.phone, ''),
+      'child_jersey_number', jersey_number
+    )
+  )
+  on conflict (id) do nothing;
 
   return query
   select
