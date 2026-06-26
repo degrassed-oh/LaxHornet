@@ -22,7 +22,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v197";
+const APP_VERSION = "v198";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -5507,8 +5507,8 @@ function renderTeamRosterCard(options = {}) {
                           ${selectedTeamRosterPlayer ? renderEditRosterPlayerBlock(selectedTeamRosterPlayer) : ""}
                           ${renderAddRosterPlayerBlock()}
                           <div class="team-roster-block admin-tool-group team-safety-group">
-                            <h4>Team Safety</h4>
-                            <p class="muted small">Export roster details, delete teams, and manage access carefully.</p>
+                            <h4>Access & Cleanup</h4>
+                            <p class="muted small">Export roster details, manage parent access, or delete this team when needed.</p>
                             <div class="team-actions">
                               <button class="mini-btn light" type="button" data-action="copy-roster-summary">Export Roster</button>
                               ${deletableTeam ? `<button class="mini-btn danger" type="button" data-action="delete-team">Delete Team</button>` : ""}
@@ -5579,7 +5579,7 @@ function renderMore() {
       <section class="card pad more-card admin-tools-card">
         <div>
           <h3>Team Admin Tools</h3>
-          <p class="muted small">Create teams, manage rosters, approve parent requests, and handle team safety tools.</p>
+          <p class="muted small">Create teams, manage rosters, approve parent requests, and handle access cleanup tools.</p>
         </div>
         <div class="admin-tool-groups">
           <div>
@@ -5595,15 +5595,15 @@ function renderMore() {
             <p class="muted small">Approve or reject access from the Team page.</p>
           </div>
           <div>
-            <h4>Team Safety</h4>
-            <p class="muted small">Export roster details, delete teams, and manage access.</p>
+            <h4>Access & Cleanup</h4>
+            <p class="muted small">Manage parent access, export roster details, and delete teams when needed.</p>
           </div>
         </div>
         <div class="more-action-list compact-actions">
           <button class="more-action" type="button" data-nav="team">
             <span>${renderNavIcon("team")}</span>
             <strong>Open Team Admin Tools</strong>
-            <small>Manage team setup, roster, requests, and safety.</small>
+            <small>Manage team setup, roster, requests, and access cleanup.</small>
           </button>
           <button class="more-action" type="button" data-nav="launchKit">
             <span>${renderNavIcon("games")}</span>

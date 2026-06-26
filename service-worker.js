@@ -1,15 +1,15 @@
-const CACHE_NAME = "laxhornet-v197";
+const CACHE_NAME = "laxhornet-v198";
 const APP_ASSETS = [
   "./",
   "./index.html",
   "./app.html",
   "./privacy.html",
   "./logo-options.html",
-  "./landing.css?v=197",
-  "./styles.css?v=197",
-  "./assets/supabase.min.js?v=197",
-  "./app.js?v=197",
-  "./manifest.json?v=197",
+  "./landing.css?v=198",
+  "./styles.css?v=198",
+  "./assets/supabase.min.js?v=198",
+  "./app.js?v=198",
+  "./manifest.json?v=198",
   "./assets/icon.svg?v=11",
   "./assets/LHicon.png?v=1",
   "./assets/LHbanner.png?v=3",
