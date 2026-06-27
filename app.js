@@ -2651,9 +2651,15 @@ function generateShareCard(player, archetypeResult, options = {}) {
   const badgeLabel = archetypeResult.name.replace(/^The\s+/i, "").split(" ")[0];
   const profileLabel = options.profileLabel || "Today's Player Profile";
   const patternScope = options.patternScope || "game";
-  const whyCopy = archetypeResult.reasons.length
-    ? archetypeResult.reasons.join(". ")
-    : archetypeResult.explanation;
+  const whyCopy =
+    patternScope === "season"
+      ? `${seasonProfileDescription(archetypeResult.key)}${
+          archetypeResult.reasons.length ? ` Season evidence: ${archetypeResult.reasons.join(". ")}.` : ""
+        }`
+      : archetypeResult.reasons.length
+        ? archetypeResult.reasons.join(". ")
+        : archetypeResult.explanation;
+  const whySentence = /[.!?]$/.test(whyCopy.trim()) ? whyCopy.trim() : `${whyCopy}.`;
   return `
     <section class="card pad archetype-card">
       <div class="section-head compact-head">
@@ -2666,7 +2672,7 @@ function generateShareCard(player, archetypeResult, options = {}) {
       </div>
       <div class="archetype-story">
         <strong>Why:</strong>
-        <p>${escapeHTML(whyCopy)}.</p>
+        <p>${escapeHTML(whySentence)}</p>
       </div>
       <div class="archetype-story">
         <strong>Next focus:</strong>
@@ -7348,6 +7354,7 @@ function renderWhyThesePlaysMatter(events = [], options = {}) {
   const title = options.title || "Why these plays matter";
   const helper = options.helper || "A quick parent guide to the plays that shaped this game.";
   const emptyCopy = options.emptyCopy || "Track a few plays to see simple explanations of what each stat means and why it supports development.";
+  const showMoreLabel = options.showMoreLabel || "Show more stat explanations";
   const renderEducationItem = ({ count, education }) => `
     <article class="why-play-item">
       <div>
@@ -7376,7 +7383,7 @@ function renderWhyThesePlaysMatter(events = [], options = {}) {
       ${
         extraItems.length
           ? `<details class="why-more-details">
-              <summary>Show more stat explanations</summary>
+              <summary>${escapeHTML(showMoreLabel)}</summary>
               <div class="why-play-list compact">${extraItems.map(renderEducationItem).join("")}</div>
             </details>`
           : ""
@@ -7955,27 +7962,92 @@ function renderFamilyRecapSection(game, player, totals) {
   `;
 }
 
+function seasonStoryForTotals(totals, player = state.player, topContribution = topContributionForTotals(totals).label) {
+  const name = playerFirstName(player);
+  const driver = reviewDriverType(totals, topContribution, player);
+  if (!Number(totals.gamesPlayed || 0) || Number(totals.eventCount || 0) < 3) {
+    return `A clearer season story will build as more games are tracked. Right now, focus on the plays that show ${name}'s involvement, effort, and growth.`;
+  }
+  if (driver === "goalie") {
+    return `${name}'s season story is taking shape around managing pressure in goal. Saves matter, but the bigger development pattern is how quickly those moments turn into organization, outlets, and clears.`;
+  }
+  if (impactPositionGroup(player) === "faceoff" && totals.faceoffAttempts > 0) {
+    return `${name}'s season impact is tied to possession creation at the faceoff spot. The next layer is turning wins, wing help, and loose-ball follow-up into controlled team possessions.`;
+  }
+  if (driver === "possession") {
+    return `Across the saved games, ${name} is building a season around possession work. Ground balls, clears, faceoffs, and defensive pressure are helping create or protect extra chances, which often matters before the scoreboard shows it.`;
+  }
+  if (driver === "scoring") {
+    return `${name}'s season impact is being driven by scoring involvement. The next development step is making those chances more repeatable through shot quality, spacing, support play, and decisions under pressure.`;
+  }
+  if (driver === "defense") {
+    return `${name} is showing value through pressure, stops, and possession-changing defensive plays. That type of impact helps turn defense into opportunity.`;
+  }
+  if (driver === "effort") {
+    return `${name}'s season story is forming around effort and awareness away from the scoreboard. Those plays keep the player connected to possessions even when they do not become goals or assists.`;
+  }
+  return `${name} is contributing in several ways, which is a strong development sign. The season story is not just one stat; it is the mix of scoring, possession, effort, and decision-making.`;
+}
+
 function seasonStrengthBullets(totals, player = state.player) {
   const bullets = [];
   const add = (condition, text) => {
-    if (condition && bullets.length < 4) bullets.push(text);
+    if (condition && bullets.length < 5) bullets.push(text);
   };
-  add(totals.points > 0, `${playerFirstName(player)} has created ${totals.points} total points through goals and assists.`);
-  add(totals.possessionValue > 0, `Possession Impact is positive at ${signedMetric(totals.possessionValue)}, showing helpful possession-changing plays.`);
-  add(totals.groundBalls > 0, `${totals.groundBalls} ground balls are helping turn loose balls into team chances.`);
-  add(totals.causedTurnovers + totals.defensiveStops > 0, `${totals.causedTurnovers + totals.defensiveStops} defensive impact plays are helping prevent opponent chances.`);
-  add(totals.saves > 0, `${totals.saves} saves are contributing to goalie impact and helping keep games within reach.`);
-  add(totals.effortScore > 0, `${totals.effortScore} effort plays show hustle through ground balls, backed up shots, and hustle plays.`);
+  const name = playerFirstName(player);
+  add(totals.points > 0, `Scoring involvement is becoming part of ${name}'s season profile through goals, assists, or pressure around the cage.`);
+  add(totals.possessionValue > 0, `Positive possession impact shows ${name} is helping create or protect extra chances.`);
+  add(totals.groundBalls > 0, `Ground balls are helping turn loose-ball moments into team possessions.`);
+  add(totals.clears > 0, `Successful clears are helping protect the ball after pressure and turn defense into offense.`);
+  add(totals.causedTurnovers + totals.defensiveStops > 0, `Defensive impact plays are helping reduce opponent pressure and create chances to reset.`);
+  add(totals.saves > 0, `Saves are giving the team a chance to reset, outlet, and start the next possession.`);
+  add(totals.faceoffWins > 0, `Faceoff wins are creating immediate possession chances that can become settled offense.`);
+  add(totals.effortScore > 0, `Effort plays show ${name} is staying involved away from the scoreboard.`);
   add(totals.gamesPlayed === 0, "Track a game to start building a clear season story.");
-  return bullets.length ? bullets : ["Keep tracking games to reveal this player's strongest contribution patterns."];
+  return bullets.length ? bullets.slice(0, 5) : [`Keep tracking games to reveal ${name}'s strongest development patterns.`];
+}
+
+function seasonEncouragementForTotals(totals = {}, player = state.player, topContribution = topContributionForTotals(totals).label) {
+  const driver = reviewDriverType(totals, topContribution, player);
+  if (!totals.gamesPlayed) return "Encourage the first full-game tracking session so the season story can start to take shape.";
+  if (driver === "goalie") return "Praise the reset and outlet after the save, not just the save itself.";
+  if (impactPositionGroup(player) === "faceoff" && totals.faceoffAttempts > 0) return "Praise the compete-through-the-ball moments that turn faceoff reps into team possessions.";
+  if (driver === "possession") return "Praise the ground balls, clears, and possession plays that help the team gain control.";
+  if (driver === "scoring" && totals.assists) return "Point out the smart decisions and feeds before praising only goals.";
+  if (driver === "scoring") return "Celebrate the scoring involvement, then reinforce spacing, shot quality, and support play.";
+  if (driver === "defense") return "Praise the pressure and positioning that turn stops into clears.";
+  if (driver === "effort") return "Celebrate the effort plays that keep the player involved beyond the scoreboard.";
+  return "Encourage the plays that show effort, awareness, and growth beyond the stat sheet.";
 }
 
 function nextLevelFocusForSeason(totals, archetypeResult) {
-  if (!totals.gamesPlayed) return "Track the first game, then look for one skill to build from the first pattern.";
-  if (totals.turnovers > totals.groundBalls + totals.clears) return "Focus on cleaner catches, safer outlets, and protecting possessions under pressure.";
-  if (totals.shots > 0 && totals.shotOnGoalPct < 0.5) return "Work on getting more shots on cage before increasing shot volume.";
-  if (totals.possessionValue <= 0) return "Look for one extra possession play each game: a ground ball, clear, ride, or backed up shot.";
+  if (!totals.gamesPlayed) return "Track one full game to build a stronger season picture.";
+  if (totals.turnovers + totals.failedClears > totals.groundBalls + totals.clears) return "Win the ball, then make the first clean pass before pressure arrives.";
+  if (totals.shots > 0 && totals.shotOnGoalPct < 0.5) return "Look for higher-quality shots instead of rushing the first available look.";
+  if (totals.groundBalls >= Math.max(2, totals.gamesPlayed)) return "Turn ground balls into clean possessions and quick support passes.";
+  if (totals.causedTurnovers + totals.defensiveStops >= Math.max(2, totals.gamesPlayed)) return "Stay composed after the stop and help start the clear.";
+  if (totals.saves > 0) return "Find the outlet after saves and help the defense reset quickly.";
+  if (totals.faceoffAttempts > 0) return "Turn faceoff wins into controlled offensive chances.";
+  if (totals.effortScore > 0) return "Keep turning effort plays into controlled possessions.";
   return archetypeResult.nextFocus;
+}
+
+function seasonProfileDescription(archetypeKey = "growthProfile") {
+  const descriptions = {
+    finisher: "This profile shows a player whose season impact is coming through scoring chances and finishing moments.",
+    setupArtist: "This profile shows a player creating chances for teammates through passing, vision, and timing.",
+    possessionEngine: "This profile shows a player helping the team gain and protect possessions through ground balls, clears, faceoffs, or smart decisions.",
+    groundBallMagnet: "This profile shows a player changing possessions by winning loose balls and helping the team gain control.",
+    defensiveDisruptor: "This profile shows a player creating value by pressuring the ball, forcing turnovers, and helping end opponent possessions.",
+    twoWayForce: "This profile shows a player contributing across both ends of the field.",
+    sparkPlug: "This profile shows a player creating energy through hustle plays and momentum-changing moments.",
+    gluePlayer: "This profile shows a player connecting possessions, making smart plays, and helping the team function.",
+    theWall: "This profile shows a goalie whose saves and resets are shaping the season story.",
+    outletStarter: "This profile shows a goalie or defender helping turn stops into clears and new possessions.",
+    growthProfile:
+      "Growth Profile means the season is still taking shape. The tracked games show several areas of involvement, but one clear identity has not fully separated yet. That is normal in youth lacrosse as players learn roles, spacing, and decision-making.",
+  };
+  return descriptions[archetypeKey] || descriptions.growthProfile;
 }
 
 function renderReviewSummarySection(game, player, totals) {
@@ -8516,7 +8588,10 @@ function dashboardHeadlineMetrics(totals, player = state.player) {
 function renderDashboard() {
   const totals = calculateSeasonTotals();
   const archetypeResult = calculateArchetypeResult(totals);
+  const topContribution = topContributionForTotals(totals);
   const strengths = seasonStrengthBullets(totals, state.player);
+  const seasonStory = seasonStoryForTotals(totals, state.player, topContribution.label);
+  const encouragement = seasonEncouragementForTotals(totals, state.player, topContribution.label);
   const nextFocus = nextLevelFocusForSeason(totals, archetypeResult);
   const seasonEvents = visibleGames().flatMap((game) => game.events || []);
   return renderShell(`
@@ -8525,42 +8600,50 @@ function renderDashboard() {
       <p>Totals for ${escapeHTML(playerContextLine(state.player))}.</p>
     </section>
 
-    <section class="stack">
+    <section class="stack lh-season-review">
       ${renderCompactPlayerContext({
         title: "Season For",
         helper: "Switch players to see another season dashboard.",
       })}
-      <div class="explainer-card">
-        <strong>Season Snapshot</strong>
-        <p>Season Snapshot shows how this player is contributing across scoring, possession, defense, goalie play, hustle, and decision-making. Position matters, so players are not evaluated the same way across every role.</p>
-      </div>
       <div class="insight-grid">
         ${insightCard("Games Tracked", escapeHTML(String(totals.gamesPlayed)), "Saved games")}
         ${insightCard("Total Points", escapeHTML(String(totals.points)), `${totals.goals}G ${totals.assists}A`)}
         ${insightCard("Possession Impact", escapeHTML(signedMetric(totals.possessionValue)), `${signedMetric(totals.extraPossessions)} extra chances`)}
         ${insightCard("Average Game Impact", renderImpactGrade(totals.averageImpact), "Across saved games")}
       </div>
-      <section class="card pad development-card">
-        <h3>What ${escapeHTML(playerFirstName(state.player))} is doing well</h3>
+      <section class="card pad development-card lh-season-story-card">
+        <h3>Season Story</h3>
+        <p>${escapeHTML(seasonStory)}</p>
+        <p class="muted small">Season Snapshot highlights patterns across scoring, possession, defense, goalie play, hustle, and decision-making. Position matters, so players are not evaluated the same way across every role.</p>
+      </section>
+      <section class="card pad development-card lh-season-strengths-card">
+        <h3>What ${escapeHTML(playerFirstName(state.player))} Is Building</h3>
         <ul class="insight-list">
           ${strengths.map((item) => `<li>${escapeHTML(item)}</li>`).join("")}
         </ul>
       </section>
-      <section class="card pad development-card">
-        <h3>Next-level focus</h3>
+      <section class="card pad development-card lh-season-encourage-card">
+        <h3>What to Encourage</h3>
+        <p>${escapeHTML(encouragement)}</p>
+      </section>
+      <section class="card pad development-card lh-season-focus-card">
+        <h3>Next-Level Focus</h3>
         <p>${escapeHTML(nextFocus)}</p>
       </section>
       ${renderWhyThesePlaysMatter(seasonEvents, {
-        title: "Why these season plays matter",
+        title: "Why These Season Plays Matter",
         helper: "A few parent-friendly meanings behind this player's most common tracked plays.",
+        limit: 5,
+        showMore: true,
+        showMoreLabel: "Show more season stat explanations",
         emptyCopy: "Track games to see simple explanations of the plays shaping this player's season.",
       })}
       ${generateShareCard(state.player, archetypeResult, { profileLabel: "Season Player Profile", patternScope: "season" })}
-      <section class="review-section">
+      <section class="review-section lh-season-stats-section">
         <div class="section-head compact-head">
           <div>
-            <h3>Full Stat Table</h3>
-            <p class="muted small">Detailed totals behind the season snapshot.</p>
+            <h3>Full Season Stats</h3>
+            <p class="muted small">Use the full stat view for details. The season story above highlights the patterns that matter most.</p>
           </div>
         </div>
         ${renderSeasonTotalsGroups(totals)}

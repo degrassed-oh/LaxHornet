@@ -5289,6 +5289,16 @@ form.account-card,
   padding-bottom: calc(130px + var(--safe-bottom));
 }
 
+.lh-season-review {
+  padding-bottom: calc(130px + var(--safe-bottom));
+}
+
+.lh-season-story-card p,
+.lh-season-encourage-card p,
+.lh-season-focus-card p {
+  line-height: 1.48;
+}
+
 .review-screen-stack .review-section {
   gap: 12px;
 }
