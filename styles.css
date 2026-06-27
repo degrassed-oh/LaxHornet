@@ -5190,6 +5190,164 @@ form.account-card,
   min-height: 48px;
 }
 
+.lh-development-takeaway,
+.lh-conversation-card,
+.lh-next-focus-card,
+.lh-why-card {
+  border-left: 4px solid var(--brand-red);
+}
+
+.lh-why-card {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(245, 247, 249, 0.98));
+}
+
+.lh-why-card summary {
+  display: grid;
+  gap: 3px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.lh-why-card summary::-webkit-details-marker {
+  display: none;
+}
+
+.lh-why-card summary::after {
+  content: ">";
+  justify-self: end;
+  margin-top: -26px;
+  color: var(--brand-red);
+  font-size: 1.1rem;
+  font-weight: 950;
+  transform: rotate(90deg);
+}
+
+.lh-why-card:not([open]) summary::after {
+  transform: rotate(0deg);
+}
+
+.lh-why-card summary span,
+.lh-why-card h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 950;
+}
+
+.lh-why-card summary small {
+  max-width: 92%;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 650;
+  line-height: 1.36;
+}
+
+.why-play-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.why-play-list.compact {
+  margin-top: 14px;
+}
+
+.why-play-item {
+  display: grid;
+  gap: 7px;
+  padding: 11px 12px;
+  border: 1px solid var(--lh-line-light);
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.why-play-item div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.why-play-item strong {
+  color: var(--text);
+  font-size: 0.94rem;
+  font-weight: 950;
+}
+
+.why-play-item span {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 950;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.why-play-item p {
+  margin: 0;
+  color: #303842;
+  font-size: 0.86rem;
+  font-weight: 580;
+  line-height: 1.42;
+}
+
+.why-play-item b {
+  color: var(--text);
+  font-weight: 900;
+}
+
+.conversation-list {
+  display: grid;
+  gap: 8px;
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.conversation-list li {
+  padding: 10px 12px;
+  border: 1px solid var(--lh-line-light);
+  border-radius: 10px;
+  color: #27303a;
+  background: #ffffff;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.focus-preview {
+  display: grid;
+  gap: 4px;
+  padding: 11px 12px;
+  border: 1px solid var(--lh-line-light);
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.focus-preview span {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.focus-preview strong {
+  color: var(--text);
+  font-size: 0.92rem;
+  line-height: 1.35;
+}
+
+.lh-focus-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.lh-focus-actions .btn {
+  min-height: 48px;
+  padding-inline: 10px;
+}
+
 @media (max-width: 430px) {
   .app-shell {
     padding-bottom: calc(96px + var(--safe-bottom));
@@ -5219,5 +5377,13 @@ form.account-card,
 
   .lh-family-recap-actions {
     grid-template-columns: 1fr;
+  }
+
+  .lh-focus-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .why-play-item div {
+    display: grid;
   }
 }

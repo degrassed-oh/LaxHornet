@@ -15,6 +15,7 @@ const STORAGE_KEYS = {
   removedPlayerAccess: "laxhornet.removedPlayerAccess",
   adminViewMode: "laxhornet.adminViewMode",
   onboardingIntent: "laxhornet.onboardingIntent",
+  nextGameFocus: "laxhornet.nextGameFocus",
 };
 
 const SUPABASE_CONFIG = {
@@ -61,6 +62,156 @@ const STAT_DEFS = [
 ];
 
 const STAT_BY_KEY = Object.fromEntries(STAT_DEFS.map((stat) => [stat.key, stat]));
+
+const STAT_EDUCATION = {
+  goal: {
+    label: "Goal",
+    meaning: "A finished scoring chance.",
+    why: "Goals matter because they turn a possession into the clearest team result on the scoreboard.",
+    focus: "Keep finding open space and add one support play, like an assist or ground ball, to round out the impact.",
+  },
+  assist: {
+    label: "Assist",
+    meaning: "A pass or feed that directly creates a goal.",
+    why: "Assists show vision, timing, and trust with teammates.",
+    focus: "Keep your head up after dodges and look for the next open teammate.",
+  },
+  shot: {
+    label: "Missed Shot",
+    meaning: "A shot attempt that does not go on goal.",
+    why: "Shot attempts show offensive involvement and help reveal where better shot selection can create growth.",
+    focus: "Work toward higher-quality looks by setting feet, changing angle, or getting closer to the cage.",
+  },
+  shotOnGoal: {
+    label: "Shot on Goal",
+    meaning: "A shot that forces the goalie to make a save or goes into the cage.",
+    why: "Shots on goal put pressure on the defense and create rebound or backup opportunities.",
+    focus: "Keep aiming for spots that make the goalie move and give teammates a chance to back up the shot.",
+  },
+  goalieSave: {
+    label: "Save",
+    meaning: "A goalie stop that prevents a scoring chance.",
+    why: "Saves protect the scoreboard and can start transition the other way.",
+    focus: "Recover quickly and look for a clean outlet.",
+  },
+  goalAllowed: {
+    label: "Goal Allowed",
+    meaning: "An opponent shot that scores.",
+    why: "This gives context for the kinds of chances the goalie and defense faced.",
+    focus: "Reset quickly, communicate the next coverage, and look for the next save or outlet.",
+  },
+  faceoffWin: {
+    label: "Faceoff Win",
+    meaning: "A won faceoff or draw that gives your team the ball.",
+    why: "Faceoff wins create extra possessions before settled offense even begins.",
+    focus: "Win the clamp or ground ball, then make the first pass clean.",
+  },
+  faceoffLoss: {
+    label: "Faceoff Loss",
+    meaning: "A faceoff or draw where the other team gains possession.",
+    why: "Tracking losses helps show the battle for possession and where wing support may help.",
+    focus: "Focus on the next rep, communicate with wings, and compete through the loose ball.",
+  },
+  groundBall: {
+    label: "Ground Ball",
+    meaning: "A loose-ball pickup that helps your team gain or keep possession.",
+    why: "Ground balls create extra chances and often decide who controls the game.",
+    focus: "Get low, move through the ball, and secure possession before looking upfield.",
+  },
+  turnover: {
+    label: "Turnover",
+    meaning: "A possession that changes to the other team.",
+    why: "Turnovers show where pressure, spacing, or decision speed affected possession.",
+    focus: "Protect the ball, make the simple pass early, and use teammates as outlets.",
+  },
+  causedTurnover: {
+    label: "Caused Turnover",
+    meaning: "A defensive play that helps force the opponent to lose possession.",
+    why: "It stops an opponent chance and can create a new chance for your team.",
+    focus: "Stay active with feet and stick while keeping good position.",
+  },
+  defensiveStop: {
+    label: "Defensive Stop",
+    meaning: "A play that prevents an opponent from turning possession into a quality chance.",
+    why: "Stops show positioning, communication, and team defense beyond the box score.",
+    focus: "Keep body position first, communicate early, and recover to the next threat.",
+  },
+  successfulClear: {
+    label: "Successful Clear",
+    meaning: "A clean move from defense into offense while keeping possession.",
+    why: "Clears protect the ball after a stop and help the team get into attack.",
+    focus: "Find the safest outlet first, then move the ball before pressure arrives.",
+  },
+  failedClear: {
+    label: "Failed Clear",
+    meaning: "A clear attempt where the other team gets the ball back.",
+    why: "Failed clears show where pressure disrupted possession and where support can improve.",
+    focus: "Slow the moment down, use width, and give the ball carrier an easy outlet.",
+  },
+  hustlePlay: {
+    label: "Hustle Play",
+    meaning: "An effort play that helps the team even if it does not appear in a traditional stat line.",
+    why: "Hustle changes momentum and shows involvement away from the ball.",
+    focus: "Keep sprinting through the play and turn effort into controlled possession.",
+  },
+  backedUpShot: {
+    label: "Backed Up Shot",
+    meaning: "A hustle play to the endline or sideline that helps retain possession after a shot.",
+    why: "Backing up shots protects offensive possessions and gives the team another chance.",
+    focus: "Anticipate the shot path early and beat your defender to the boundary.",
+  },
+  smartPlay: {
+    label: "Smart Play",
+    meaning: "A decision that helps the team stay organized, safe, or connected.",
+    why: "Smart plays build confidence and help teammates trust the next pass or rotation.",
+    focus: "Notice the simple play early and communicate it clearly.",
+  },
+  penalty: {
+    label: "Penalty",
+    meaning: "A rule infraction that affects possession, field position, or personnel.",
+    why: "Penalties help parents see how discipline and positioning affect team flow.",
+    focus: "Keep feet moving, stay balanced, and compete with controlled contact.",
+  },
+  note: {
+    label: "Note",
+    meaning: "A quick observation for game review.",
+    why: "Notes help capture context that a button alone cannot explain.",
+    focus: "Keep notes simple, supportive, and focused on development.",
+  },
+};
+
+const STAT_EDUCATION_PRIORITY = {
+  goal: 10,
+  assist: 9,
+  goalieSave: 9,
+  groundBall: 8,
+  causedTurnover: 8,
+  faceoffWin: 8,
+  defensiveStop: 7,
+  successfulClear: 7,
+  backedUpShot: 7,
+  shotOnGoal: 6,
+  hustlePlay: 6,
+  smartPlay: 6,
+  turnover: 5,
+  failedClear: 5,
+  shot: 4,
+  goalAllowed: 4,
+  faceoffLoss: 4,
+  penalty: 3,
+  note: 1,
+};
+
+const NEXT_GAME_FOCUS_OPTIONS = [
+  { value: "win-possession", label: "Win more possession plays" },
+  { value: "protect-ball", label: "Protect the ball" },
+  { value: "shot-selection", label: "Improve shot selection" },
+  { value: "communicate", label: "Communicate more" },
+  { value: "start-faster", label: "Start faster" },
+  { value: "off-ball", label: "Stay involved off-ball" },
+  { value: "support-teammates", label: "Support teammates" },
+  { value: "custom", label: "Custom focus" },
+];
 
 const IMPACT_PILLARS = [
   { key: "scoring", label: "Scoring" },
@@ -416,6 +567,7 @@ const state = {
   helpExpanded: false,
   adminViewMode: initialStoredState.adminViewMode,
   onboardingIntent: initialStoredState.onboardingIntent,
+  nextGameFocus: initialStoredState.nextGameFocus,
   signupDraft: null,
   accessRequestSummary: null,
   toast: "",
@@ -489,7 +641,31 @@ function readStoredAccountState(userId = activeStorageUserId) {
     deletedGameIds: loadJSON(STORAGE_KEYS.deletedGames, []),
     deletedEventIds: loadJSON(STORAGE_KEYS.deletedEvents, []),
     onboardingIntent: loadJSON(STORAGE_KEYS.onboardingIntent, "child"),
+    nextGameFocus: normalizeNextGameFocus(loadJSON(STORAGE_KEYS.nextGameFocus, null)),
     adminViewMode,
+  };
+}
+
+function normalizeNextGameFocus(focus = null) {
+  if (!focus || typeof focus !== "object") {
+    return {
+      selected: "",
+      customText: "",
+      text: "",
+      gameId: "",
+      playerId: "",
+      rosterPlayerId: "",
+      updatedAt: "",
+    };
+  }
+  return {
+    selected: String(focus.selected || "").trim(),
+    customText: String(focus.customText || "").trim(),
+    text: String(focus.text || "").trim(),
+    gameId: String(focus.gameId || "").trim(),
+    playerId: String(focus.playerId || "").trim(),
+    rosterPlayerId: String(focus.rosterPlayerId || "").trim(),
+    updatedAt: String(focus.updatedAt || "").trim(),
   };
 }
 
@@ -1806,6 +1982,7 @@ function persistAll() {
   saveJSON(STORAGE_KEYS.removedPlayerAccess, normalizeRemovedPlayerAccess(state.removedPlayerAccess));
   saveJSON(STORAGE_KEYS.adminViewMode, state.adminViewMode === "tracker" ? "tracker" : "admin");
   saveJSON(STORAGE_KEYS.onboardingIntent, state.onboardingIntent || "child");
+  saveJSON(STORAGE_KEYS.nextGameFocus, normalizeNextGameFocus(state.nextGameFocus));
   saveJSON(STORAGE_KEYS.deletedGames, uniqueIds(state.deletedGameIds));
   saveJSON(STORAGE_KEYS.deletedEvents, uniqueIds(state.deletedEventIds));
   saveJSON(STORAGE_KEYS.games, state.games);
@@ -1830,6 +2007,7 @@ function applyStoredAccountState(userId) {
   state.removedPlayerAccess = stored.removedPlayerAccess;
   state.adminViewMode = stored.adminViewMode;
   state.onboardingIntent = stored.onboardingIntent;
+  state.nextGameFocus = stored.nextGameFocus;
   state.games = stored.games;
   state.activeGame = stored.activeGame;
   state.reviewGameId = stored.reviewGameId;
@@ -4655,6 +4833,63 @@ async function shareGameFamilyRecap(gameId) {
   }
 }
 
+function nextFocusDraftFromReview() {
+  const game = currentReviewGame();
+  const player = game ? gamePlayerSnapshot(game) : state.player;
+  const totals = game ? calculateTotals(game.events || [], player) : calculateSeasonTotalsForPlayer(player);
+  const topContribution = topContributionForTotals(totals).label;
+  const select = document.querySelector("#nextGameFocusSelect");
+  const customInput = document.querySelector("#nextGameFocusCustom");
+  const selected = select?.value || recommendedFocusValue(totals);
+  const customText = customInput?.value?.trim() || "";
+  const text = focusTextForValue(selected, customText, totals, player, topContribution);
+  return {
+    game,
+    player,
+    selected,
+    customText,
+    text,
+  };
+}
+
+function saveNextGameFocusFromReview(options = {}) {
+  const draft = nextFocusDraftFromReview();
+  if (!draft.text) {
+    showToast("Choose a focus first");
+    return null;
+  }
+  state.nextGameFocus = normalizeNextGameFocus({
+    selected: draft.selected,
+    customText: draft.customText,
+    text: draft.text,
+    gameId: draft.game?.id || "",
+    playerId: draft.player?.id || "",
+    rosterPlayerId: draft.player?.rosterPlayerId || "",
+    updatedAt: new Date().toISOString(),
+  });
+  persistAll();
+  render();
+  if (!options.silent) showToast("Next game focus saved");
+  return state.nextGameFocus;
+}
+
+async function copyNextFocusNote() {
+  const draft = nextFocusDraftFromReview();
+  const text = `Next focus: ${draft.text}`;
+  try {
+    await writeTextToClipboard(text);
+    showToast("Focus note copied");
+  } catch {
+    showToast("Couldn't copy focus note");
+  }
+}
+
+function addFocusToFamilyRecap() {
+  const saved = saveNextGameFocusFromReview({ silent: true });
+  if (!saved) return;
+  showToast("Focus added to Family Recap");
+}
+
 async function writeTextToClipboard(text) {
   if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
     try {
@@ -7038,6 +7273,293 @@ function topContributionForTotals(totals) {
   return options.sort((a, b) => b.value - a.value)[0];
 }
 
+function statEducationForKey(key) {
+  const stat = STAT_BY_KEY[key] || {};
+  return STAT_EDUCATION[key] || {
+    label: stat.label || "Tracked Play",
+    meaning: "A tracked moment from the game.",
+    why: "Tracking it helps parents see how the player contributed to the team story.",
+    focus: "Look for one repeatable next step before the next game.",
+  };
+}
+
+function eventCountsByStat(events = []) {
+  return events.reduce((acc, event) => {
+    const key = event.statType;
+    if (!key) return acc;
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+}
+
+function importantEducationItemsForEvents(events = [], limit = 4) {
+  const counts = eventCountsByStat(events);
+  const entries = Object.entries(counts)
+    .filter(([key, count]) => count > 0 && key !== "note")
+    .map(([key, count]) => {
+      const priority = STAT_EDUCATION_PRIORITY[key] || 1;
+      return {
+        key,
+        count,
+        priority,
+        score: count * priority + Math.abs(impactValueForEvent({ statType: key })),
+        education: statEducationForKey(key),
+      };
+    })
+    .sort((a, b) => b.score - a.score || b.priority - a.priority);
+
+  if (!entries.length && counts.note) {
+    entries.push({
+      key: "note",
+      count: counts.note,
+      priority: 1,
+      score: 1,
+      education: statEducationForKey("note"),
+    });
+  }
+
+  return entries.slice(0, limit);
+}
+
+function renderWhyThesePlaysMatter(events = [], options = {}) {
+  const items = importantEducationItemsForEvents(events, options.limit || 4);
+  const title = options.title || "Why these plays matter";
+  const helper = options.helper || "A quick parent guide to the plays that shaped this game.";
+  const emptyCopy = options.emptyCopy || "Track a few plays to see simple explanations of what each stat means and why it supports development.";
+
+  return `
+    <details class="card pad lh-why-card" open>
+      <summary>
+        <span>${escapeHTML(title)}</span>
+        <small>${escapeHTML(helper)}</small>
+      </summary>
+      ${
+        items.length
+          ? `<div class="why-play-list">
+              ${items
+                .map(
+                  ({ count, education }) => `
+                    <article class="why-play-item">
+                      <div>
+                        <strong>${escapeHTML(education.label)}</strong>
+                        <span>${count} tracked</span>
+                      </div>
+                      <p><b>Meaning:</b> ${escapeHTML(education.meaning)}</p>
+                      <p><b>Why it matters:</b> ${escapeHTML(education.why)}</p>
+                      <p><b>Next focus:</b> ${escapeHTML(education.focus)}</p>
+                    </article>
+                  `,
+                )
+                .join("")}
+            </div>`
+          : `<p class="muted small">${escapeHTML(emptyCopy)}</p>`
+      }
+    </details>
+  `;
+}
+
+function recommendedFocusValue(totals = {}) {
+  if (totals.turnovers > totals.groundBalls + totals.clears) return "protect-ball";
+  if (totals.shots > 0 && totals.shotOnGoalPct < 0.5) return "shot-selection";
+  if (totals.possessionValue <= 0) return "win-possession";
+  if (totals.causedTurnovers + totals.defensiveStops > 0) return "communicate";
+  if (totals.effortScore > 1) return "off-ball";
+  return "support-teammates";
+}
+
+function focusLabelForValue(value) {
+  return NEXT_GAME_FOCUS_OPTIONS.find((item) => item.value === value)?.label || "";
+}
+
+function focusTextForValue(value, customText = "", totals = {}, player = state.player, topContribution = "") {
+  const cleanCustom = String(customText || "").trim();
+  if (value === "custom" && cleanCustom) return cleanCustom;
+  if (value && value !== "custom") return focusLabelForValue(value);
+  return developmentTakeawayForTotals(totals, player, topContribution).focus;
+}
+
+function savedNextFocusForPlayer(player = state.player) {
+  const saved = normalizeNextGameFocus(state.nextGameFocus);
+  if (!saved.text) return "";
+  const playerId = player.id || "";
+  const rosterPlayerId = player.rosterPlayerId || "";
+  if (saved.playerId && saved.playerId !== playerId) return "";
+  if (saved.rosterPlayerId && rosterPlayerId && saved.rosterPlayerId !== rosterPlayerId) return "";
+  return saved.text;
+}
+
+function developmentTakeawayForTotals(totals = {}, player = state.player, topContribution = "") {
+  const name = playerTitle(player);
+  const positionGroup = impactPositionGroup(player);
+  const hasPossessionImpact = Number(totals.extraPossessions || 0) > 0 || Number(totals.possessionValue || 0) > 0;
+
+  if (Number(totals.eventCount || 0) < 3) {
+    return {
+      wentWell: "Started building a clearer game story.",
+      why: "A few tracked plays already help connect effort, possession, and impact.",
+      focus: "Track a few more plays next game to reveal the strongest pattern.",
+    };
+  }
+  if (positionGroup === "goalie" && totals.saves) {
+    return {
+      wentWell: `${name} contributed in goal with ${countPhrase(totals.saves, "save", "saves")}.`,
+      why: "Saves protect the scoreboard and can start a cleaner possession the other way.",
+      focus: "Turn more saves into quick, clean outlets.",
+    };
+  }
+  if (positionGroup === "faceoff" && totals.faceoffWins) {
+    return {
+      wentWell: `${name} helped create chances at the faceoff spot.`,
+      why: "Faceoff wins give the team possessions before settled offense begins.",
+      focus: "Turn more wins into clean ground balls and settled possessions.",
+    };
+  }
+  if (topContribution === "Scoring" && totals.points) {
+    return {
+      wentWell: `${name} helped finish scoring chances.`,
+      why: "Finishing and feeding turn team possessions into points.",
+      focus: "Add ground balls, assists, or backed up shots to become a more complete offensive threat.",
+    };
+  }
+  if (topContribution === "Defense" || totals.causedTurnovers + totals.defensiveStops >= 2) {
+    return {
+      wentWell: `${name} helped turn defense into possession.`,
+      why: "Stops and caused turnovers prevent opponent chances and can create transition.",
+      focus: "Stay aggressive while keeping clears and decisions clean.",
+    };
+  }
+  if (topContribution === "Possession" || hasPossessionImpact) {
+    return {
+      wentWell: `${name} created or protected extra possessions.`,
+      why: "Extra possessions give the team more chances and reduce pressure on the defense.",
+      focus: "Turn possession wins into clean clears or better shot opportunities.",
+    };
+  }
+  if (topContribution === "Hustle" || totals.effortScore >= 2) {
+    return {
+      wentWell: `${name} showed effort in several parts of the field.`,
+      why: "Hustle plays keep the player involved even away from the ball.",
+      focus: "Channel that effort into controlled possessions and smart decisions.",
+    };
+  }
+  return {
+    wentWell: `${name} contributed to the team story in this game.`,
+    why: "Each tracked play helps parents see how development shows up beyond the box score.",
+    focus: "Choose one simple next step and watch for it next game.",
+  };
+}
+
+function renderDevelopmentTakeaway(totals = {}, player = state.player, topContribution = "") {
+  const takeaway = developmentTakeawayForTotals(totals, player, topContribution);
+  return `
+    <section class="card pad development-card lh-development-takeaway">
+      <h3>Development Takeaway</h3>
+      <div class="takeaway-stack">
+        <p><span>What went well</span>${escapeHTML(takeaway.wentWell)}</p>
+        <p><span>Why it mattered</span>${escapeHTML(takeaway.why)}</p>
+        <p><span>Next focus</span>${escapeHTML(savedNextFocusForPlayer(player) || takeaway.focus)}</p>
+      </div>
+    </section>
+  `;
+}
+
+function conversationStartersForTotals(totals = {}, player = state.player) {
+  const prompts = [];
+  const add = (condition, prompt) => {
+    if (condition && !prompts.includes(prompt) && prompts.length < 3) prompts.push(prompt);
+  };
+  add(totals.points > 0, "What helped you create or finish your best scoring chance?");
+  add(totals.groundBalls + totals.backedUpShots > 0, "What play helped your team keep or win possession today?");
+  add(totals.causedTurnovers + totals.defensiveStops > 0, "When did you feel most connected on defense?");
+  add(totals.saves > 0, "What helped you see the ball and recover after a save?");
+  add(totals.effortScore > 0, "What was one moment where you worked hard away from the ball?");
+  add(totals.eventCount > 0, "What is one thing you want to try next game?");
+  add(true, "What play felt best today?");
+  add(true, "What should we practice before the next game?");
+  return prompts.slice(0, 3);
+}
+
+function renderConversationStarters(totals = {}, player = state.player) {
+  const prompts = conversationStartersForTotals(totals, player);
+  return `
+    <section class="card pad development-card lh-conversation-card">
+      <h3>Talk About the Game</h3>
+      <p class="muted small">Optional prompts for a supportive ride-home conversation.</p>
+      <ul class="conversation-list">
+        ${prompts.map((prompt) => `<li>${escapeHTML(prompt)}</li>`).join("")}
+      </ul>
+    </section>
+  `;
+}
+
+function nextGameFocusForRecap(totals = {}, player = state.player, topContribution = "") {
+  return savedNextFocusForPlayer(player) || developmentTakeawayForTotals(totals, player, topContribution).focus;
+}
+
+function renderNextGameFocusSection(game, player, totals, topContribution = "") {
+  const saved = normalizeNextGameFocus(state.nextGameFocus);
+  const recommendedValue = recommendedFocusValue(totals);
+  const selectedValue = saved.selected || recommendedValue;
+  const customText = selectedValue === "custom" ? saved.customText : "";
+  const previewFocus = saved.text || focusTextForValue(selectedValue, customText, totals, player, topContribution);
+
+  return `
+    <section class="card pad development-card lh-next-focus-card">
+      <h3>Next Game Focus</h3>
+      <p class="muted small">Pick one simple next step. This saves locally for the selected player and can be added to the Family Recap.</p>
+      <div class="field">
+        <label for="nextGameFocusSelect">Choose focus</label>
+        <select id="nextGameFocusSelect" name="nextGameFocus">
+          ${NEXT_GAME_FOCUS_OPTIONS.map(
+            (option) => `<option value="${escapeHTML(option.value)}" ${option.value === selectedValue ? "selected" : ""}>${escapeHTML(option.label)}</option>`,
+          ).join("")}
+        </select>
+      </div>
+      <div class="field">
+        <label for="nextGameFocusCustom">Custom focus</label>
+        <input id="nextGameFocusCustom" name="nextGameFocusCustom" value="${escapeHTML(customText)}" placeholder="One simple focus for next game" />
+      </div>
+      <div class="focus-preview">
+        <span>Current focus</span>
+        <strong>${escapeHTML(previewFocus)}</strong>
+      </div>
+      <div class="lh-focus-actions">
+        <button class="btn secondary" type="button" data-action="save-next-focus" data-game-id="${escapeHTML(game.id)}">Save Focus</button>
+        <button class="btn neutral" type="button" data-action="add-focus-to-recap" data-game-id="${escapeHTML(game.id)}">Add to Family Recap</button>
+        <button class="btn neutral" type="button" data-action="copy-focus-note" data-game-id="${escapeHTML(game.id)}">Copy Focus Note</button>
+      </div>
+    </section>
+  `;
+}
+
+function renderStatEducationHelp() {
+  const keys = ["groundBall", "causedTurnover", "goalieSave", "successfulClear", "backedUpShot", "assist", "faceoffWin", "smartPlay"];
+  return `
+    <div class="card pad lh-why-card lh-help-why-card">
+      <h3>Why Plays Matter</h3>
+      <p class="muted small">Track the game. Understand the sport. Encourage the player. These quick explanations help parents connect stats to development.</p>
+      <div class="why-play-list compact">
+        ${keys
+          .map((key) => {
+            const item = statEducationForKey(key);
+            return `
+              <article class="why-play-item">
+                <div>
+                  <strong>${escapeHTML(item.label)}</strong>
+                  <span>development lens</span>
+                </div>
+                <p><b>Meaning:</b> ${escapeHTML(item.meaning)}</p>
+                <p><b>Why it matters:</b> ${escapeHTML(item.why)}</p>
+                <p><b>Next focus:</b> ${escapeHTML(item.focus)}</p>
+              </article>
+            `;
+          })
+          .join("")}
+      </div>
+    </div>
+  `;
+}
+
 const FAMILY_RECAP_STATS_BY_POSITION = {
   attack: ["goals", "assists", "shotsOnGoal", "groundBalls", "backedUpShots", "smartPlays", "hustlePlays"],
   midfield: ["goals", "assists", "groundBalls", "causedTurnovers", "clears", "backedUpShots", "hustlePlays", "smartPlays"],
@@ -7105,30 +7627,9 @@ function familyRecapTopContribution(totals = {}, player = {}) {
 }
 
 function familyRecapTakeaway(totals = {}, player = {}, topContribution = "") {
-  const name = playerTitle(player);
-  const positionGroup = impactPositionGroup(player);
-  const hasPossessionImpact = Number(totals.extraPossessions || 0) > 0 || Number(totals.possessionValue || 0) > 0;
-
   if (Number(totals.eventCount || 0) < 3) return "A short recap is available once more plays are tracked.";
-  if (positionGroup === "goalie" && totals.saves) {
-    return `${name} made a strong contribution in goal with ${countPhrase(totals.saves, "save", "saves")}. Next focus: turn more saves into quick, clean outlets.`;
-  }
-  if (positionGroup === "faceoff" && totals.faceoffWins) {
-    return `${name} helped create extra chances at the faceoff spot. Next focus: turn more wins into clean ground balls and settled possessions.`;
-  }
-  if (topContribution === "Scoring" && totals.points) {
-    return `${name} made the biggest impact by helping finish scoring chances. Next focus: keep adding possession plays so the impact shows up beyond the box score.`;
-  }
-  if (topContribution === "Defense" || totals.causedTurnovers + totals.defensiveStops >= 2) {
-    return `${name} helped the team by turning defense into possession. Next focus: stay aggressive while keeping clears and decisions clean.`;
-  }
-  if (topContribution === "Possession" || hasPossessionImpact) {
-    return `${name} made an impact beyond the box score by creating and protecting possessions. Next focus: keep turning those extra chances into clean shot opportunities.`;
-  }
-  if (topContribution === "Hustle" || totals.effortScore >= 2) {
-    return `${name} showed hustle in several parts of the field. Next focus: channel that effort into controlled possessions and smart decisions.`;
-  }
-  return `${name} contributed to the team story in this game. Next focus: track a few more plays next game to reveal the clearest impact pattern.`;
+  const takeaway = developmentTakeawayForTotals(totals, player, topContribution);
+  return `${takeaway.wentWell} ${takeaway.why}`;
 }
 
 function buildFamilyRecap(game = {}, events = [], playerContext = {}, computedStats = null) {
@@ -7137,7 +7638,7 @@ function buildFamilyRecap(game = {}, events = [], playerContext = {}, computedSt
   const title = `${playerTitle(player)} ${familyRecapOpponentLabel(game)}`;
 
   if (Number(totals.eventCount || events?.length || 0) < 3) {
-    const body = "A short recap is available once more plays are tracked.";
+    const body = `A short recap is available once more plays are tracked.\nNext focus: ${nextGameFocusForRecap(totals, player, "")}`;
     return {
       title,
       body,
@@ -7156,6 +7657,7 @@ function buildFamilyRecap(game = {}, events = [], playerContext = {}, computedSt
   if (statLine) lines.push(`Stats: ${statLine}`);
   if (hasPossessionStory) lines.push(`Possession story: ${signedMetric(totals.possessionValue)} possession value and ${signedMetric(totals.extraPossessions)} extra chances`);
   lines.push(`Takeaway: ${familyRecapTakeaway(totals, player, topContribution)}`);
+  lines.push(`Next focus: ${nextGameFocusForRecap(totals, player, topContribution)}`);
 
   const body = lines.join("\n");
   return {
@@ -7223,6 +7725,10 @@ function renderReviewSummarySection(game, player, totals, archetypeResult) {
         ${insightCard("Possession Impact", escapeHTML(signedMetric(totals.possessionValue)), `${signedMetric(totals.extraPossessions)} extra chances`)}
         ${insightCard("Key Takeaway", renderTakeawayValue(totals.gameImpact?.takeaway))}
       </div>
+      ${renderDevelopmentTakeaway(totals, player, topContribution.label)}
+      ${renderWhyThesePlaysMatter(game.events || [])}
+      ${renderConversationStarters(totals, player)}
+      ${renderNextGameFocusSection(game, player, totals, topContribution.label)}
       ${renderFamilyRecapSection(game, player, totals)}
       <div class="explainer-card">
         <strong>Game Impact</strong>
@@ -7729,6 +8235,7 @@ function renderDashboard() {
   const archetypeResult = calculateArchetypeResult(totals);
   const strengths = seasonStrengthBullets(totals, state.player);
   const nextFocus = nextLevelFocusForSeason(totals, archetypeResult);
+  const seasonEvents = visibleGames().flatMap((game) => game.events || []);
   return renderShell(`
     <section class="screen-title">
       <h2>Season Snapshot</h2>
@@ -7760,6 +8267,11 @@ function renderDashboard() {
         <h3>Next-level focus</h3>
         <p>${escapeHTML(nextFocus)}</p>
       </section>
+      ${renderWhyThesePlaysMatter(seasonEvents, {
+        title: "Why these season plays matter",
+        helper: "A few parent-friendly meanings behind this player's most common tracked plays.",
+        emptyCopy: "Track games to see simple explanations of the plays shaping this player's season.",
+      })}
       ${generateShareCard(state.player, archetypeResult, { profileLabel: "Season Player Profile", patternScope: "season" })}
       <section class="review-section">
         <div class="section-head compact-head">
@@ -7824,6 +8336,8 @@ function renderHelp() {
         <h3>Effort Score</h3>
         <p class="muted small">Effort Score is Hustle Plays plus Ground Balls plus Backed Up Shots. It is a simple count of extra-possession effort plays.</p>
       </div>
+
+      ${renderStatEducationHelp()}
 
       <div class="card table-card">
         <table class="stat-table">
@@ -7930,6 +8444,7 @@ function renderDemoPage() {
   const seasonTotals = calculateSeasonTotalsFromGames([game]);
   const headlineMetrics = dashboardHeadlineMetrics(seasonTotals, DEMO_PLAYER).slice(0, 6);
   const archetypeResult = calculateArchetypeResult(seasonTotals);
+  const demoTopContribution = topContributionForTotals(totals).label;
   return renderShell(`
     <section class="screen-title">
       <h2>Demo Game</h2>
@@ -7978,6 +8493,13 @@ function renderDemoPage() {
         </div>
         <div class="event-list">${game.events.slice(-5).reverse().map(renderEventRow).join("")}</div>
       </section>
+
+      ${renderDevelopmentTakeaway(totals, DEMO_PLAYER, demoTopContribution)}
+      ${renderWhyThesePlaysMatter(game.events, {
+        title: "Why these demo plays matter",
+        helper: "Sample explanations that help parents connect plays to development.",
+      })}
+      ${renderConversationStarters(totals, DEMO_PLAYER)}
 
       <section class="card pad">
         <h3>Sample Season Dashboard Preview</h3>
@@ -8689,6 +9211,9 @@ function handleClick(event) {
     if (action.dataset.action === "copy-family-summary") copyFamilySummary(action.dataset.gameId);
     if (action.dataset.action === "copy-family-recap") copyGameFamilyRecap(action.dataset.gameId);
     if (action.dataset.action === "share-family-recap") shareGameFamilyRecap(action.dataset.gameId);
+    if (action.dataset.action === "save-next-focus") saveNextGameFocusFromReview();
+    if (action.dataset.action === "add-focus-to-recap") addFocusToFamilyRecap();
+    if (action.dataset.action === "copy-focus-note") copyNextFocusNote();
     if (action.dataset.action === "close-saved-game") {
       state.gameSavedSummaryId = "";
       navigate("home");
