@@ -672,6 +672,8 @@ a {
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+  overflow: visible;
+  padding-bottom: 0.12em;
   text-wrap: balance;
 }
 
@@ -938,7 +940,7 @@ a {
   .hero-copy h1 {
     max-width: 100%;
     font-size: clamp(2rem, 9.2vw, 2.8rem);
-    line-height: 1.08;
+    line-height: 1.16;
   }
 }
 
@@ -949,6 +951,6 @@ a {
 
   .hero-copy h1 {
     font-size: clamp(1.82rem, 9.8vw, 2.18rem);
-    line-height: 1.1;
+    line-height: 1.18;
   }
 }
