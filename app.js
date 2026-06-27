@@ -24,7 +24,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v249";
+const APP_VERSION = "v250";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -8311,8 +8311,10 @@ function renderReviewStatsSection(totals, player, archetypeResult) {
     <section class="review-section review-full-breakdown">
       <details class="review-details-card">
         <summary>
-          <span>Full Game Impact Breakdown</span>
-          <small>Open detailed scoring, player profile, and full stat table.</small>
+          <span class="review-details-summary-copy">
+            <span>Full Game Impact Breakdown</span>
+            <small>Open detailed scoring, player profile, and full stat table.</small>
+          </span>
         </summary>
         <div class="review-details-stack">
           ${renderImpactBreakdown(totals, { embedded: true })}
@@ -8497,18 +8499,20 @@ function renderTotalsTable(totals, options = {}) {
 
   return `
     <div class="${options.embedded ? "table-card table-card-embedded" : "card table-card"}">
-      <table class="stat-table">
-        <thead><tr><th>Stat</th><th>Total</th></tr></thead>
-        <tbody>
-          ${rows
-            .map((row) =>
-              row.section
-                ? `<tr class="stat-section-row"><th colspan="2">${escapeHTML(row.section)}</th></tr>`
-                : `<tr><td>${row[0]}</td><td>${row[1]}</td></tr>`,
-            )
-            .join("")}
-        </tbody>
-      </table>
+      <div class="stat-table-scroll">
+        <table class="stat-table">
+          <thead><tr><th>Stat</th><th>Total</th></tr></thead>
+          <tbody>
+            ${rows
+              .map((row) =>
+                row.section
+                  ? `<tr class="stat-section-row"><th colspan="2">${escapeHTML(row.section)}</th></tr>`
+                  : `<tr><td>${row[0]}</td><td>${row[1]}</td></tr>`,
+              )
+              .join("")}
+          </tbody>
+        </table>
+      </div>
     </div>
   `;
 }
