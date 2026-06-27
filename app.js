@@ -24,7 +24,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v235";
+const APP_VERSION = "v237";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -7343,7 +7343,7 @@ function renderWhyThesePlaysMatter(events = [], options = {}) {
         <strong>${escapeHTML(education.label)}</strong>
         <span>${count} tracked</span>
       </div>
-      <p><b>Meaning:</b> ${escapeHTML(education.meaning)}</p>
+      <p class="why-play-meaning">${escapeHTML(education.meaning)}</p>
       <p><b>Why it matters:</b> ${escapeHTML(education.why)}</p>
       <p><b>Next focus:</b> ${escapeHTML(education.focus)}</p>
     </article>
@@ -7606,7 +7606,7 @@ function renderConversationStarters(totals = {}, player = state.player) {
   return `
     <section class="card pad development-card lh-conversation-card">
       <h3>Talk About the Game</h3>
-      <p class="muted small">Optional prompts for a supportive ride-home conversation.</p>
+      <p class="muted small">A few suggestions for a supportive ride home.</p>
       <ul class="conversation-list">
         ${prompts.map((prompt) => `<li>${escapeHTML(prompt)}</li>`).join("")}
       </ul>
@@ -7670,7 +7670,7 @@ function renderStatEducationHelp() {
                   <strong>${escapeHTML(item.label)}</strong>
                   <span>development lens</span>
                 </div>
-                <p><b>Meaning:</b> ${escapeHTML(item.meaning)}</p>
+                <p class="why-play-meaning">${escapeHTML(item.meaning)}</p>
                 <p><b>Why it matters:</b> ${escapeHTML(item.why)}</p>
                 <p><b>Next focus:</b> ${escapeHTML(item.focus)}</p>
               </article>
