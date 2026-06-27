@@ -3221,11 +3221,14 @@ form.account-card .btn.auth-login {
   box-shadow: 0 12px 24px rgba(0, 0, 0, 0.26), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
-form.account-card .btn.auth-create-dark {
-  border: 1px solid rgba(255, 255, 255, 0.14);
+form.account-card .btn.auth-create-dark,
+form.account-card .account-actions .btn.neutral {
+  border: 1px solid rgba(232, 16, 16, 0.5);
   color: #ffffff;
-  background: linear-gradient(180deg, #343a42, #20252b);
-  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.22), inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+  background:
+    linear-gradient(90deg, var(--hornet-red) 0 6px, transparent 6px),
+    linear-gradient(180deg, #30363d, #1b2026);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.24), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
 .admin-tools-card {

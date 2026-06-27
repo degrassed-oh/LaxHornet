@@ -24,7 +24,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v232";
+const APP_VERSION = "v233";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -5257,8 +5257,6 @@ function renderAccountCard() {
       ${renderInstallCard({ compact: true })}
       <div class="auth-legal muted small">
         <p>By creating an account, you agree to the <a href="terms.html" target="_blank" rel="noopener">LaxHornet Terms of Use</a> and <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.</p>
-        <p>LaxHornet is for adults managing youth lacrosse tracking. Children may not create accounts.</p>
-        <p>Only enter player/team information you are authorized to manage or track.</p>
       </div>
     </form>
   `;
