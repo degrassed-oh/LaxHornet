@@ -66,116 +66,116 @@ const STAT_BY_KEY = Object.fromEntries(STAT_DEFS.map((stat) => [stat.key, stat])
 const STAT_EDUCATION = {
   goal: {
     label: "Goal",
-    meaning: "A finished scoring chance.",
-    why: "Goals matter because they turn a possession into the clearest team result on the scoreboard.",
-    focus: "Keep finding open space and add one support play, like an assist or ground ball, to round out the impact.",
+    meaning: "A possession finished with a score.",
+    why: "Goals matter because they reward the work that came before them: winning the ball, moving it, and getting to a dangerous area.",
+    focus: "Keep getting to good spots, then add one support play like a feed, ride, or ground ball to round out the impact.",
   },
   assist: {
     label: "Assist",
     meaning: "A pass or feed that directly creates a goal.",
-    why: "Assists show vision, timing, and trust with teammates.",
-    focus: "Keep your head up after dodges and look for the next open teammate.",
+    why: "Assists show vision and timing. They turn a teammate's cut or dodge into a better scoring chance.",
+    focus: "Keep your head up after pressure and move the ball before the defense fully recovers.",
   },
   shot: {
     label: "Missed Shot",
-    meaning: "A shot attempt that does not go on goal.",
-    why: "Shot attempts show offensive involvement and help reveal where better shot selection can create growth.",
-    focus: "Work toward higher-quality looks by setting feet, changing angle, or getting closer to the cage.",
+    meaning: "A shot attempt that misses the cage.",
+    why: "Missed shots still show offensive involvement, but they also help reveal when shot quality can improve.",
+    focus: "Look for higher-quality shots by changing angle, getting closer, or moving the ball one more time.",
   },
   shotOnGoal: {
     label: "Shot on Goal",
     meaning: "A shot that forces the goalie to make a save or goes into the cage.",
-    why: "Shots on goal put pressure on the defense and create rebound or backup opportunities.",
-    focus: "Keep aiming for spots that make the goalie move and give teammates a chance to back up the shot.",
+    why: "Shots on goal force the defense and goalie to react. They can create rebounds, backups, and unsettled chances.",
+    focus: "Aim for spots that make the goalie move, and be ready for the rebound or backed-up shot.",
   },
   goalieSave: {
     label: "Save",
-    meaning: "A goalie stop that prevents a scoring chance.",
-    why: "Saves protect the scoreboard and can start transition the other way.",
-    focus: "Recover quickly and look for a clean outlet.",
+    meaning: "A goalie stop that prevents a scoring chance from becoming a goal.",
+    why: "A save protects the scoreboard, but it can also become the first play of the next possession.",
+    focus: "Recover quickly, organize the clear, and find the safest outlet.",
   },
   goalAllowed: {
     label: "Goal Allowed",
     meaning: "An opponent shot that scores.",
-    why: "This gives context for the kinds of chances the goalie and defense faced.",
-    focus: "Reset quickly, communicate the next coverage, and look for the next save or outlet.",
+    why: "Goals allowed give context for the pressure the goalie and defense faced, especially when shot quality varies.",
+    focus: "Reset quickly, communicate the next coverage, and prepare for the next save or outlet.",
   },
   faceoffWin: {
     label: "Faceoff Win",
     meaning: "A won faceoff or draw that gives your team the ball.",
-    why: "Faceoff wins create extra possessions before settled offense even begins.",
-    focus: "Win the clamp or ground ball, then make the first pass clean.",
+    why: "Faceoff wins create immediate possession. The next step is turning that win into controlled offense.",
+    focus: "Win the clamp or loose ball, then make the first clean pass before pressure arrives.",
   },
   faceoffLoss: {
     label: "Faceoff Loss",
     meaning: "A faceoff or draw where the other team gains possession.",
-    why: "Tracking losses helps show the battle for possession and where wing support may help.",
-    focus: "Focus on the next rep, communicate with wings, and compete through the loose ball.",
+    why: "Tracking losses helps show the possession battle and where wing support or ground-ball follow-up can help.",
+    focus: "Compete through the loose ball, communicate with wings, and be ready to defend the next possession.",
   },
   groundBall: {
     label: "Ground Ball",
     meaning: "A loose-ball pickup that helps your team gain or keep possession.",
-    why: "Ground balls create extra chances and often decide who controls the game.",
-    focus: "Get low, move through the ball, and secure possession before looking upfield.",
+    why: "Ground balls create extra chances and often decide who controls the game before the scoreboard shows it.",
+    focus: "Get low, move through the ball, and secure the first clean pass before looking upfield.",
   },
   turnover: {
     label: "Turnover",
     meaning: "A possession that changes to the other team.",
-    why: "Turnovers show where pressure, spacing, or decision speed affected possession.",
-    focus: "Protect the ball, make the simple pass early, and use teammates as outlets.",
+    why: "Turnovers show where pressure, spacing, or decision speed affected the possession.",
+    focus: "Move the ball earlier, use the nearest outlet, and recover quickly into the next play.",
   },
   causedTurnover: {
     label: "Caused Turnover",
     meaning: "A defensive play that helps force the opponent to lose possession.",
-    why: "It stops an opponent chance and can create a new chance for your team.",
-    focus: "Stay active with feet and stick while keeping good position.",
+    why: "Caused turnovers disrupt rhythm and can turn opponent pressure into a new possession.",
+    focus: "Keep body position first, then use smart stick pressure to force rushed decisions.",
   },
   defensiveStop: {
     label: "Defensive Stop",
     meaning: "A play that prevents an opponent from turning possession into a quality chance.",
-    why: "Stops show positioning, communication, and team defense beyond the box score.",
-    focus: "Keep body position first, communicate early, and recover to the next threat.",
+    why: "Defensive stops show positioning, communication, and team defense beyond the box score.",
+    focus: "End the stop with a clean pickup, outlet, or recovery to the next threat.",
   },
   successfulClear: {
     label: "Successful Clear",
     meaning: "A clean move from defense into offense while keeping possession.",
-    why: "Clears protect the ball after a stop and help the team get into attack.",
-    focus: "Find the safest outlet first, then move the ball before pressure arrives.",
+    why: "Clears protect possession after pressure. A clean clear turns defense into offense.",
+    focus: "Find the safest outlet first, then move the ball before the ride arrives.",
   },
   failedClear: {
     label: "Failed Clear",
     meaning: "A clear attempt where the other team gets the ball back.",
-    why: "Failed clears show where pressure disrupted possession and where support can improve.",
-    focus: "Slow the moment down, use width, and give the ball carrier an easy outlet.",
+    why: "Failed clears show where pressure disrupted possession and where support or spacing can improve.",
+    focus: "Use width, talk early, and give the ball carrier a simple outlet.",
   },
   hustlePlay: {
     label: "Hustle Play",
     meaning: "An effort play that helps the team even if it does not appear in a traditional stat line.",
-    why: "Hustle changes momentum and shows involvement away from the ball.",
-    focus: "Keep sprinting through the play and turn effort into controlled possession.",
+    why: "Hustle plays show effort away from the scoreboard. They often create the extra chance that leads to a bigger moment later.",
+    focus: "Keep sprinting through the play, then turn the effort into a controlled possession.",
   },
   backedUpShot: {
     label: "Backed Up Shot",
     meaning: "A hustle play to the endline or sideline that helps retain possession after a shot.",
-    why: "Backing up shots protects offensive possessions and gives the team another chance.",
-    focus: "Anticipate the shot path early and beat your defender to the boundary.",
+    why: "Backing up shots protects offensive possessions and gives the team another chance to attack.",
+    focus: "Anticipate the shot path early and beat the defender to the endline or sideline.",
   },
   smartPlay: {
     label: "Smart Play",
     meaning: "A decision that helps the team stay organized, safe, or connected.",
-    why: "Smart plays build confidence and help teammates trust the next pass or rotation.",
-    focus: "Notice the simple play early and communicate it clearly.",
+    why: "Smart plays show awareness, timing, and decision-making. They help a player grow even without a traditional stat.",
+    focus: "Recognize the simple play early, communicate it, and keep the possession connected.",
   },
   penalty: {
     label: "Penalty",
     meaning: "A rule infraction that affects possession, field position, or personnel.",
-    why: "Penalties help parents see how discipline and positioning affect team flow.",
+    why: "Penalties show how discipline, footwork, and positioning affect team flow.",
     focus: "Keep feet moving, stay balanced, and compete with controlled contact.",
   },
   note: {
     label: "Note",
     meaning: "A quick observation for game review.",
-    why: "Notes help capture context that a button alone cannot explain.",
+    why: "Notes can add context to development moments that a button alone cannot explain.",
     focus: "Keep notes simple, supportive, and focused on development.",
   },
 };
@@ -203,13 +203,13 @@ const STAT_EDUCATION_PRIORITY = {
 };
 
 const NEXT_GAME_FOCUS_OPTIONS = [
-  { value: "win-possession", label: "Win more possession plays" },
-  { value: "protect-ball", label: "Protect the ball" },
-  { value: "shot-selection", label: "Improve shot selection" },
-  { value: "communicate", label: "Communicate more" },
-  { value: "start-faster", label: "Start faster" },
+  { value: "win-possession", label: "Turn ground balls into clean possessions" },
+  { value: "protect-ball", label: "Move the ball before pressure arrives" },
+  { value: "shot-selection", label: "Look for higher-quality shots" },
+  { value: "communicate", label: "Communicate earlier on defense" },
+  { value: "start-faster", label: "Start the next shift ready" },
   { value: "off-ball", label: "Stay involved off-ball" },
-  { value: "support-teammates", label: "Support teammates" },
+  { value: "support-teammates", label: "Support the next play" },
   { value: "custom", label: "Custom focus" },
 ];
 
@@ -7432,13 +7432,129 @@ function isPossessionReviewStory(totals = {}, topContribution = "") {
   return false;
 }
 
-function possessionStoryForTotals(totals = {}, topContribution = "") {
+function reviewLanguageSeed(totals = {}, topContribution = "", player = state.player) {
+  const normalized = normalizePlayer(player || {});
+  const basis = [
+    normalized.id,
+    normalized.rosterPlayerId,
+    normalized.name,
+    normalized.position,
+    topContribution,
+    totals.eventCount,
+    totals.points,
+    totals.groundBalls,
+    totals.causedTurnovers,
+    totals.saves,
+    totals.extraPossessions,
+    totals.possessionValue,
+  ].join("|");
+  let hash = 0;
+  for (let index = 0; index < basis.length; index += 1) {
+    hash = (hash * 31 + basis.charCodeAt(index)) >>> 0;
+  }
+  return hash;
+}
+
+function chooseReviewTemplate(templates = [], totals = {}, topContribution = "", player = state.player) {
+  const cleanTemplates = templates.filter(Boolean);
+  if (!cleanTemplates.length) return "";
+  const choice = cleanTemplates[reviewLanguageSeed(totals, topContribution, player) % cleanTemplates.length];
+  return typeof choice === "function" ? choice() : choice;
+}
+
+function reviewDriverType(totals = {}, topContribution = "", player = state.player) {
+  const positionGroup = impactPositionGroup(player);
+  const contribution = String(topContribution || "");
+  const eventCount = Number(totals.eventCount || 0);
+  const possessionIsStory = isPossessionReviewStory(totals, contribution);
+  if (eventCount < 3) return "lowData";
+  if (positionGroup === "goalie" && totals.saves + totals.goalsAllowed > 0) return "goalie";
+  if (contribution === "Possession" || (possessionIsStory && contribution !== "Scoring" && contribution !== "Defense")) return "possession";
+  if (contribution === "Defense" || totals.causedTurnovers + totals.defensiveStops >= 2) return "defense";
+  if (contribution === "Scoring" || totals.points >= 2 || totals.goals >= 1) return "scoring";
+  if (contribution === "Hustle" || totals.effortScore >= 2 || totals.smartPlays >= 2) return "effort";
+  return "balanced";
+}
+
+function positionDevelopmentLens(player = state.player) {
+  switch (impactPositionGroup(player)) {
+    case "attack":
+      return "For an attack player, repeatable impact comes from spacing, shot selection, feeding, and riding after the ball leaves the stick.";
+    case "midfield":
+      return "For a midfielder, the strongest games usually connect both ends: transition, ground balls, clears, and support after the first pass.";
+    case "defense":
+      return "For a defender or LSM, the goal is to turn good positioning and pressure into a clean ground ball or clear.";
+    case "faceoff":
+      return "For a faceoff player, the win matters most when it becomes a controlled team possession.";
+    case "goalie":
+      return "For a goalie, the save is only part of the play; the reset, outlet, and clear can start the next possession.";
+    default:
+      return "The strongest development pattern is usually the repeatable play that helps the team gain control.";
+  }
+}
+
+function buildReviewStoryLine(totals = {}, topContribution = "", player = state.player) {
+  const driver = reviewDriverType(totals, topContribution, player);
+  const possessionIsStory = isPossessionReviewStory(totals, topContribution);
+  if (driver === "lowData") return "A fuller review will build as more plays are tracked.";
+
+  if (driver === "scoring" && possessionIsStory) {
+    return chooseReviewTemplate(
+      [
+        "Scoring shaped the game, with possession decisions as the next growth area.",
+        "The scoring line led the story, while possession details show the next layer to build.",
+        "Finishing and feeding stood out, with cleaner possessions as the next step.",
+      ],
+      totals,
+      topContribution,
+      player,
+    );
+  }
+
+  const templates = {
+    scoring: [
+      "Scoring drove the impact, with shot quality and support play as the next focus.",
+      "The biggest story was offensive involvement in dangerous areas.",
+      "Finishing or feeding shaped the game, and the next step is making those chances repeatable.",
+    ],
+    possession: [
+      "Possession work was the biggest story today.",
+      "Winning, protecting, or extending possessions shaped this game.",
+      "The most important impact came from helping the team gain control of the ball.",
+    ],
+    defense: [
+      "Defensive pressure helped shape the game story.",
+      "Defense turned pressure into opportunities to clear and reset.",
+      "The strongest theme was disrupting the opponent and helping the team get the ball back.",
+    ],
+    goalie: [
+      "Goalie play helped define the game story.",
+      "Shot-stopping and reset moments shaped this game.",
+      "The goalie impact came from managing pressure and starting the next possession.",
+    ],
+    effort: [
+      "Effort and awareness kept the player involved beyond the scoreboard.",
+      "Hustle and smart plays connected the game story.",
+      "The impact came from staying involved when the ball was loose or the play was changing.",
+    ],
+    balanced: [
+      "A balanced game with contributions in more than one part of the field.",
+      "The story came from several small plays adding up.",
+      "This game showed a mix of involvement, effort, and decision-making.",
+    ],
+  };
+
+  return chooseReviewTemplate(templates[driver] || templates.balanced, totals, topContribution, player);
+}
+
+function buildPossessionStory(totals = {}, topContribution = "", player = state.player) {
   if (!isPossessionReviewStory(totals, topContribution)) return "";
   const extraPossessions = Number(totals.extraPossessions || 0);
   const possessionValue = Number(totals.possessionValue || 0);
   const events = totals.possessionImpact?.eventsByType || {};
   const positives = [];
   const negatives = [];
+  const chanceLabel = Math.abs(extraPossessions) === 1 ? "chance" : "chances";
 
   if (events.groundBall > 0) positives.push(`${events.groundBall} ground ball${events.groundBall === 1 ? "" : "s"}`);
   if (events.causedTurnover > 0) positives.push(`${events.causedTurnover} caused turnover${events.causedTurnover === 1 ? "" : "s"}`);
@@ -7448,132 +7564,154 @@ function possessionStoryForTotals(totals = {}, topContribution = "") {
   if (events.faceoffWin > 0) positives.push(`${events.faceoffWin} faceoff win${events.faceoffWin === 1 ? "" : "s"}`);
   if (events.turnover > 0) negatives.push(`${events.turnover} turnover${events.turnover === 1 ? "" : "s"}`);
   if (events.failedClear > 0) negatives.push(`${events.failedClear} failed clear${events.failedClear === 1 ? "" : "s"}`);
+  if (events.faceoffLoss > 0) negatives.push(`${events.faceoffLoss} faceoff loss${events.faceoffLoss === 1 ? "" : "es"}`);
 
   if (extraPossessions > 0 && possessionValue > 0) {
     const source = positives.length ? ` through ${listPhrase(positives.slice(0, 3))}` : "";
-    return `Created ${signedMetric(extraPossessions)} extra chances${source}, adding ${signedMetric(possessionValue)} possession value.`;
+    return `${signedMetric(possessionValue)} possession value means the player helped create or protect ${signedMetric(extraPossessions)} extra ${chanceLabel}${source}. The next step is turning those wins into clean clears or better shot opportunities.`;
   }
   if (extraPossessions > 0) {
-    const source = positives.length ? ` with ${listPhrase(positives.slice(0, 3))}` : "";
-    return `Created ${signedMetric(extraPossessions)} extra chances${source}. The next step is turning more of those possessions into clean scoring chances.`;
+    const source = positives.length ? ` came from ${listPhrase(positives.slice(0, 3))}` : " came from possession work";
+    return `${signedMetric(extraPossessions)} extra ${chanceLabel}${source}. Winning the ball is the first part; the next step is turning the win into a clean team possession.`;
   }
   if (possessionValue > 0) {
     const source = positives.length ? ` from ${listPhrase(positives.slice(0, 3))}` : "";
-    return `Protected or improved possessions${source}, finishing at ${signedMetric(possessionValue)} possession value.`;
+    return `${signedMetric(possessionValue)} possession value shows useful possession-changing plays${source}. Those moments matter because they help the team stay in control.`;
   }
   if (extraPossessions < 0 || possessionValue < 0) {
-    const source = negatives.length ? ` after ${listPhrase(negatives.slice(0, 2))}` : "";
-    return `Possession was the area to clean up${source}. Encourage safer outlets, stronger catches, and the next ground ball opportunity.`;
+    const source = negatives.length ? ` The pressure showed up through ${listPhrase(negatives.slice(0, 2))}.` : "";
+    return `Possession was the growth area in this game.${source} The next step is making the first safe outlet or ground-ball decision before pressure builds.`;
   }
-  return "";
+  return "Possession was part of the story, but not the main driver in this game.";
 }
 
-function reviewOneLineSummary(totals = {}, topContribution = "") {
-  const eventCount = Number(totals.eventCount || 0);
-  const possessionIsStory = isPossessionReviewStory(totals, topContribution);
-  if (!eventCount) return "Here is what shaped this game.";
-  if (topContribution === "Possession") return "Possession work was the biggest story today.";
-  if (topContribution === "Scoring" && possessionIsStory) return "Balanced scoring and possession game with one clear next focus.";
-  if (topContribution === "Scoring") return "Scoring drove the impact, with possession as the next growth area.";
-  if (topContribution === "Defense") return "Defensive pressure and effort plays shaped this game.";
-  if (topContribution === "Goalie") return "Goalie play helped shape the game story.";
-  if (topContribution === "Hustle" && Number(totals.possessionValue || 0) > 0) return "Strong hustle game with positive possession impact.";
-  if (topContribution === "Hustle") return "Effort plays kept the player involved throughout the game.";
-  return "Here is what shaped this game.";
+function buildNextFocusLine(totals = {}, player = state.player, topContribution = "") {
+  const positionGroup = impactPositionGroup(player);
+  if (Number(totals.eventCount || 0) < 3) return "Track a few more plays next game to reveal the strongest pattern.";
+  if (positionGroup === "goalie" && totals.saves) return "Find the outlet after saves and help the defense reset quickly.";
+  if (totals.turnovers > totals.groundBalls + totals.clears) return "Move the ball before pressure arrives and recover quickly into the next play.";
+  if (totals.failedClears > 0 && totals.clears <= totals.failedClears) return "Clear through pressure with the first clean pass or easy outlet.";
+  if (totals.shots > 0 && totals.shotOnGoalPct < 0.5) return "Look for higher-quality shots instead of rushing the first available look.";
+  if (topContribution === "Defense" || totals.causedTurnovers + totals.defensiveStops >= 2) return "Keep body position first, then use stick pressure to force a rushed decision.";
+  if (topContribution === "Possession" || Number(totals.extraPossessions || 0) > 0) return "Turn possession wins into cleaner clears or better shot opportunities.";
+  if (positionGroup === "attack" && totals.points > 0) return "Build on the scoring by adding one feed, ride, or backed-up shot.";
+  if (positionGroup === "faceoff" && totals.faceoffWins) return "Turn faceoff wins into controlled possessions with the first clean pass.";
+  if (totals.effortScore > 0) return "Stay involved off-ball and turn effort plays into controlled possessions.";
+  return "Choose one repeatable play to build on next game.";
 }
 
-function encouragementForTotals(totals = {}, topContribution = "") {
-  if (topContribution === "Possession") {
-    if (totals.groundBalls || totals.clears || totals.backedUpShots) {
-      return "Celebrate the ground balls, clears, and backed up shots that created extra chances.";
-    }
-    return "Encourage cleaner possessions after winning the ball.";
-  }
-  if (topContribution === "Scoring" && totals.assists) {
-    return "Point out the smart decisions and feeds, not just the scoring moments.";
-  }
-  if (topContribution === "Scoring") {
-    return "Celebrate the finishing, then look for one way to add assists or possession plays.";
-  }
-  if (topContribution === "Defense") {
-    return "Praise the pressure, positioning, and stops that helped turn defense into possession.";
-  }
-  if (topContribution === "Goalie") {
-    return "Praise the saves and quick resets that helped the team move into the next play.";
-  }
-  if (topContribution === "Hustle") {
-    return "Praise the hustle plays that kept the player involved away from the ball.";
-  }
-  if (totals.turnovers > totals.groundBalls + totals.clears) {
-    return "Encourage safer outlets and cleaner possessions after winning the ball.";
-  }
-  return "Encourage the plays that show effort, awareness, and growth beyond the box score.";
-}
-
-function developmentTakeawayForTotals(totals = {}, player = state.player, topContribution = "") {
+function buildDevelopmentInsight(totals = {}, player = state.player, topContribution = "") {
   const name = playerFirstName(player);
   const positionGroup = impactPositionGroup(player);
-  const possessionIsStory = isPossessionReviewStory(totals, topContribution);
+  const driver = reviewDriverType(totals, topContribution, player);
+  const focus = buildNextFocusLine(totals, player, topContribution);
 
-  if (Number(totals.eventCount || 0) < 3) {
+  if (driver === "lowData") {
     return {
-      wentWell: "Started building a clearer game story.",
-      why: "A few tracked plays already help connect effort, possession, and impact.",
-      focus: "Track a few more plays next game to reveal the strongest pattern.",
+      wentWell: "A fuller review will build as more plays are tracked.",
+      why: "From this sample, focus on the plays that show involvement, effort, and how the player stayed connected to the game.",
+      focus,
     };
   }
-  if (positionGroup === "goalie" && totals.saves) {
+  if (driver === "goalie") {
     return {
-      wentWell: `${name} contributed in goal with ${countPhrase(totals.saves, "save", "saves")}.`,
-      why: "Saves protect the scoreboard and can start a cleaner possession the other way.",
-      focus: "Turn more saves into quick, clean outlets.",
+      wentWell: `${name} helped manage pressure in goal with ${countPhrase(totals.saves, "save", "saves") || "important reset moments"}.`,
+      why: "A save is not only a stopped shot. It can become the first play of the next possession when the outlet and clear are organized.",
+      focus,
     };
   }
   if (positionGroup === "faceoff" && totals.faceoffWins) {
     return {
-      wentWell: `${name} helped create chances at the faceoff spot.`,
-      why: "Faceoff wins give the team possessions before settled offense begins.",
-      focus: "Turn more wins into clean ground balls and settled possessions.",
+      wentWell: `${name} helped create possession chances at the faceoff spot.`,
+      why: "Faceoff wins matter most when the loose ball, wing support, and first pass turn the win into settled team possession.",
+      focus,
     };
   }
-  if (topContribution === "Scoring" && totals.points) {
+  if (driver === "scoring") {
+    const scoringDetail =
+      totals.goals && totals.assists
+        ? "showed up in both finishing and feeding"
+        : totals.goals
+          ? "got to scoring spots and finished chances"
+          : "helped create scoring chances for teammates";
     return {
-      wentWell: `${name} helped finish scoring chances.`,
-      why: "Finishing and feeding turn team possessions into points.",
-      focus: "Add ground balls, assists, or backed up shots to become a more complete offensive threat.",
+      wentWell: `${name} ${scoringDetail}.`,
+      why: "Finishing matters, but repeatable impact comes from getting to good areas, reading pressure, and making the next right play.",
+      focus,
     };
   }
-  if (topContribution === "Defense" || totals.causedTurnovers + totals.defensiveStops >= 2) {
+  if (driver === "defense") {
     return {
-      wentWell: `${name} helped turn defense into possession.`,
-      why: "Stops and caused turnovers prevent opponent chances and can create transition.",
-      focus: "Stay aggressive while keeping clears and decisions clean.",
+      wentWell: `${name} helped disrupt the opponent and turn defense into opportunity.`,
+      why: "Defensive impact is not only stopping a shot. It is pressure, positioning, and helping the team get the ball back.",
+      focus,
     };
   }
-  if (possessionIsStory) {
+  if (driver === "possession") {
     return {
-      wentWell: `${name} created or protected extra possessions.`,
-      why: "Extra possessions give the team more chances and reduce pressure on the defense.",
-      focus: "Turn possession wins into clean clears or better shot opportunities.",
+      wentWell: `${name} helped the team gain control through possession plays.`,
+      why: "Possession work often decides youth lacrosse games before the scoreboard shows it.",
+      focus,
     };
   }
-  if (topContribution === "Hustle" || totals.effortScore >= 2) {
+  if (driver === "effort") {
     return {
-      wentWell: `${name} showed effort in several parts of the field.`,
-      why: "Hustle plays keep the player involved even away from the ball.",
-      focus: "Channel that effort into controlled possessions and smart decisions.",
+      wentWell: `${name} stayed involved through effort, awareness, and off-ball plays.`,
+      why: "These are the plays that may not lead the box score, but they connect possessions and help the team keep pressure on.",
+      focus,
     };
   }
   return {
-    wentWell: `${name} contributed to the team story in this game.`,
-    why: "Each tracked play helps parents see how development shows up beyond the box score.",
-    focus: "Choose one simple next step and watch for it next game.",
+    wentWell: `${name} contributed in multiple parts of the game.`,
+    why: `${positionDevelopmentLens(player)} Each tracked play helps show development beyond the scoreboard.`,
+    focus,
   };
+}
+
+function buildRichKeyTakeaway(totals = {}, player = state.player, topContribution = "") {
+  const insight = buildDevelopmentInsight(totals, player, topContribution);
+  const possessionStory = buildPossessionStory(totals, topContribution, player);
+  return [insight.wentWell, insight.why, possessionStory || insight.focus].filter(Boolean).join(" ");
+}
+
+function buildEncouragementLine(totals = {}, topContribution = "", player = state.player) {
+  const driver = reviewDriverType(totals, topContribution, player);
+  if (driver === "lowData") return "Encourage the tracked moments that show involvement, effort, and growth beyond the box score.";
+  if (driver === "possession") return "Celebrate the ground balls, clears, backups, or faceoff plays that created extra chances.";
+  if (driver === "scoring" && totals.assists) return "Point out the smart decisions and feeds before praising only the scoring moments.";
+  if (driver === "scoring") return "Celebrate getting to dangerous areas, then look for one support play that makes the scoring repeatable.";
+  if (driver === "defense") return "Praise the pressure, positioning, and recovery that helped turn stops into possessions.";
+  if (driver === "goalie") return "Praise the reset after the save, not just the save itself.";
+  if (driver === "effort") return "Praise the effort plays that kept the player involved away from the ball.";
+  return "Encourage the plays that show effort, awareness, and growth beyond the box score.";
+}
+
+function buildFamilyRecapDevelopmentLine(totals = {}, player = {}, topContribution = "") {
+  if (Number(totals.eventCount || 0) < 3) {
+    return "A fuller recap will build as more plays are tracked. From this sample, focus on involvement and effort.";
+  }
+  return buildRichKeyTakeaway(totals, player, topContribution);
+}
+
+function possessionStoryForTotals(totals = {}, topContribution = "", player = state.player) {
+  return buildPossessionStory(totals, topContribution, player);
+}
+
+function reviewOneLineSummary(totals = {}, topContribution = "", player = state.player) {
+  return buildReviewStoryLine(totals, topContribution, player);
+}
+
+function encouragementForTotals(totals = {}, topContribution = "", player = state.player) {
+  return buildEncouragementLine(totals, topContribution, player);
+}
+
+function developmentTakeawayForTotals(totals = {}, player = state.player, topContribution = "") {
+  return buildDevelopmentInsight(totals, player, topContribution);
 }
 
 function renderDevelopmentTakeaway(totals = {}, player = state.player, topContribution = "") {
   const takeaway = developmentTakeawayForTotals(totals, player, topContribution);
-  const possessionStory = possessionStoryForTotals(totals, topContribution);
+  const possessionStory = possessionStoryForTotals(totals, topContribution, player);
   return `
     <section class="card pad development-card lh-development-takeaway">
       <h3>Development Takeaway</h3>
@@ -7587,11 +7725,11 @@ function renderDevelopmentTakeaway(totals = {}, player = state.player, topContri
   `;
 }
 
-function renderWhatToEncourage(totals = {}, topContribution = "") {
+function renderWhatToEncourage(totals = {}, topContribution = "", player = state.player) {
   return `
     <section class="card pad development-card lh-encourage-card">
       <h3>What to Encourage</h3>
-      <p>${escapeHTML(encouragementForTotals(totals, topContribution))}</p>
+      <p>${escapeHTML(encouragementForTotals(totals, topContribution, player))}</p>
     </section>
   `;
 }
@@ -7760,9 +7898,7 @@ function familyRecapTopContribution(totals = {}, player = {}) {
 }
 
 function familyRecapTakeaway(totals = {}, player = {}, topContribution = "") {
-  if (Number(totals.eventCount || 0) < 3) return "A short recap is available once more plays are tracked.";
-  const takeaway = developmentTakeawayForTotals(totals, player, topContribution);
-  return `${takeaway.wentWell} ${takeaway.why}`;
+  return buildFamilyRecapDevelopmentLine(totals, player, topContribution);
 }
 
 function buildFamilyRecap(game = {}, events = [], playerContext = {}, computedStats = null) {
@@ -7858,7 +7994,7 @@ function renderReviewSummarySection(game, player, totals) {
   ].filter(Boolean);
   return `
     <section class="review-section review-snapshot-section">
-      <p class="review-storyline">${escapeHTML(reviewOneLineSummary(totals, topContribution.label))}</p>
+      <p class="review-storyline">${escapeHTML(reviewOneLineSummary(totals, topContribution.label, player))}</p>
       <div class="section-head compact-head">
         <div>
           <h3>Game Snapshot</h3>
@@ -7932,7 +8068,7 @@ function renderReview() {
     <section class="stack review-screen-stack">
       ${renderReviewSummarySection(game, player, totals, archetypeResult)}
       ${renderDevelopmentTakeaway(totals, player, topContribution.label)}
-      ${renderWhatToEncourage(totals, topContribution.label)}
+      ${renderWhatToEncourage(totals, topContribution.label, player)}
       ${renderWhyThesePlaysMatter(game.events || [], { limit: 3, showMore: true })}
       ${renderReviewStatsSection(totals, player, archetypeResult)}
       ${renderConversationStarters(totals, player)}
