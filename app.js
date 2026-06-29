@@ -2053,6 +2053,13 @@ function normalizeEvent(event = {}, gameId = "") {
     hasStoredPointValue && Number.isFinite(numericPointValue) && !storedPointValueLooksWrong
       ? numericPointValue
       : Number(stat.points || 0);
+  const scoreForAtEvent = optionalScoreNumber(event.scoreForAtEvent ?? event.score_for_at_event);
+  const scoreAgainstAtEvent = optionalScoreNumber(event.scoreAgainstAtEvent ?? event.score_against_at_event);
+  const scoreMarginAtEvent = scoreForAtEvent === null || scoreAgainstAtEvent === null
+    ? null
+    : scoreForAtEvent - scoreAgainstAtEvent;
+  const scoreForBeforeEvent = optionalScoreNumber(event.scoreForBeforeEvent ?? event.score_for_before_event);
+  const scoreAgainstBeforeEvent = optionalScoreNumber(event.scoreAgainstBeforeEvent ?? event.score_against_before_event);
 
   return {
     id: event.id || uid("event"),
@@ -2071,6 +2078,14 @@ function normalizeEvent(event = {}, gameId = "") {
     fieldZone: event.fieldZone || "",
     correctedAt: event.correctedAt || null,
     tagsUpdatedAt: event.tagsUpdatedAt || null,
+    scoreForAtEvent,
+    scoreAgainstAtEvent,
+    scoreMarginAtEvent,
+    scoreStateAtEvent: event.scoreStateAtEvent || event.score_state_at_event || scoreStateForMargin(scoreMarginAtEvent),
+    gameSegmentAtEvent: event.gameSegmentAtEvent || event.game_segment_at_event || gameSegmentForPeriod(event.quarter),
+    scoreAutoIncrement: event.scoreAutoIncrement || "",
+    scoreForBeforeEvent,
+    scoreAgainstBeforeEvent,
   };
 }
 
@@ -2090,6 +2105,14 @@ function normalizeGame(game = {}, fallbackPlayer = null) {
   if ((!playerSnapshot.name || playerSnapshot.name === DEFAULT_PLAYER.name) && fallbackSnapshot?.name) {
     playerSnapshot = { ...fallbackSnapshot, id: playerId || fallbackSnapshot.id };
   }
+  const scoreFor = optionalScoreNumber(game.scoreFor ?? game.score_for);
+  const scoreAgainst = optionalScoreNumber(game.scoreAgainst ?? game.score_against);
+  const finalScoreFor = optionalScoreNumber(game.finalScoreFor ?? game.final_score_for);
+  const finalScoreAgainst = optionalScoreNumber(game.finalScoreAgainst ?? game.final_score_against);
+  const storedScoreTouched = game.scoreTrackingTouched ?? game.score_tracking_touched;
+  const scoreTrackingTouched = Boolean(
+    storedScoreTouched ?? (scoreFor !== null || scoreAgainst !== null || finalScoreFor !== null || finalScoreAgainst !== null),
+  );
   return {
     ...game,
     id,
@@ -2102,6 +2125,11 @@ function normalizeGame(game = {}, fallbackPlayer = null) {
     isShared: Boolean(game.isShared ?? game.is_shared ?? false),
     periodFormat,
     currentQuarter: periods.includes(currentQuarter) ? currentQuarter : periods[0],
+    scoreFor: scoreFor ?? 0,
+    scoreAgainst: scoreAgainst ?? 0,
+    scoreTrackingTouched,
+    finalScoreFor,
+    finalScoreAgainst,
     events: (game.events || [])
       .filter((event) => !isDeletedEvent(event.id))
       .map((event) => normalizeEvent({ ...event, teamId: event.teamId || event.team_id || teamId, rosterPlayerId: event.rosterPlayerId || event.roster_player_id || rosterPlayerId }, id)),
@@ -2318,6 +2346,11 @@ function makeGame(formData) {
     gameType: formData.get("gameType") || "Regular season",
     playerSnapshot: player,
     currentQuarter,
+    scoreFor: 0,
+    scoreAgainst: 0,
+    scoreTrackingTouched: false,
+    finalScoreFor: null,
+    finalScoreAgainst: null,
     events: [],
     status: "in-progress",
     createdAt: new Date().toISOString(),
@@ -2491,6 +2524,173 @@ function statWithExtraPossessions(value, extraPossessions) {
   const extra = Number(extraPossessions || 0);
   if (!extra) return value;
   return `${value} (${signedMetric(extra)} EP)`;
+}
+
+function optionalScoreNumber(value) {
+  if (value === undefined || value === null || value === "") return null;
+  const number = Number(value);
+  if (!Number.isFinite(number)) return null;
+  return Math.max(0, Math.round(number));
+}
+
+function scoreStateForMargin(margin) {
+  if (margin === undefined || margin === null || !Number.isFinite(Number(margin))) return "unknown";
+  const value = Number(margin);
+  if (value > 0) return "leading";
+  if (value < 0) return "trailing";
+  return "tied";
+}
+
+function gameSegmentForPeriod(period = "") {
+  const clean = String(period || "").toUpperCase();
+  if (clean === "OT") return "overtime";
+  if (clean === "Q1" || clean === "H1") return "early_game";
+  if (clean === "Q2" || clean === "Q3") return "mid_game";
+  if (clean === "Q4" || clean === "H2") return "late_game";
+  return "unknown";
+}
+
+function gameSegmentLabel(segment = "") {
+  const labels = {
+    early_game: "Early game",
+    mid_game: "Mid game",
+    late_game: "Late game",
+    overtime: "Overtime",
+  };
+  return labels[segment] || "Unknown";
+}
+
+function hasScoreContext(game = {}) {
+  const normalized = game || {};
+  return Boolean(
+    normalized.scoreTrackingTouched ||
+      optionalScoreNumber(normalized.finalScoreFor) !== null ||
+      optionalScoreNumber(normalized.finalScoreAgainst) !== null ||
+      (normalized.events || []).some((event) => optionalScoreNumber(event.scoreForAtEvent) !== null && optionalScoreNumber(event.scoreAgainstAtEvent) !== null),
+  );
+}
+
+function scoreLabel(game = {}) {
+  const normalized = normalizeGame(game);
+  return `Us ${normalized.scoreFor} · Them ${normalized.scoreAgainst}`;
+}
+
+function eventScoreDisplay(event = {}) {
+  const scoreFor = optionalScoreNumber(event.scoreForAtEvent);
+  const scoreAgainst = optionalScoreNumber(event.scoreAgainstAtEvent);
+  if (scoreFor === null || scoreAgainst === null) return "";
+  return `Us ${scoreFor} - Them ${scoreAgainst}`;
+}
+
+function scoreContextForGame(game = {}, quarter = "") {
+  const normalized = normalizeGame(game);
+  const finalFor = optionalScoreNumber(normalized.finalScoreFor);
+  const finalAgainst = optionalScoreNumber(normalized.finalScoreAgainst);
+  const lastScoreEvent = [...(normalized.events || [])]
+    .reverse()
+    .find((event) => optionalScoreNumber(event.scoreForAtEvent) !== null && optionalScoreNumber(event.scoreAgainstAtEvent) !== null);
+  const scoreFor = normalized.scoreTrackingTouched
+    ? optionalScoreNumber(normalized.scoreFor)
+    : finalFor ?? optionalScoreNumber(lastScoreEvent?.scoreForAtEvent);
+  const scoreAgainst = normalized.scoreTrackingTouched
+    ? optionalScoreNumber(normalized.scoreAgainst)
+    : finalAgainst ?? optionalScoreNumber(lastScoreEvent?.scoreAgainstAtEvent);
+  const hasScore = scoreFor !== null && scoreAgainst !== null && hasScoreContext(normalized);
+  const safeFor = scoreFor ?? 0;
+  const safeAgainst = scoreAgainst ?? 0;
+  const margin = hasScore ? safeFor - safeAgainst : null;
+  return {
+    scoreForAtEvent: hasScore ? safeFor : null,
+    scoreAgainstAtEvent: hasScore ? safeAgainst : null,
+    scoreMarginAtEvent: margin,
+    scoreStateAtEvent: scoreStateForMargin(margin),
+    gameSegmentAtEvent: gameSegmentForPeriod(quarter || game.currentQuarter),
+  };
+}
+
+function applyScoreIncrement(game, side = "") {
+  if (!game) return { side: "", beforeFor: null, beforeAgainst: null };
+  const beforeFor = optionalScoreNumber(game.scoreFor) ?? 0;
+  const beforeAgainst = optionalScoreNumber(game.scoreAgainst) ?? 0;
+  game.scoreFor = beforeFor;
+  game.scoreAgainst = beforeAgainst;
+  game.scoreTrackingTouched = true;
+  if (side === "for") game.scoreFor += 1;
+  if (side === "against") game.scoreAgainst += 1;
+  return { side, beforeFor, beforeAgainst };
+}
+
+function rollbackScoreIncrement(game, event = {}) {
+  if (!game || !event.scoreAutoIncrement) return;
+  const currentFor = optionalScoreNumber(game.scoreFor) ?? 0;
+  const currentAgainst = optionalScoreNumber(game.scoreAgainst) ?? 0;
+  if (event.scoreAutoIncrement === "for" && currentFor === optionalScoreNumber(event.scoreForAtEvent)) {
+    game.scoreFor = optionalScoreNumber(event.scoreForBeforeEvent) ?? Math.max(0, currentFor - 1);
+  }
+  if (event.scoreAutoIncrement === "against" && currentAgainst === optionalScoreNumber(event.scoreAgainstAtEvent)) {
+    game.scoreAgainst = optionalScoreNumber(event.scoreAgainstBeforeEvent) ?? Math.max(0, currentAgainst - 1);
+  }
+}
+
+function possessionContextEvent(event = {}) {
+  return ["groundBall", "causedTurnover", "successfulClear", "failedClear", "turnover", "goalieSave", "faceoffWin", "backedUpShot"].includes(event.statType);
+}
+
+function negativeContextEvent(event = {}) {
+  return ["turnover", "failedClear", "penalty", "faceoffLoss"].includes(event.statType);
+}
+
+function gameContextSummary(game = {}, totals = {}) {
+  const normalized = normalizeGame(game);
+  const events = normalized.events || [];
+  const scoreEvents = events.filter((event) => optionalScoreNumber(event.scoreForAtEvent) !== null && optionalScoreNumber(event.scoreAgainstAtEvent) !== null);
+  const segmentCounts = events.reduce((acc, event, index) => {
+    let segment = event.gameSegmentAtEvent || gameSegmentForPeriod(event.quarter);
+    if (segment === "unknown" && events.length) {
+      const ratio = (index + 1) / events.length;
+      segment = ratio <= 1 / 3 ? "early_game" : ratio <= 2 / 3 ? "mid_game" : "late_game";
+    }
+    if (impactValueForEvent(event) > 0) acc[segment] = (acc[segment] || 0) + 1;
+    return acc;
+  }, {});
+  const strongestStretch = Object.entries(segmentCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "";
+  const closeGameEvents = scoreEvents.filter((event) => Math.abs(Number(event.scoreMarginAtEvent || 0)) <= 2);
+  const closePossessionPlays = closeGameEvents.filter(possessionContextEvent).length;
+  const lateEvents = events.filter((event) => event.gameSegmentAtEvent === "late_game" || gameSegmentForPeriod(event.quarter) === "late_game");
+  const latePositivePossession = lateEvents.filter((event) => possessionContextEvent(event) && impactValueForEvent(event) > 0).length;
+  const lateNegative = lateEvents.filter(negativeContextEvent).length;
+  const tiedOrTrailingTurnovers = scoreEvents.filter((event) => event.statType === "turnover" && Number(event.scoreMarginAtEvent || 0) <= 0).length;
+  const earlyScoring = events.filter((event) => event.gameSegmentAtEvent === "early_game" && (event.statType === "goal" || event.statType === "assist")).length;
+  const goalieCloseSaves = closeGameEvents.filter((event) => event.statType === "goalieSave").length;
+  const hasFinal = normalized.finalScoreFor !== null && normalized.finalScoreAgainst !== null;
+  return {
+    hasScore: hasScoreContext(normalized),
+    hasFinal,
+    finalScoreFor: normalized.finalScoreFor,
+    finalScoreAgainst: normalized.finalScoreAgainst,
+    strongestStretch,
+    closePossessionPlays,
+    latePositivePossession,
+    lateNegative,
+    tiedOrTrailingTurnovers,
+    earlyScoring,
+    goalieCloseSaves,
+    scoreEvents: scoreEvents.length,
+    eventCount: events.length || totals.eventCount || 0,
+  };
+}
+
+function scoreContextSentence(context = {}, totals = {}, player = state.player) {
+  if (!context.eventCount || (!context.hasScore && !context.strongestStretch)) return "";
+  const positionGroup = impactPositionGroup(player);
+  if (context.goalieCloseSaves > 0) return "Goalie play helped protect the game during an important stretch.";
+  if (context.closePossessionPlays > 0 && context.strongestStretch === "late_game") {
+    return "Those plays came in a high-leverage stretch, when possessions mattered more.";
+  }
+  if (context.latePositivePossession > 0) return "Late-game possession work helped keep the player involved when the game tightened.";
+  if (context.earlyScoring > 0) return "Early scoring helped set the tone.";
+  if (positionGroup === "goalie" && totals.saves > 0) return "The score context can make save-and-clear moments easier to understand over time.";
+  return "";
 }
 
 /**
@@ -2896,6 +3096,13 @@ function logEvent(statKey) {
   }
 
   const stat = STAT_BY_KEY[statKey];
+  const scoreChange =
+    statKey === "goal"
+      ? applyScoreIncrement(state.activeGame, "for")
+      : statKey === "goalAllowed"
+        ? applyScoreIncrement(state.activeGame, "against")
+        : { side: "", beforeFor: optionalScoreNumber(state.activeGame.scoreFor) ?? 0, beforeAgainst: optionalScoreNumber(state.activeGame.scoreAgainst) ?? 0 };
+  const scoreContext = scoreContextForGame(state.activeGame, state.activeGame.currentQuarter);
   let note = "";
   if (statKey === "note") {
     note = window.prompt("Add a quick note")?.trim() || "";
@@ -2917,6 +3124,10 @@ function logEvent(statKey) {
     tags: [],
     note,
     fieldZone: "",
+    ...scoreContext,
+    scoreAutoIncrement: scoreChange.side,
+    scoreForBeforeEvent: scoreChange.beforeFor,
+    scoreAgainstBeforeEvent: scoreChange.beforeAgainst,
   };
 
   state.activeGame.events.push(event);
@@ -2944,6 +3155,7 @@ function undoLastEvent() {
     return;
   }
   const removed = state.activeGame.events.pop();
+  rollbackScoreIncrement(state.activeGame, removed);
   state.activeGame.savedAt = new Date().toISOString();
   state.lastEventConfirmation = null;
   persistAll();
@@ -2951,6 +3163,48 @@ function undoLastEvent() {
   syncGameToSupabase(state.activeGame);
   render();
   showToast(`Undo last event: ${removed.statLabel}`);
+}
+
+function updateActiveGameScore(side = "") {
+  if (!state.activeGame) return;
+  if (!canEditGame(state.activeGame)) {
+    showToast("View-only team access");
+    return;
+  }
+  applyScoreIncrement(state.activeGame, side);
+  state.activeGame.savedAt = new Date().toISOString();
+  persistAll();
+  syncGameToSupabase(state.activeGame);
+  render();
+  showToast(`${side === "against" ? "Opponent score" : "Our score"} updated`);
+}
+
+function editActiveGameScore() {
+  if (!state.activeGame) return;
+  if (!canEditGame(state.activeGame)) {
+    showToast("View-only team access");
+    return;
+  }
+  const currentFor = optionalScoreNumber(state.activeGame.scoreFor) ?? 0;
+  const currentAgainst = optionalScoreNumber(state.activeGame.scoreAgainst) ?? 0;
+  const forInput = window.prompt("Our Score", String(currentFor));
+  if (forInput === null) return;
+  const againstInput = window.prompt("Opponent Score", String(currentAgainst));
+  if (againstInput === null) return;
+  const scoreFor = optionalScoreNumber(forInput);
+  const scoreAgainst = optionalScoreNumber(againstInput);
+  if (scoreFor === null || scoreAgainst === null) {
+    showToast("Enter whole-number scores");
+    return;
+  }
+  state.activeGame.scoreFor = scoreFor;
+  state.activeGame.scoreAgainst = scoreAgainst;
+  state.activeGame.scoreTrackingTouched = true;
+  state.activeGame.savedAt = new Date().toISOString();
+  persistAll();
+  syncGameToSupabase(state.activeGame);
+  render();
+  showToast("Score updated");
 }
 
 function addNoteToLastEvent() {
@@ -3006,6 +3260,10 @@ function confirmEndGame() {
   state.activeGame.status = "complete";
   state.activeGame.endedAt = new Date().toISOString();
   state.activeGame.savedAt = new Date().toISOString();
+  if (hasScoreContext(state.activeGame)) {
+    state.activeGame.finalScoreFor = optionalScoreNumber(state.activeGame.scoreFor) ?? 0;
+    state.activeGame.finalScoreAgainst = optionalScoreNumber(state.activeGame.scoreAgainst) ?? 0;
+  }
   const completedGame = normalizeGame(state.activeGame);
   upsertGame(state.activeGame);
   state.reviewGameId = state.activeGame.id;
@@ -3148,6 +3406,8 @@ function buildCSV() {
     "playerNumber",
     "gameDate",
     "opponent",
+    "finalScoreFor",
+    "finalScoreAgainst",
     "eventId",
     "timestamp",
     "quarter",
@@ -3161,6 +3421,11 @@ function buildCSV() {
     "gameImpactRaw",
     "extraPossessions",
     "possessionValue",
+    "scoreForAtEvent",
+    "scoreAgainstAtEvent",
+    "scoreMarginAtEvent",
+    "scoreStateAtEvent",
+    "gameSegmentAtEvent",
     "tags",
     "note",
     "fieldZone",
@@ -3180,6 +3445,8 @@ function buildCSV() {
         player.number,
         normalizedGame.date,
         normalizedGame.opponent,
+        normalizedGame.finalScoreFor ?? "",
+        normalizedGame.finalScoreAgainst ?? "",
         event.id,
         event.timestamp,
         event.quarter,
@@ -3193,6 +3460,11 @@ function buildCSV() {
         formatImpactNumber(totals.rawImpact),
         formatImpactNumber(totals.extraPossessions),
         formatImpactNumber(totals.possessionValue),
+        event.scoreForAtEvent ?? "",
+        event.scoreAgainstAtEvent ?? "",
+        event.scoreMarginAtEvent ?? "",
+        event.scoreStateAtEvent || "",
+        event.gameSegmentAtEvent || "",
         event.tags,
         event.note,
         event.fieldZone,
@@ -7330,6 +7602,23 @@ function renderLiveImpactPill(game, totals) {
   return `<div class="live-pill">${renderImpactGrade(totals.impact)}<span>Game Impact</span></div>`;
 }
 
+function renderLiveScoreControl(game) {
+  const normalized = normalizeGame(game);
+  return `
+    <section class="lh-score-control" aria-label="Score control">
+      <div class="lh-score-chip">
+        <span>Score</span>
+        <strong>${escapeHTML(scoreLabel(normalized))}</strong>
+      </div>
+      <div class="lh-score-actions">
+        <button class="mini-btn light" type="button" data-action="score-goal-for">Goal For</button>
+        <button class="mini-btn light" type="button" data-action="score-goal-against">Goal Against</button>
+        <button class="mini-btn light" type="button" data-action="edit-score">Edit Score</button>
+      </div>
+    </section>
+  `;
+}
+
 function renderLiveTracker() {
   if (!state.activeGame) {
     return renderShell(`
@@ -7372,6 +7661,8 @@ function renderLiveTracker() {
       ).join("")}
     </div>
 
+    ${renderLiveScoreControl(game)}
+
     <section class="live-summary" aria-label="Live game summary">
       ${renderLiveImpactPill(game, totals)}
       <div class="live-pill"><strong>${totals.points}</strong><span>Points</span></div>
@@ -7401,12 +7692,13 @@ function renderLiveTracker() {
 
 function renderEventRow(event, options = {}) {
   const stat = STAT_BY_KEY[event.statType] || { tone: "neutral" };
+  const scoreContext = eventScoreDisplay(event);
   return `
     <div class="event-row ${stat.tone}">
       <span class="badge">${escapeHTML(event.quarter)}</span>
       <span>
         <strong>${escapeHTML(event.statLabel)}</strong>
-        <p>${formatTime(event.timestamp)} - ${escapeHTML(event.category || "General")}${event.fieldZone ? ` - ${escapeHTML(event.fieldZone)}` : ""}${event.note ? ` - ${escapeHTML(event.note)}` : ""}</p>
+        <p>${formatTime(event.timestamp)} - ${escapeHTML(event.category || "General")}${scoreContext ? ` - ${escapeHTML(scoreContext)}` : ""}${event.fieldZone ? ` - ${escapeHTML(event.fieldZone)}` : ""}${event.note ? ` - ${escapeHTML(event.note)}` : ""}</p>
         ${renderTagChips(event.tags)}
       </span>
       <span class="score">${pointText(impactValueForEvent(event))}</span>
@@ -8014,9 +8306,19 @@ function buildPossessionStory(totals = {}, topContribution = "", player = state.
   return "Possession was part of the story, but not the main driver in this game.";
 }
 
-function buildNextFocusLine(totals = {}, player = state.player, topContribution = "") {
+function buildNextFocusLine(totals = {}, player = state.player, topContribution = "", game = null) {
   const positionGroup = impactPositionGroup(player);
   if (Number(totals.eventCount || 0) < 3) return "Track a few more plays next game to reveal the strongest pattern.";
+  const context = game ? gameContextSummary(game, totals) : null;
+  if (context?.lateNegative > 0 && (context.tiedOrTrailingTurnovers > 0 || totals.groundBalls > 0)) {
+    return "Protect the ball after winning possession. Try this next game: secure the ball first, then make the simple pass.";
+  }
+  if (context?.latePositivePossession > 0 && context.lateNegative === 0) {
+    return "Keep building late-game involvement. Try this next game: look for one more possession play after halftime or late in the game.";
+  }
+  if (context?.goalieCloseSaves > 0) {
+    return "Turn saves into clean outlets. Try this next game: look early for the safest outlet after the save.";
+  }
   if (positionGroup === "goalie" && totals.saves) return "Find the outlet after saves and help the defense reset quickly.";
   if (totals.turnovers > totals.groundBalls + totals.clears) return "Move the ball before pressure arrives and recover quickly into the next play.";
   if (totals.failedClears > 0 && totals.clears <= totals.failedClears) return "Clear through pressure with the first clean pass or easy outlet.";
@@ -8029,30 +8331,33 @@ function buildNextFocusLine(totals = {}, player = state.player, topContribution 
   return "Choose one repeatable play to build on next game.";
 }
 
-function buildDevelopmentInsight(totals = {}, player = state.player, topContribution = "") {
+function buildDevelopmentInsight(totals = {}, player = state.player, topContribution = "", game = null) {
   const name = playerFirstName(player);
   const positionGroup = impactPositionGroup(player);
   const driver = reviewDriverType(totals, topContribution, player);
-  const focus = buildNextFocusLine(totals, player, topContribution);
+  const context = game ? gameContextSummary(game, totals) : null;
+  const contextSentence = scoreContextSentence(context, totals, player);
+  const withContext = (sentence) => [sentence, contextSentence].filter(Boolean).join(" ");
+  const focus = buildNextFocusLine(totals, player, topContribution, game);
 
   if (driver === "lowData") {
     return {
       wentWell: "A fuller review will build as more plays are tracked.",
-      why: "From this sample, focus on the plays that show involvement, effort, and how the player stayed connected to the game.",
+      why: withContext("From this sample, focus on the plays that show involvement, effort, and how the player stayed connected to the game."),
       focus,
     };
   }
   if (driver === "goalie") {
     return {
       wentWell: `${name} helped manage pressure in goal with ${countPhrase(totals.saves, "save", "saves") || "important reset moments"}.`,
-      why: "A save is not only a stopped shot. It can become the first play of the next possession when the outlet and clear are organized.",
+      why: withContext("A save is not only a stopped shot. It can become the first play of the next possession when the outlet and clear are organized."),
       focus,
     };
   }
   if (positionGroup === "faceoff" && totals.faceoffWins) {
     return {
       wentWell: `${name} helped create possession chances at the faceoff spot.`,
-      why: "Faceoff wins matter most when the loose ball, wing support, and first pass turn the win into settled team possession.",
+      why: withContext("Faceoff wins matter most when the loose ball, wing support, and first pass turn the win into settled team possession."),
       focus,
     };
   }
@@ -8065,34 +8370,34 @@ function buildDevelopmentInsight(totals = {}, player = state.player, topContribu
           : "helped create scoring chances for teammates";
     return {
       wentWell: `${name} ${scoringDetail}.`,
-      why: "Finishing matters, but repeatable impact comes from getting to good areas, reading pressure, and making the next right play.",
+      why: withContext("Finishing matters, but repeatable impact comes from getting to good areas, reading pressure, and making the next right play."),
       focus,
     };
   }
   if (driver === "defense") {
     return {
       wentWell: `${name} helped disrupt the opponent and turn defense into opportunity.`,
-      why: "Defensive impact is not only stopping a shot. It is pressure, positioning, and helping the team get the ball back.",
+      why: withContext("Defensive impact is not only stopping a shot. It is pressure, positioning, and helping the team get the ball back."),
       focus,
     };
   }
   if (driver === "possession") {
     return {
       wentWell: `${name} helped the team gain control through possession plays.`,
-      why: "Possession work often decides youth lacrosse games before the scoreboard shows it.",
+      why: withContext("Possession work often decides youth lacrosse games before the scoreboard shows it."),
       focus,
     };
   }
   if (driver === "effort") {
     return {
       wentWell: `${name} stayed involved through effort, awareness, and off-ball plays.`,
-      why: "These are the plays that may not lead the box score, but they connect possessions and help the team keep pressure on.",
+      why: withContext("These are the plays that may not lead the box score, but they connect possessions and help the team keep pressure on."),
       focus,
     };
   }
   return {
     wentWell: `${name} contributed in multiple parts of the game.`,
-    why: `${positionDevelopmentLens(player)} Each tracked play helps show development beyond the scoreboard.`,
+    why: withContext(`${positionDevelopmentLens(player)} Each tracked play helps show development beyond the scoreboard.`),
     focus,
   };
 }
@@ -8134,12 +8439,12 @@ function encouragementForTotals(totals = {}, topContribution = "", player = stat
   return buildEncouragementLine(totals, topContribution, player);
 }
 
-function developmentTakeawayForTotals(totals = {}, player = state.player, topContribution = "") {
-  return buildDevelopmentInsight(totals, player, topContribution);
+function developmentTakeawayForTotals(totals = {}, player = state.player, topContribution = "", game = null) {
+  return buildDevelopmentInsight(totals, player, topContribution, game);
 }
 
-function renderDevelopmentTakeaway(totals = {}, player = state.player, topContribution = "") {
-  const takeaway = developmentTakeawayForTotals(totals, player, topContribution);
+function renderDevelopmentTakeaway(totals = {}, player = state.player, topContribution = "", game = null) {
+  const takeaway = developmentTakeawayForTotals(totals, player, topContribution, game);
   const possessionStory = possessionStoryForTotals(totals, topContribution, player);
   return `
     <section class="card pad development-card lh-development-takeaway">
@@ -8531,7 +8836,34 @@ function renderReviewSummarySection(game, player, totals) {
       <div class="insight-grid review-snapshot-grid">
         ${snapshotCards.join("")}
       </div>
+      ${renderGameContextCard(game, totals)}
     </section>
+  `;
+}
+
+function renderGameContextCard(game, totals) {
+  const context = gameContextSummary(game, totals);
+  const rows = [];
+  if (context.hasFinal) rows.push(["Final Score", `Us ${context.finalScoreFor} · Them ${context.finalScoreAgainst}`]);
+  if (context.strongestStretch && context.strongestStretch !== "unknown") rows.push(["Strongest stretch", gameSegmentLabel(context.strongestStretch)]);
+  if (context.closePossessionPlays > 0) rows.push(["Close-game impact", `${context.closePossessionPlays} possession ${context.closePossessionPlays === 1 ? "play" : "plays"} while tied or within 2 goals`]);
+  if (!rows.length) return "";
+  return `
+    <div class="lh-context-card" aria-label="Game context">
+      <strong>Game Context</strong>
+      <div>
+        ${rows
+          .map(
+            ([label, value]) => `
+              <p class="lh-game-context-row">
+                <span>${escapeHTML(label)}</span>
+                <b>${escapeHTML(value)}</b>
+              </p>
+            `,
+          )
+          .join("")}
+      </div>
+    </div>
   `;
 }
 
@@ -8597,7 +8929,7 @@ function renderReview() {
 
     <section class="stack review-screen-stack">
       ${renderReviewSummarySection(game, player, totals, archetypeResult)}
-      ${renderDevelopmentTakeaway(totals, player, topContribution.label)}
+      ${renderDevelopmentTakeaway(totals, player, topContribution.label, game)}
       ${renderWhatToEncourage(totals, topContribution.label, player)}
       ${renderWhyThesePlaysMatter(game.events || [], { limit: 3, showMore: true })}
       ${renderReviewStatsSection(totals, player, archetypeResult)}
@@ -9861,6 +10193,8 @@ function handleSubmit(event) {
 
     const stat = STAT_BY_KEY[formData.get("statType")];
     if (!stat) return;
+    const eventQuarter = formData.get("quarter") || periodsForGame(game)[0];
+    const scoreContext = scoreContextForGame(game, eventQuarter);
 
     const newEvent = {
       id: uid("event"),
@@ -9869,7 +10203,7 @@ function handleSubmit(event) {
       teamId: gameTeamId(game),
       rosterPlayerId: gameRosterPlayerId(game),
       timestamp: new Date().toISOString(),
-      quarter: formData.get("quarter") || periodsForGame(game)[0],
+      quarter: eventQuarter,
       statType: stat.key,
       statLabel: stat.label,
       category: stat.category,
@@ -9878,6 +10212,7 @@ function handleSubmit(event) {
       note: formData.get("note")?.trim() || "",
       fieldZone: formData.get("fieldZone") || "",
       correctedAt: new Date().toISOString(),
+      ...scoreContext,
     };
 
     state.addingReviewEvent = false;
@@ -10027,6 +10362,9 @@ function handleClick(event) {
   const action = event.target.closest("[data-action]");
   if (action) {
     if (action.dataset.action === "undo") undoLastEvent();
+    if (action.dataset.action === "score-goal-for") updateActiveGameScore("for");
+    if (action.dataset.action === "score-goal-against") updateActiveGameScore("against");
+    if (action.dataset.action === "edit-score") editActiveGameScore();
     if (action.dataset.action === "save-game") saveActiveGame();
     if (action.dataset.action === "end-game") endGame();
     if (action.dataset.action === "cancel-end-game") {

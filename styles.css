@@ -2407,6 +2407,48 @@ button:focus-visible,
   box-shadow: inset 0 -2px 0 var(--hornet-red);
 }
 
+.lh-score-control {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.lh-score-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: #ffffff;
+}
+
+.lh-score-chip span {
+  color: #b8bec5;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.lh-score-chip strong {
+  font-size: 1.08rem;
+  line-height: 1.1;
+}
+
+.lh-score-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.lh-score-actions .mini-btn {
+  min-height: 48px;
+}
+
 .live-summary {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -5355,6 +5397,37 @@ form.account-card,
 
 .review-snapshot-grid {
   gap: 8px;
+}
+
+.lh-context-card {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-left: 4px solid var(--hornet-red);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--text);
+}
+
+.lh-context-card > strong {
+  font-size: 0.9rem;
+}
+
+.lh-game-context-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
+.lh-game-context-row b {
+  color: var(--text);
+  text-align: right;
 }
 
 .snapshot-card {
