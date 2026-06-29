@@ -5310,12 +5310,11 @@ form.account-card,
 }
 
 .lh-family-recap-card {
-  margin-top: 14px;
-  border-left: 4px solid var(--brand-red);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(244, 246, 248, 0.98));
+  border-left: 4px solid rgba(232, 16, 16, 0.72);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(246, 247, 248, 0.99));
 }
 
+.lh-family-recap-preview,
 .lh-family-recap-text {
   margin-top: 10px;
   padding: 13px 14px;
@@ -5329,6 +5328,11 @@ form.account-card,
   line-height: 1.48;
 }
 
+.lh-family-recap-preview {
+  color: #18202a;
+  font-weight: 780;
+}
+
 .lh-family-recap-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -5340,8 +5344,22 @@ form.account-card,
   min-height: 48px;
 }
 
+.lh-family-recap-expand {
+  margin-top: 10px;
+}
+
+.lh-family-recap-expand summary {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  color: var(--brand-red);
+  cursor: pointer;
+  font-size: 0.86rem;
+  font-weight: 950;
+}
+
 .review-screen-stack {
-  padding-bottom: calc(130px + var(--safe-bottom));
+  padding-bottom: calc(140px + var(--safe-bottom));
 }
 
 .lh-season-review {
@@ -5389,6 +5407,22 @@ form.account-card,
   font-size: clamp(0.96rem, 3.7vw, 1.08rem);
   font-weight: 850;
   line-height: 1.3;
+}
+
+.lh-review-page {
+  padding-bottom: calc(140px + var(--safe-bottom));
+}
+
+.lh-review-page .card,
+.lh-review-page .review-details-card {
+  border-color: rgba(17, 19, 23, 0.11);
+}
+
+.lh-review-page .development-card,
+.lh-review-page .lh-family-recap-card,
+.lh-review-page .lh-why-card,
+.lh-review-page .review-details-card {
+  border-left-color: rgba(232, 16, 16, 0.74);
 }
 
 .lh-game-story-card {
@@ -5528,6 +5562,99 @@ form.account-card,
 
 .lh-development-takeaway .takeaway-stack p {
   color: #18202a;
+}
+
+.lh-review-action-section {
+  margin-top: -2px;
+}
+
+.lh-review-action-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+.lh-review-action-row .btn {
+  min-height: 50px;
+  padding-inline: 10px;
+}
+
+.lh-review-action-row .btn:first-child {
+  grid-column: 1 / -1;
+}
+
+.lh-review-action-row .btn.ghost {
+  border-color: rgba(17, 19, 23, 0.18);
+  color: #14191f;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: inset 4px 0 0 rgba(17, 19, 23, 0.76);
+}
+
+.lh-customize-focus-card {
+  margin-top: -2px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.985), rgba(247, 248, 249, 0.985));
+}
+
+.lh-customize-focus-card > summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 36px;
+  grid-template-areas:
+    "title arrow"
+    "helper arrow";
+  gap: 10px;
+  align-items: center;
+  cursor: pointer;
+  list-style: none;
+}
+
+.lh-customize-focus-card > summary::-webkit-details-marker {
+  display: none;
+}
+
+.lh-customize-focus-card > summary::after {
+  content: ">";
+  display: inline-grid;
+  grid-area: arrow;
+  justify-self: end;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid rgba(232, 16, 16, 0.22);
+  border-radius: 999px;
+  color: var(--brand-red);
+  font-weight: 950;
+  transform: rotate(0deg);
+}
+
+.lh-customize-focus-card[open] > summary::after {
+  transform: rotate(90deg);
+}
+
+.lh-customize-focus-card > summary span,
+.lh-customize-focus-card > summary small {
+  display: block;
+}
+
+.lh-customize-focus-card > summary span {
+  grid-area: title;
+  color: var(--text);
+  font-size: 0.98rem;
+  font-weight: 950;
+  line-height: 1.18;
+}
+
+.lh-customize-focus-card > summary small {
+  grid-area: helper;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 650;
+  line-height: 1.34;
+}
+
+.lh-customize-focus-body {
+  display: grid;
+  gap: 10px;
+  padding-top: 12px;
 }
 
 .lh-encourage-card p {
@@ -5699,6 +5826,24 @@ form.account-card,
   font-size: 0.9rem;
   font-weight: 700;
   line-height: 1.35;
+}
+
+.lh-more-questions {
+  margin-top: 10px;
+}
+
+.lh-more-questions summary {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  color: var(--brand-red);
+  cursor: pointer;
+  font-size: 0.86rem;
+  font-weight: 950;
+}
+
+.conversation-list.compact {
+  margin-top: 2px;
 }
 
 .focus-preview {

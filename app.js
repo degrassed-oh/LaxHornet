@@ -9141,7 +9141,6 @@ function developmentTakeawayForTotals(totals = {}, player = state.player, topCon
 function renderDevelopmentTakeaway(totals = {}, player = state.player, topContribution = "", game = null, intelligence = null) {
   const reviewIntelligence = intelligence || (game ? buildPostGameIntelligence(game, game.events || [], player, totals, calculateSeasonTotalsForPlayer(player)) : null);
   const takeaway = reviewIntelligence?.developmentTakeaway || developmentTakeawayForTotals(totals, player, topContribution, game);
-  const nextFocus = reviewIntelligence?.nextFocusRecommendation || null;
   return `
     <section class="card pad development-card lh-development-takeaway">
       <h3>Development Takeaway</h3>
@@ -9151,17 +9150,18 @@ function renderDevelopmentTakeaway(totals = {}, player = state.player, topContri
         <p><span>What to build on</span>${escapeHTML(takeaway.whatToBuildOn || "Repeat the most useful play from this game.")}</p>
         <p><span>Next focus</span>${escapeHTML(takeaway.nextFocus || takeaway.focus)}</p>
       </div>
-      ${
-        nextFocus
-          ? `<div class="lh-focus-recommendation">
-              <span>Recommended focus</span>
-              <strong>${escapeHTML(nextFocus.focusTitle)}</strong>
-              <p>${escapeHTML(nextFocus.whyThisFits)}</p>
-              <p><b>Try this next game:</b> ${escapeHTML(nextFocus.tryThisNextGame)}</p>
-              ${nextFocus.evidence?.length ? `<small>Based on: ${escapeHTML(nextFocus.evidence.slice(0, 3).join("; "))}</small>` : ""}
-            </div>`
-          : ""
-      }
+    </section>
+  `;
+}
+
+function renderReviewActionRow(game) {
+  return `
+    <section class="lh-review-action-section" aria-label="Review actions">
+      <div class="lh-review-action-row">
+        <button class="btn positive" type="button" data-action="save-next-focus" data-game-id="${escapeHTML(game.id)}">Save for Next Game</button>
+        <button class="btn neutral" type="button" data-action="add-focus-to-recap" data-game-id="${escapeHTML(game.id)}">Add to Family Recap</button>
+        <button class="btn ghost" type="button" data-action="copy-focus-note" data-game-id="${escapeHTML(game.id)}">Copy Focus Note</button>
+      </div>
     </section>
   `;
 }
@@ -9178,7 +9178,7 @@ function renderWhatToEncourage(totals = {}, topContribution = "", player = state
 function conversationStartersForTotals(totals = {}, player = state.player) {
   const prompts = [];
   const add = (condition, prompt) => {
-    if (condition && !prompts.includes(prompt) && prompts.length < 3) prompts.push(prompt);
+    if (condition && !prompts.includes(prompt) && prompts.length < 5) prompts.push(prompt);
   };
   add(totals.points > 0, "What helped you create or finish your best scoring chance?");
   add(totals.groundBalls + totals.backedUpShots > 0, "What play helped your team keep or win possession today?");
@@ -9188,18 +9188,30 @@ function conversationStartersForTotals(totals = {}, player = state.player) {
   add(totals.eventCount > 0, "What is one thing you want to try next game?");
   add(true, "What play felt best today?");
   add(true, "What should we practice before the next game?");
-  return prompts.slice(0, 3);
+  return prompts.slice(0, 5);
 }
 
 function renderConversationStarters(totals = {}, player = state.player) {
   const prompts = conversationStartersForTotals(totals, player);
+  const visiblePrompts = prompts.slice(0, 2);
+  const extraPrompts = prompts.slice(2);
   return `
     <section class="card pad development-card lh-conversation-card">
       <h3>Talk About the Game</h3>
-      <p class="muted small">A few suggestions for a supportive ride home.</p>
+      <p class="muted small">Ask your player:</p>
       <ul class="conversation-list">
-        ${prompts.map((prompt) => `<li>${escapeHTML(prompt)}</li>`).join("")}
+        ${visiblePrompts.map((prompt) => `<li>${escapeHTML(prompt)}</li>`).join("")}
       </ul>
+      ${
+        extraPrompts.length
+          ? `<details class="lh-more-questions">
+              <summary>Show More Questions</summary>
+              <ul class="conversation-list compact">
+                ${extraPrompts.map((prompt) => `<li>${escapeHTML(prompt)}</li>`).join("")}
+              </ul>
+            </details>`
+          : ""
+      }
     </section>
   `;
 }
@@ -9230,9 +9242,12 @@ function renderNextGameFocusSection(game, player, totals, topContribution = "", 
   const changedNote = sourceReviewFocusChangeNote(saved, game.id);
 
   return `
-    <section class="card pad development-card lh-next-focus-card">
-      <h3>Next Game Focus</h3>
-      <p class="muted small">Pick one simple next step. This saves locally for the selected player and can be added to the Family Recap.</p>
+    <details class="card pad development-card lh-next-focus-card lh-customize-focus-card">
+      <summary>
+        <span>Customize Next Focus</span>
+        <small>Change the saved focus before using the action buttons above.</small>
+      </summary>
+      <div class="lh-customize-focus-body">
       <div class="field">
         <label for="nextGameFocusSelect">Choose focus</label>
         <select id="nextGameFocusSelect" name="nextGameFocus">
@@ -9260,12 +9275,8 @@ function renderNextGameFocusSection(game, player, totals, topContribution = "", 
           : ""
       }
       ${changedNote ? `<p class="focus-change-note">${escapeHTML(changedNote)}</p>` : ""}
-      <div class="lh-focus-actions">
-        <button class="btn secondary" type="button" data-action="save-next-focus" data-game-id="${escapeHTML(game.id)}">Save for Next Game</button>
-        <button class="btn neutral" type="button" data-action="add-focus-to-recap" data-game-id="${escapeHTML(game.id)}">Add to Family Recap</button>
-        <button class="btn neutral" type="button" data-action="copy-focus-note" data-game-id="${escapeHTML(game.id)}">Copy Focus Note</button>
       </div>
-    </section>
+    </details>
   `;
 }
 
@@ -9427,19 +9438,29 @@ function buildFamilyRecap(game = {}, events = [], playerContext = {}, computedSt
 
 function renderFamilyRecapSection(game, player, totals, intelligence = null) {
   const recap = buildFamilyRecap(game, game.events || [], player, totals, intelligence);
+  const previewLines = recap.text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("\n");
   return `
     <section class="card pad lh-family-recap-card">
       <div class="section-head compact-head">
         <div>
           <h3>Family Recap</h3>
-          <p class="muted small">Copy a short, positive recap to share with family after the game.</p>
+          <p class="muted small">Copy a short, positive recap to share with family.</p>
         </div>
       </div>
-      <div class="lh-family-recap-text" aria-label="Family recap preview">${escapeHTML(recap.text).replace(/\n/g, "<br>")}</div>
+      <div class="lh-family-recap-preview" aria-label="Family recap preview">${escapeHTML(previewLines || recap.title).replace(/\n/g, "<br>")}</div>
       <div class="lh-family-recap-actions">
-        <button class="btn secondary" type="button" data-action="copy-family-recap" data-game-id="${escapeHTML(game.id)}">Copy Family Recap</button>
-        ${canShareFamilyRecap() ? `<button class="btn neutral" type="button" data-action="share-family-recap" data-game-id="${escapeHTML(game.id)}">Share Family Recap</button>` : ""}
+        <button class="btn secondary" type="button" data-action="copy-family-recap" data-game-id="${escapeHTML(game.id)}">Copy Recap</button>
+        ${canShareFamilyRecap() ? `<button class="btn neutral" type="button" data-action="share-family-recap" data-game-id="${escapeHTML(game.id)}">Share Recap</button>` : ""}
       </div>
+      <details class="lh-family-recap-expand">
+        <summary>Expand</summary>
+        <div class="lh-family-recap-text" aria-label="Full family recap">${escapeHTML(recap.text).replace(/\n/g, "<br>")}</div>
+      </details>
     </section>
   `;
 }
@@ -9538,6 +9559,7 @@ function renderReviewSummarySection(game, player, totals) {
   const activityLabel = totals.points > 0 ? "Points" : "Events";
   const activityValue = totals.points > 0 ? totals.points : totals.eventCount;
   const activityHelper = totals.points > 0 ? `${totals.goals}G ${totals.assists}A` : "tracked plays";
+  const context = gameContextSummary(game, totals);
   const snapshotCards = [
     insightCard("Game Impact", renderImpactGrade(totals.impact), "Snapshot, not a coach grade", { className: "snapshot-card" }),
     insightCard("Top Contribution", escapeHTML(topContribution.display), topContribution.label, { className: "snapshot-card" }),
@@ -9545,9 +9567,12 @@ function renderReviewSummarySection(game, player, totals) {
       ? insightCard("Possession", escapeHTML(signedMetric(totals.possessionValue)), `${signedMetric(totals.extraPossessions)} extra ${Math.abs(Number(totals.extraPossessions || 0)) === 1 ? "chance" : "chances"}`, { className: "snapshot-card" })
       : "",
     insightCard(activityLabel, escapeHTML(String(activityValue)), activityHelper, { className: "snapshot-card" }),
+    context.hasFinal
+      ? insightCard("Final Score", escapeHTML(`${context.finalScoreFor}-${context.finalScoreAgainst}`), "final", { className: "snapshot-card" })
+      : "",
   ].filter(Boolean);
   return `
-    <section class="review-section review-snapshot-section">
+    <section class="review-section review-snapshot-section lh-review-snapshot">
       <div class="section-head compact-head">
         <div>
           <h3>Game Snapshot</h3>
@@ -9562,7 +9587,6 @@ function renderReviewSummarySection(game, player, totals) {
 
 function renderGameStorySection(intelligence = null) {
   if (!intelligence) return "";
-  const highlights = (intelligence.contextHighlights || []).slice(0, 3);
   return `
     <section class="card pad development-card lh-game-story-card">
       <div class="section-head compact-head">
@@ -9573,22 +9597,6 @@ function renderGameStorySection(intelligence = null) {
       </div>
       <strong>${escapeHTML(intelligence.gameStoryTitle)}</strong>
       <p>${escapeHTML(intelligence.gameStoryText)}</p>
-      ${
-        highlights.length
-          ? `<div class="context-highlight-list">
-              ${highlights
-                .map(
-                  (item) => `
-                    <div class="context-highlight">
-                      <span>${escapeHTML(item.label)}</span>
-                      <p>${escapeHTML(item.text)}</p>
-                    </div>
-                  `,
-                )
-                .join("")}
-            </div>`
-          : ""
-      }
     </section>
   `;
 }
@@ -9622,11 +9630,11 @@ function renderGameContextCard(game, totals) {
 function renderReviewStatsSection(totals, player, archetypeResult) {
   return `
     <section class="review-section review-full-breakdown">
-      <details class="review-details-card">
+      <details class="review-details-card lh-breakdown-card">
         <summary>
           <span class="review-details-summary-copy">
             <span>Full Game Impact Breakdown</span>
-            <small>Open detailed scoring, player profile, and full stat table.</small>
+            <small>View scoring, possession, defense, goalie, and effort scores.</small>
           </span>
         </summary>
         <div class="review-details-stack">
@@ -9675,24 +9683,31 @@ function renderReview() {
   const correctionPanelOpen = state.addingReviewEvent || state.editingGameDetails || editingEvent || tagEditingEvent;
   const canShowGameEdit = canEditCurrentGame && !correctionPanelOpen;
   const canShowAddEvent = canEditCurrentGame && !correctionPanelOpen;
+  const opponent = String(game.opponent || "").trim();
   return renderShell(`
-    <section class="screen-title">
+    <section class="screen-title lh-review-header">
       <h2>Game Review</h2>
-      <p>${escapeHTML(playerFirstName(player))} vs ${escapeHTML(game.opponent)} &middot; ${formatDate(game.date)}</p>
+      <p>${escapeHTML(playerTitle(player))}${opponent ? ` vs ${escapeHTML(opponent)}` : ""} &middot; ${formatDate(game.date)}</p>
     </section>
 
-    <section class="stack review-screen-stack">
-      ${renderReviewSummarySection(game, player, totals, archetypeResult)}
+    <section class="stack review-screen-stack lh-review-page">
+      ${renderReviewSummarySection(game, player, totals)}
       ${renderGameStorySection(postGameIntelligence)}
       ${renderDevelopmentTakeaway(totals, player, topContribution.label, game, postGameIntelligence)}
-      ${renderWhatToEncourage(totals, topContribution.label, player, postGameIntelligence)}
-      ${renderWhyThesePlaysMatter(game.events || [], { limit: 3, showMore: true, items: postGameIntelligence.whyThesePlaysMatter })}
-      ${renderReviewStatsSection(totals, player, archetypeResult)}
-      ${renderConversationStarters(totals, player)}
-      ${renderFocusFollowUpSection(game, player)}
+      ${renderReviewActionRow(game)}
       ${renderNextGameFocusSection(game, player, totals, topContribution.label, postGameIntelligence)}
       ${renderFamilyRecapSection(game, player, totals, postGameIntelligence)}
-      <section class="review-section">
+      ${renderWhyThesePlaysMatter(game.events || [], {
+        limit: 2,
+        showMore: true,
+        title: "Why These Plays Matter",
+        helper: "2 key explanations from this game",
+        showMoreLabel: "Show More",
+        items: postGameIntelligence.whyThesePlaysMatter,
+      })}
+      ${renderConversationStarters(totals, player)}
+      ${renderReviewStatsSection(totals, player, archetypeResult)}
+      <section class="review-section lh-timeline-section">
         <div class="card pad">
           <h3>Timeline &amp; Edits</h3>
           <p class="muted small">Review each tracked play, add notes or tags, and make corrections if needed.</p>
