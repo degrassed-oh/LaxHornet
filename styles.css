@@ -6092,6 +6092,17 @@ form.account-card,
   max-width: 100%;
 }
 
+.review-details-card .review-embedded-why-card {
+  border: 1px solid rgba(17, 19, 23, 0.1);
+  border-left: 0;
+  background: #ffffff;
+  box-shadow: none;
+}
+
+.review-details-card .review-embedded-why-card > summary {
+  padding: 0;
+}
+
 .impact-card-embedded {
   display: grid;
   gap: 12px;

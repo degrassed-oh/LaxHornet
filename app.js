@@ -25,7 +25,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v260";
+const APP_VERSION = "v261";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -8128,6 +8128,7 @@ function renderWhyThesePlaysMatter(events = [], options = {}) {
   const helper = options.helper || "A quick parent guide to the plays that shaped this game.";
   const emptyCopy = options.emptyCopy || "Track a few plays to see simple explanations of what each stat means and why it supports development.";
   const showMoreLabel = options.showMoreLabel || "Show more stat explanations";
+  const className = options.className ? ` ${options.className}` : "";
   const renderEducationItem = (item) => {
     if (item.explanation) {
       return `
@@ -8154,7 +8155,7 @@ function renderWhyThesePlaysMatter(events = [], options = {}) {
   };
 
   return `
-    <details class="card pad lh-why-card" open>
+    <details class="card pad lh-why-card${className}" open>
       <summary>
         <span>${escapeHTML(title)}</span>
         <small>${escapeHTML(helper)}</small>
@@ -9629,7 +9630,7 @@ function renderGameContextCard(game, totals) {
   `;
 }
 
-function renderReviewStatsSection(totals, player, archetypeResult) {
+function renderReviewStatsSection(totals, player, archetypeResult, events = [], postGameIntelligence = null) {
   return `
     <section class="review-section review-full-breakdown">
       <details class="review-details-card lh-breakdown-card">
@@ -9641,6 +9642,15 @@ function renderReviewStatsSection(totals, player, archetypeResult) {
         </summary>
         <div class="review-details-stack">
           ${renderImpactBreakdown(totals, { embedded: true })}
+          ${renderWhyThesePlaysMatter(events, {
+            limit: 2,
+            showMore: true,
+            title: "Why These Plays Matter",
+            helper: "2 key explanations from this game",
+            showMoreLabel: "Show More",
+            items: postGameIntelligence?.whyThesePlaysMatter,
+            className: "review-embedded-why-card",
+          })}
           <div class="explainer-card review-explainer-card">
             <strong>Game Impact</strong>
             <p>Game Impact is a quick snapshot of how this player helped create, protect, finish, or defend possessions. It is not a coach grade or a permanent label.</p>
@@ -9699,16 +9709,8 @@ function renderReview() {
       ${renderReviewActionRow(game)}
       ${renderNextGameFocusSection(game, player, totals, topContribution.label, postGameIntelligence)}
       ${renderFamilyRecapSection(game, player, totals, postGameIntelligence)}
-      ${renderWhyThesePlaysMatter(game.events || [], {
-        limit: 2,
-        showMore: true,
-        title: "Why These Plays Matter",
-        helper: "2 key explanations from this game",
-        showMoreLabel: "Show More",
-        items: postGameIntelligence.whyThesePlaysMatter,
-      })}
       ${renderConversationStarters(totals, player)}
-      ${renderReviewStatsSection(totals, player, archetypeResult)}
+      ${renderReviewStatsSection(totals, player, archetypeResult, game.events || [], postGameIntelligence)}
       <section class="review-section lh-timeline-section">
         <div class="card pad">
           <h3>Timeline &amp; Edits</h3>
