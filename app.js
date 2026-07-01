@@ -25,7 +25,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v259";
+const APP_VERSION = "v260";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -576,6 +576,7 @@ const state = {
   toast: "",
   updateAvailable: false,
   updateInstalling: false,
+  availableVersion: "",
   authBusy: false,
   reminderBusyId: "",
   installInstructionsVisible: false,
@@ -11435,10 +11436,11 @@ function watchServiceWorkerUpdates(registration) {
   });
 }
 
-function showUpdateAvailable(worker) {
+function showUpdateAvailable(worker, version = "") {
   waitingServiceWorker = worker;
   state.updateAvailable = true;
   state.updateInstalling = false;
+  if (version) state.availableVersion = version;
   render();
 }
 
@@ -11473,6 +11475,7 @@ async function checkForAppUpdate(options = {}) {
     if (serverVersion && serverVersion !== APP_VERSION) {
       state.updateAvailable = true;
       state.updateInstalling = false;
+      state.availableVersion = serverVersion;
       render();
       if (options.manual) showToast(`Update found: ${serverVersion}`);
       return;
@@ -11484,9 +11487,9 @@ async function checkForAppUpdate(options = {}) {
   }
 }
 
-function reloadWithFreshMarker() {
+function reloadWithFreshMarker(targetVersion = "") {
   const url = new URL(window.location.href);
-  url.searchParams.set("fresh", `${APP_VERSION}-update-${Date.now()}`);
+  url.searchParams.set("fresh", `${targetVersion || state.availableVersion || APP_VERSION}-update-${Date.now()}`);
   window.location.replace(url.toString());
 }
 
@@ -11528,6 +11531,8 @@ async function applyAppUpdate() {
   state.updateInstalling = true;
   render();
 
+  const targetVersion = state.availableVersion || (await fetchServerAppVersion().catch(() => "")) || APP_VERSION;
+
   try {
     const registration = serviceWorkerRegistration || (await navigator.serviceWorker?.getRegistration?.());
     if (registration) {
@@ -11536,11 +11541,17 @@ async function applyAppUpdate() {
       const worker = waitingServiceWorker || registration.waiting;
       if (worker) {
         waitingServiceWorker = worker;
+        await clearLaxHornetCaches().catch(() => {});
+        navigator.serviceWorker?.addEventListener?.("controllerchange", () => {
+          if (reloadingForUpdate) return;
+          reloadingForUpdate = true;
+          reloadWithFreshMarker(targetVersion);
+        }, { once: true });
         worker.postMessage({ type: "SKIP_WAITING" });
         window.setTimeout(() => {
           if (!reloadingForUpdate) {
             reloadingForUpdate = true;
-            reloadWithFreshMarker();
+            reloadWithFreshMarker(targetVersion);
           }
         }, 1500);
         return;
@@ -11557,7 +11568,7 @@ async function applyAppUpdate() {
   }
 
   reloadingForUpdate = true;
-  reloadWithFreshMarker();
+  reloadWithFreshMarker(targetVersion);
 }
 
 async function initApp() {

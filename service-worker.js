@@ -1,4 +1,4 @@
-const CACHE_NAME = "laxhornet-v259";
+const CACHE_NAME = "laxhornet-v260";
 const APP_ASSETS = [
   "./",
   "./index.html",
@@ -7,9 +7,9 @@ const APP_ASSETS = [
   "./terms.html",
   "./logo-options.html",
   "./landing.css?v=253",
-  "./styles.css?v=259",
+  "./styles.css?v=260",
   "./assets/supabase.min.js?v=253",
-  "./app.js?v=259",
+  "./app.js?v=260",
   "./manifest.json?v=253",
   "./assets/icon.svg?v=11",
   "./assets/LHicon.png?v=1",
@@ -24,7 +24,9 @@ const APP_ASSETS = [
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_ASSETS)),
+    caches.open(CACHE_NAME).then((cache) =>
+      cache.addAll(APP_ASSETS.map((asset) => new Request(asset, { cache: "reload" }))),
+    ),
   );
 });
 
@@ -52,7 +54,7 @@ self.addEventListener("fetch", (event) => {
 
   if (event.request.mode === "navigate") {
     event.respondWith(
-      fetch(event.request)
+      fetch(event.request, { cache: "reload" })
         .then((response) => {
           const copy = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
@@ -72,7 +74,7 @@ self.addEventListener("fetch", (event) => {
     caches.match(event.request).then((cached) => {
       if (cached) return cached;
 
-      return fetch(event.request)
+      return fetch(event.request, { cache: "reload" })
         .then((response) => {
           const copy = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
