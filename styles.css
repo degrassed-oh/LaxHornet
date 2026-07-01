@@ -5900,6 +5900,11 @@ form.account-card,
   opacity: 1;
 }
 
+.welcome-info-card.subtle-welcome-card h3,
+.welcome-faq-card.subtle-welcome-card .faq-card-summary strong {
+  color: #ffffff;
+}
+
 .focus-preview {
   display: grid;
   gap: 4px;
