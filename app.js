@@ -25,7 +25,7 @@ const SUPABASE_CONFIG = {
 };
 
 const PLATFORM_REVIEWER_EMAIL = "degrassed@gmail.com";
-const APP_VERSION = "v257";
+const APP_VERSION = "v258";
 
 const PERIOD_FORMATS = {
   quarters: {
@@ -560,6 +560,7 @@ const state = {
   deletedGameIds: initialStoredState.deletedGameIds,
   deletedEventIds: initialStoredState.deletedEventIds,
   watchShareExpanded: false,
+  watchShareTouched: false,
   teamRosterExpanded: true,
   teamEditPlayerExpanded: false,
   teamAddPlayerExpanded: false,
@@ -5960,7 +5961,7 @@ function renderAccountCard() {
 }
 
 function renderWatchSharedGameForm(options = {}) {
-  const expanded = options.expanded ?? state.watchShareExpanded;
+  const expanded = options.expanded ?? (options.defaultExpanded && !state.watchShareTouched ? true : state.watchShareExpanded);
   const compact = options.compact !== false;
   return `
     <form class="card pad form-grid share-watch-form ${expanded ? "expanded" : "collapsed"} ${compact ? "compact-watch-card" : ""}" data-form="watch-share">
@@ -6866,7 +6867,9 @@ function renderWelcome() {
     <section class="stack welcome-stack">
       ${renderAccountCard()}
 
-      <div class="card pad welcome-info-card">
+      ${renderWatchSharedGameForm({ defaultExpanded: true })}
+
+      <div class="card pad welcome-info-card welcome-access-card subtle-welcome-card">
         <h3>How access works</h3>
         <div class="welcome-step-list">
           <div><strong>1</strong><span>Create a User Profile.</span></div>
@@ -6875,9 +6878,7 @@ function renderWelcome() {
         </div>
       </div>
 
-      ${renderWatchSharedGameForm()}
-
-      <details class="card pad faq-card welcome-faq-card">
+      <details class="card pad faq-card welcome-faq-card subtle-welcome-card">
         <summary class="faq-card-summary">
           <span>
             <strong>Quick FAQ</strong>
@@ -11268,7 +11269,10 @@ function handleClick(event) {
     if (action.dataset.action === "remove-claimed-player") removeClaimedRosterPlayer();
     if (action.dataset.action === "delete-team") deleteActiveTeam();
     if (action.dataset.action === "toggle-watch-share") {
-      state.watchShareExpanded = !state.watchShareExpanded;
+      const expandedAttr = action.getAttribute("aria-expanded");
+      const currentlyExpanded = expandedAttr === null ? state.watchShareExpanded : expandedAttr === "true";
+      state.watchShareTouched = true;
+      state.watchShareExpanded = !currentlyExpanded;
       render();
     }
     if (action.dataset.action === "toggle-team-roster") {

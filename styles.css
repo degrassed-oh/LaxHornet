@@ -348,6 +348,46 @@ button:focus-visible,
   border-color: rgba(232, 16, 16, 0.24);
 }
 
+.subtle-welcome-card {
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #f6f7f8;
+  background:
+    linear-gradient(180deg, rgba(22, 24, 27, 0.98), rgba(8, 9, 11, 0.98));
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.26), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.subtle-welcome-card::before {
+  background: rgba(255, 255, 255, 0.16);
+  opacity: 1;
+}
+
+.subtle-welcome-card h3,
+.subtle-welcome-card .faq-card-summary strong {
+  color: #ffffff;
+}
+
+.subtle-welcome-card .welcome-step-list div,
+.subtle-welcome-card .faq-card-body details summary {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.subtle-welcome-card .welcome-step-list span,
+.subtle-welcome-card .faq-card-summary small,
+.subtle-welcome-card .muted,
+.subtle-welcome-card .muted.small {
+  color: rgba(235, 238, 242, 0.72);
+}
+
+.subtle-welcome-card .faq-card-body details {
+  border-top-color: rgba(255, 255, 255, 0.12);
+}
+
+.subtle-welcome-card.welcome-faq-card > summary::after {
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
 .welcome-step-list {
   display: grid;
   gap: 10px;
@@ -5844,6 +5884,20 @@ form.account-card,
 
 .conversation-list.compact {
   margin-top: 2px;
+}
+
+.welcome-info-card.subtle-welcome-card,
+.welcome-faq-card.subtle-welcome-card {
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #f6f7f8;
+  background:
+    linear-gradient(180deg, rgba(22, 24, 27, 0.98), rgba(8, 9, 11, 0.98));
+}
+
+.welcome-info-card.subtle-welcome-card::before,
+.welcome-faq-card.subtle-welcome-card::before {
+  background: rgba(255, 255, 255, 0.16);
+  opacity: 1;
 }
 
 .focus-preview {
